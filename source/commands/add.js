@@ -1,7 +1,6 @@
 const SQUADRONS = {
     red: {
-        name: "Alpha",
-        nickname: "SOE1 Alpha",
+        group: "Alpha",
         roles: [
             "1373365804279791839",
             "1373365810910859265",
@@ -17,8 +16,7 @@ const SQUADRONS = {
     },
 
     blue: {
-        name: "Bravo",
-        nickname: "SOE1 Bravo",
+        group: "Bravo",
         roles: [
             "1373365805693009920",
             "1373365810910859265",
@@ -34,8 +32,7 @@ const SQUADRONS = {
     },
 
     gold: {
-        name: "Charlie",
-        nickname: "SOE1 Charlie",
+        group: "Charlie",
         roles: [
             "1373365806775406693",
             "1373365810910859265",
@@ -51,8 +48,7 @@ const SQUADRONS = {
     },
 
     black: {
-        name: "Delta",
-        nickname: "SOE1 Delta",
+        group: "Delta",
         roles: [
             "1373365808969023529",
             "1373365810910859265",
@@ -68,8 +64,7 @@ const SQUADRONS = {
     },
 
     silver: {
-        name: "Echo",
-        nickname: "SOE1 Echo",
+        group: "Echo",
         roles: [
             "1535720824257122476",
             "1373365810910859265",
@@ -87,7 +82,7 @@ const SQUADRONS = {
 
 const GUEST_ROLE = "1373365890623602768";
 
-const RANKS = {
+const RANK_NAMES = {
     "1373365811858768005": "SO10",
     "1373365812383187047": "SO9",
     "1373365813490483313": "SO8",
@@ -109,22 +104,13 @@ const RANKS = {
     "1373365831454556312": "SOE1"
 };
 
-const TYPE_5_ROLES = [
-    "1373365833618690059",
-    "1373365835862642713",
-    "1373365837129318474",
-    "1373365839037988894",
-    "1373365839721529506",
-    "1373365840677703865"
-];
+const RANK_ROLES = Object.keys(RANK_NAMES);
 
 const ALL_SQUADRON_ROLES = [
     ...new Set(
         Object.values(SQUADRONS).flatMap(squadron => squadron.roles)
     )
 ];
-
-const ALL_RANK_ROLES = Object.keys(RANKS);
 
 export default {
     name: "add",
@@ -160,6 +146,11 @@ export default {
                 member = await message.guild.members.fetch(userId);
             }
 
+            if (!member) {
+                await message.react("❌");
+                return;
+            }
+
             member = await message.guild.members.fetch({
                 user: member.id,
                 force: true
@@ -171,17 +162,18 @@ export default {
 
         try {
             if (group === "guest") {
-                const rolesToRemove = member.roles.cache.filter(role =>
-                    [
-                        ...ALL_SQUADRON_ROLES,
-                        ...ALL_RANK_ROLES,
-                        ...TYPE_5_ROLES,
-                        GUEST_ROLE
-                    ].includes(role.id)
+                const rolesToRemove = [
+                    ...ALL_SQUADRON_ROLES,
+                    ...RANK_ROLES,
+                    GUEST_ROLE
+                ];
+
+                const removableRoles = member.roles.cache.filter(role =>
+                    rolesToRemove.includes(role.id)
                 );
 
-                if (rolesToRemove.size > 0) {
-                    await member.roles.remove(rolesToRemove);
+                if (removableRoles.size > 0) {
+                    await member.roles.remove(removableRoles);
                 }
 
                 await member.setNickname(null);
@@ -193,20 +185,14 @@ export default {
 
             const squadron = SQUADRONS[group];
 
-            const existingRank = ALL_RANK_ROLES.find(roleId =>
+            let existingRank = RANK_ROLES.find(roleId =>
                 member.roles.cache.has(roleId)
             );
-
-            let rankName = "SOE1";
-
-            if (existingRank) {
-                rankName = RANKS[existingRank];
-            }
 
             let plate = null;
 
             if (member.nickname) {
-                const match = member.nickname.match(/\s(\d+)$/);
+                const match = member.nickname.match(/\s(\d{2})$/);
 
                 if (match) {
                     plate = match[1];
@@ -214,21 +200,27 @@ export default {
             }
 
             const rolesToRemove = member.roles.cache.filter(role =>
-                [
-                    ...ALL_SQUADRON_ROLES,
-                    ...ALL_RANK_ROLES,
-                    ...TYPE_5_ROLES,
-                    GUEST_ROLE
-                ].includes(role.id)
+                ALL_SQUADRON_ROLES.includes(role.id)
             );
 
             if (rolesToRemove.size > 0) {
                 await member.roles.remove(rolesToRemove);
             }
 
+            await member.roles.remove(GUEST_ROLE);
+
+            let rankName;
+
+            if (existingRank) {
+                rankName = RANK_NAMES[existingRank];
+            } else {
+                rankName = "SOE1";
+                existingRank = "1373365831454556312";
+            }
+
             const newNickname = plate
-                ? `${rankName} ${squadron.name} ${plate}`
-                : `${rankName} ${squadron.name}`;
+                ? `${rankName} ${squadron.group} ${plate}`
+                : `${rankName} ${squadron.group}`;
 
             await member.setNickname(newNickname);
 
@@ -236,17 +228,16 @@ export default {
                 await member.roles.add(existingRank);
             }
 
-            const rolesToAdd = squadron.roles.filter(roleId => {
-                if (ALL_RANK_ROLES.includes(roleId)) {
-                    return !existingRank;
+            for (const roleId of squadron.roles) {
+                if (roleId === "1373365831454556312" && existingRank) {
+                    continue;
                 }
 
-                return true;
-            });
-
-            await member.roles.add(rolesToAdd);
+                await member.roles.add(roleId);
+            }
 
             await message.react("✅");
+
         } catch (error) {
             await message.react("❌");
             throw error;
