@@ -190,6 +190,10 @@ export default {
             await member.roles.add(newRank.id);
             await member.setNickname(newNickname);
 
+            const action = newRankIndex > currentRankIndex
+                ? "ascendido"
+                : "descendido";
+
             const logChannel = await message.guild.channels.fetch(
                 RANK_LOG_CHANNEL_ID
             );
@@ -198,7 +202,7 @@ export default {
                 const embed = new EmbedBuilder()
                     .setColor("#ffaf1a")
                     .setDescription(
-                        `El usuario ${member} fue ascendido a **${newRank.name} (${newRank.short})** por ${message.author}.`
+                        `El usuario ${member} fue **${action}** a **${newRank.name} (${newRank.short})** por ${message.author}.`
                     );
 
                 await logChannel.send({
