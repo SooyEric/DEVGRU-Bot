@@ -250,14 +250,6 @@ export function buildTable(members, squadronKey) {
         );
     }
 
-    const operator10Text = operators10
-        .map(member => buildSlot(member))
-        .join("\n");
-
-    const operator20Text = operators20
-        .map(member => buildSlot(member))
-        .join("\n");
-
     return new EmbedBuilder()
         .setColor(COLOR)
         .setTitle(
@@ -287,7 +279,7 @@ export function buildTable(members, squadronKey) {
             `${buildSlot(squad12)}\n\n` +
 
             `**Team Operator (13/19):**\n` +
-            `${operator10Text || ""}\n\n` +
+            `${operators10.map(buildSlot).join("\n")}\n\n` +
 
             `**Unidad 20**\n` +
 
@@ -301,10 +293,10 @@ export function buildTable(members, squadronKey) {
             `${buildSlot(squad22)}\n\n` +
 
             `**Team Operator (23/29):**\n` +
-            `${operator20Text || ""}`
+            `${operators20.map(buildSlot).join("\n")}`
         )
         .setFooter({
-            text: `Última actualización`
+            text: "Última actualización"
         })
         .setTimestamp();
 }
@@ -377,6 +369,51 @@ export async function assignPlate(member) {
     return true;
 }
 
+async function createSquadronMessage(
+    guild,
+    squadronKey
+) {
+    const squadron = SQUADRONS[squadronKey];
+
+    if (!squadron) return null;
+
+    const channel = await guild.channels.fetch(
+        squadron.channel
+    );
+
+    if (!channel) return null;
+
+    const members = [
+        ...guild.members.cache.values()
+    ];
+
+    const embed = buildTable(
+        members,
+        squadronKey
+    );
+
+    const message = await channel.send({
+        embeds: [embed]
+    });
+
+    try {
+        await message.pin();
+    } catch (error) {
+        console.error(
+            `No se pudo pinear ${squadronKey}:`,
+            error
+        );
+    }
+
+    await saveSquadronMessage(
+        squadronKey,
+        channel.id,
+        message.id
+    );
+
+    return message;
+}
+
 export async function updateSquadronTable(
     guild,
     squadronKey
@@ -389,18 +426,6 @@ export async function updateSquadronTable(
         squadronKey
     );
 
-    if (!registry) return;
-
-    const channel = await guild.channels.fetch(
-        registry.channel_id
-    );
-
-    if (!channel) return;
-
-    const message = await channel.messages.fetch(
-        registry.message_id
-    );
-
     const members = [
         ...guild.members.cache.values()
     ];
@@ -410,7 +435,76 @@ export async function updateSquadronTable(
         squadronKey
     );
 
+    if (!registry) {
+        await createSquadronMessage(
+            guild,
+            squadronKey
+        );
+
+        return;
+    }
+
+    let channel;
+
+    try {
+        channel = await guild.channels.fetch(
+            registry.channel_id
+        );
+    } catch {
+        channel = null;
+    }
+
+    if (!channel) {
+        await createSquadronMessage(
+            guild,
+            squadronKey
+        );
+
+        return;
+    }
+
+    let message;
+
+    try {
+        message = await channel.messages.fetch(
+            registry.message_id
+        );
+    } catch {
+        message = null;
+    }
+
+    if (!message) {
+        await createSquadronMessage(
+            guild,
+            squadronKey
+        );
+
+        return;
+    }
+
     await message.edit({
         embeds: [embed]
     });
+}
+
+export async function recreateSquadronMessage(
+    guild,
+    squadronKey
+) {
+    const registry = await getSquadronMessage(
+        squadronKey
+    );
+
+    if (registry) {
+        await saveSquadronMessage(
+            squadronKey,
+            SQUADRONS[squadronKey].channel,
+            ""
+        );
+    }
+
+    return createSquadronMessage(
+        guild,
+        squadronKey
+    );
 }
