@@ -44,6 +44,7 @@ client.on("interactionCreate", async (interaction) => {
     if (!interaction.customId.startsWith("restore_ban:")) return;
 
     const userId = interaction.customId.split(":")[1];
+
     const allowedRoles = permissions[1];
 
     const hasPermission = allowedRoles?.some(
@@ -81,43 +82,28 @@ client.on("interactionCreate", async (interaction) => {
             return;
         }
 
-        const rolesToRemove = member.roles.cache.filter(
+        const currentRoles = member.roles.cache.filter(
             role => role.id !== interaction.guild.id
         );
 
-        if (rolesToRemove.size > 0) {
-            await member.roles.remove(rolesToRemove);
+        if (currentRoles.size > 0) {
+            await member.roles.remove(currentRoles);
         }
 
         for (const roleId of bannedMember.role_ids) {
-            try {
-                await member.roles.add(roleId);
-            } catch (error) {
-                logger.error(
-                    `No se pudo restaurar el rol ${roleId} de ${userId}:`,
-                    error
-                );
-            }
+            if (roleId === interaction.guild.id) continue;
+
+            await member.roles.add(roleId);
         }
 
-        await member.setNickname(bannedMember.nickname);
+        await member.setNickname(
+            bannedMember.nickname || null
+        );
+
         await markRestored(userId);
 
-        try {
-            const logMessage = await interaction.channel.messages.fetch(
-                bannedMember.log_message_id
-            );
-
-            await logMessage.edit({
-                components: []
-            });
-        } catch (error) {
-            logger.error("No se pudo actualizar el mensaje de restauración:", error);
-        }
-
-        await interaction.reply({
-            content: "✅ Usuario restaurado correctamente.",
-            ephemeral: true
+        await interaction.update({
+            components: []
         });
 
         await interaction.channel.send(
@@ -138,6 +124,7 @@ client.on("interactionCreate", async (interaction) => {
 
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
+
     if (!message.content.startsWith(config.discord.prefix)) return;
 
     const args = message.content
