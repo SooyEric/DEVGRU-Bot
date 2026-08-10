@@ -11,6 +11,29 @@ export async function logBotUpdate(client) {
 
         if (!channel) return;
 
+        const messages = await channel.messages.fetch({
+            limit: 20
+        });
+
+        const lastUpdate = messages.find(
+            message =>
+                message.author.id === client.user.id &&
+                message.embeds.length > 0 &&
+                message.embeds[0].title === "DEVGRU Bot actualizado"
+        );
+
+        if (lastUpdate) {
+            const description = lastUpdate.embeds[0].description || "";
+
+            if (
+                description.includes(
+                    `**Versión:** \`v${version.number}\``
+                )
+            ) {
+                return;
+            }
+        }
+
         const embed = new EmbedBuilder()
             .setColor("#ffaf1a")
             .setTitle("DEVGRU Bot actualizado")
