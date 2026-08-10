@@ -12,7 +12,9 @@ const SQUADRONS = {
             "1373365865734738070",
             "1373365866657222819",
             "1373365867576033440"
-        ]
+        ],
+        emoji: "<:red:1527450543692320869>",
+        channel: "https://discord.com/channels/1314786301647519794/1373366015576117459"
     },
 
     blue: {
@@ -28,7 +30,9 @@ const SQUADRONS = {
             "1373365865734738070",
             "1373365866657222819",
             "1373365868569952298"
-        ]
+        ],
+        emoji: "<:blue:1527449963758358608>",
+        channel: "https://discord.com/channels/1314786301647519794/1373366016754847816"
     },
 
     gold: {
@@ -44,7 +48,9 @@ const SQUADRONS = {
             "1373365865734738070",
             "1373365866657222819",
             "1373365870226571325"
-        ]
+        ],
+        emoji: "<:gold:1527451395848933626>",
+        channel: "https://discord.com/channels/1314786301647519794/1530329743465906338"
     },
 
     black: {
@@ -60,7 +66,9 @@ const SQUADRONS = {
             "1373365865734738070",
             "1373365866657222819",
             "1420443645558919308"
-        ]
+        ],
+        emoji: "<:black:1527452013812650054>",
+        channel: "https://discord.com/channels/1314786301647519794/1420443595659280498"
     },
 
     silver: {
@@ -76,7 +84,9 @@ const SQUADRONS = {
             "1373365865734738070",
             "1373365866657222819",
             "1535716769417666653"
-        ]
+        ],
+        emoji: "<:silver:1535722714260578344>",
+        channel: "https://discord.com/channels/1314786301647519794/1535718026618478623"
     }
 };
 
@@ -121,6 +131,11 @@ const ALL_SQUADRON_ROLES = [
     )
 ];
 
+const MAIN_CHANNELS = [
+    "https://discord.com/channels/1314786301647519794/1525028656286662776",
+    "https://discord.com/channels/1314786301647519794/1373366013999190047"
+];
+
 export default {
     name: "add",
     permission: 1,
@@ -138,6 +153,15 @@ export default {
             await message.react("❌");
             return;
         }
+
+        if (group === "guest" && args.length < 3) {
+            await message.react("❌");
+            return;
+        }
+
+        const reason = group === "guest"
+            ? args.slice(2).join(" ")
+            : null;
 
         let member;
 
@@ -170,6 +194,16 @@ export default {
         }
 
         try {
+            const previousSquadronKey = Object.keys(SQUADRONS).find(key =>
+                member.roles.cache.some(role =>
+                    SQUADRONS[key].roles.includes(role.id)
+                )
+            );
+
+            const previousSquadron = previousSquadronKey
+                ? SQUADRONS[previousSquadronKey]
+                : null;
+
             if (group === "guest") {
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
@@ -188,6 +222,14 @@ export default {
 
                 await member.setNickname(null);
                 await member.roles.add(GUEST_ROLE);
+
+                await member.send(
+                    `**Desverificación**\n\n` +
+                    `Has sido desverificado de DEVGRU.\n\n` +
+                    `- **Estado**: Inactivo <a:offline:1536302693251813447>\n` +
+                    `- **Motivo**: ${reason}\n\n` +
+                    `Como consecuencia de esta acción, el miembro deja de formar parte oficialmente de DEVGRU y pierde los permisos correspondientes a su verificación. En caso de querer volver haga su proceso de verificación nuevamente.`
+                ).catch(() => {});
 
                 await message.react("✅");
                 return;
@@ -247,6 +289,28 @@ export default {
                 }
 
                 await member.roles.add(roleId);
+            }
+
+            if (previousSquadronKey) {
+                await member.send(
+                    `**Cambio de Escuadrón**\n\n` +
+                    `Se ha actualizado la asignación de tu escuadrón.\n\n` +
+                    `- **Escuadrón Anterior**: ${previousSquadron.group} ${previousSquadron.emoji}\n` +
+                    `- **Nuevo Escuadrón**: ${squadron.group} ${squadron.emoji}\n` +
+                    `- **Estado**: Activo <a:online:1536302690613862461>`
+                ).catch(() => {});
+            } else {
+                await member.send(
+                    `**¡Bienvenido a DEVGRU, ${member.user}!**\n\n` +
+                    `Tu ingreso a DEVGRU ha sido aprobado y tu verificación como miembro ha sido completada correctamente.\n\n` +
+                    `- **Escuadrón**: ${squadron.group} ${squadron.emoji}\n` +
+                    `- **Rango**: ${rankName}\n` +
+                    `- **Estado**: Activo <a:online:1536302690613862461>\n\n` +
+                    `A partir de este momento tendrás acceso a todos los canales generales y los correspondientes a tu unidad.\n\n` +
+                    `**Canales principales:**\n` +
+                    `${MAIN_CHANNELS.join("\n")}\n` +
+                    `${squadron.channel}`
+                ).catch(() => {});
             }
 
             await message.react("✅");
