@@ -1,4 +1,3 @@
-import { EmbedBuilder } from "discord.js";
 import { getDatabase } from "../database/postgres.js";
 
 const COLOR = "#ffaf1a";
@@ -137,7 +136,7 @@ export function getPlate(member) {
 }
 
 function mention(member) {
-    return `<@${member.id}>`;
+    return member ? `<@${member.id}>` : "";
 }
 
 function findMember(members, squadron, roleId) {
@@ -158,7 +157,7 @@ function findByPlate(members, squadron, roleId, plate) {
 }
 
 function buildSlot(member) {
-    return member ? mention(member) : "";
+    return mention(member);
 }
 
 export function buildTable(members, squadronKey) {
@@ -250,55 +249,57 @@ export function buildTable(members, squadronKey) {
         );
     }
 
-    return new EmbedBuilder()
-        .setColor(COLOR)
-        .setTitle(
-            `${squadron.name} ${squadron.emoji}`
-        )
-        .setDescription(
-            `<@&${squadron.role}>\n\n` +
+    const operator10Text = operators10
+        .map(buildSlot)
+        .join("\n");
 
-            `**Squadron Commander (00):**\n` +
-            `${buildSlot(commander)}\n\n` +
+    const operator20Text = operators20
+        .map(buildSlot)
+        .join("\n");
 
-            `**Squadron Deputy Commander (01):**\n` +
-            `${buildSlot(deputy)}\n\n` +
+    return (
+        `# ${squadron.name} ${squadron.emoji}\n` +
+        `<@&${squadron.role}>\n\n` +
 
-            `**Squadron Executive Officer (02):**\n` +
-            `${buildSlot(executive)}\n\n` +
+        `**Squadron Commander (00):**\n` +
+        `${buildSlot(commander)}\n\n` +
 
-            `**Unidad 10**\n` +
+        `**Squadron Deputy Commander (01):**\n` +
+        `${buildSlot(deputy)}\n\n` +
 
-            `**Group Commander (10):**\n` +
-            `${buildSlot(group10)}\n\n` +
+        `**Squadron Executive Officer (02):**\n` +
+        `${buildSlot(executive)}\n\n` +
 
-            `**Squad Leader (11):**\n` +
-            `${buildSlot(squad11)}\n\n` +
+        `**Unidad 10**\n` +
 
-            `**Squad Leader (12):**\n` +
-            `${buildSlot(squad12)}\n\n` +
+        `**Group Commander (10):**\n` +
+        `${buildSlot(group10)}\n\n` +
 
-            `**Team Operator (13/19):**\n` +
-            `${operators10.map(buildSlot).join("\n")}\n\n` +
+        `**Squad Leader (11):**\n` +
+        `${buildSlot(squad11)}\n\n` +
 
-            `**Unidad 20**\n` +
+        `**Squad Leader (12):**\n` +
+        `${buildSlot(squad12)}\n\n` +
 
-            `**Group Commander (20):**\n` +
-            `${buildSlot(group20)}\n\n` +
+        `**Team Operator (13/19):**\n` +
+        `${operator10Text}\n\n` +
 
-            `**Squad Leader (21):**\n` +
-            `${buildSlot(squad21)}\n\n` +
+        `**Unidad 20**\n` +
 
-            `**Squad Leader (22):**\n` +
-            `${buildSlot(squad22)}\n\n` +
+        `**Group Commander (20):**\n` +
+        `${buildSlot(group20)}\n\n` +
 
-            `**Team Operator (23/29):**\n` +
-            `${operators20.map(buildSlot).join("\n")}`
-        )
-        .setFooter({
-            text: "Última actualización"
-        })
-        .setTimestamp();
+        `**Squad Leader (21):**\n` +
+        `${buildSlot(squad21)}\n\n` +
+
+        `**Squad Leader (22):**\n` +
+        `${buildSlot(squad22)}\n\n` +
+
+        `**Team Operator (23/29):**\n` +
+        `${operator20Text}\n\n` +
+
+        `*Última actualización: <t:${Math.floor(Date.now() / 1000)}:F>*`
+    );
 }
 
 export async function assignPlate(member) {
@@ -387,13 +388,13 @@ async function createSquadronMessage(
         ...guild.members.cache.values()
     ];
 
-    const embed = buildTable(
+    const content = buildTable(
         members,
         squadronKey
     );
 
     const message = await channel.send({
-        embeds: [embed]
+        content
     });
 
     try {
@@ -430,7 +431,7 @@ export async function updateSquadronTable(
         ...guild.members.cache.values()
     ];
 
-    const embed = buildTable(
+    const content = buildTable(
         members,
         squadronKey
     );
@@ -483,7 +484,7 @@ export async function updateSquadronTable(
     }
 
     await message.edit({
-        embeds: [embed]
+        content
     });
 }
 
