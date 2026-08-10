@@ -18,29 +18,6 @@ function embed(title, description) {
         .setDescription(description);
 }
 
-async function waitForMessage(dm, userId, endTime) {
-    const remaining = endTime - Date.now();
-
-    if (remaining <= 0) {
-        throw new Error("APPLICATION_TIMEOUT");
-    }
-
-    const collected = await dm.awaitMessages({
-        filter: message =>
-            message.author.id === userId &&
-            !message.author.bot,
-
-        max: 1,
-        time: remaining
-    });
-
-    if (collected.size === 0) {
-        throw new Error("APPLICATION_TIMEOUT");
-    }
-
-    return collected.first();
-}
-
 export default {
     name: "aplicar",
     permission: null,
@@ -78,14 +55,61 @@ export default {
                 ]
             });
 
-            const robloxMessage = await waitForMessage(
-                dm,
-                message.author.id,
-                endTime
-            );
+            const remaining =
+                endTime - Date.now();
+
+            if (remaining <= 0) {
+                throw new Error("APPLICATION_TIMEOUT");
+            }
+
+            const collector = dm.createMessageCollector({
+                filter: collectedMessage =>
+                    collectedMessage.author.id ===
+                        message.author.id &&
+                    !collectedMessage.author.bot,
+
+                time: remaining,
+
+                max: 1
+            });
+
+            const collectedMessage =
+                await new Promise((resolve, reject) => {
+
+                    collector.once(
+                        "collect",
+                        collected => {
+                            resolve(collected);
+                        }
+                    );
+
+                    collector.once(
+                        "end",
+                        (collected, reason) => {
+
+                            if (
+                                reason === "time" &&
+                                collected.size === 0
+                            ) {
+                                reject(
+                                    new Error(
+                                        "APPLICATION_TIMEOUT"
+                                    )
+                                );
+                            }
+                        }
+                    );
+
+                    collector.once(
+                        "error",
+                        error => {
+                            reject(error);
+                        }
+                    );
+                });
 
             const robloxUsername =
-                robloxMessage.content.trim();
+                collectedMessage.content.trim();
 
             if (!robloxUsername) {
                 await dm.send({
@@ -145,19 +169,14 @@ export default {
                 ]
             });
 
-            /*
-             * IMPORTANTE:
-             * Aquí posteriormente esperaremos a que
-             * el callback de Roblox confirme la cuenta.
-             *
-             * Por ahora el proceso se detiene aquí.
-             */
-
             await message.react("✅");
 
         } catch (error) {
 
-            if (error.message === "APPLICATION_TIMEOUT") {
+            if (
+                error?.message ===
+                "APPLICATION_TIMEOUT"
+            ) {
                 try {
                     const dm =
                         await message.author.createDM();
@@ -197,7 +216,8 @@ function buildRobloxOAuthUrl(
         redirect_uri:
             process.env.ROBLOX_REDIRECT_URI,
 
-        response_type: "code",
+        response_type:
+            "code",
 
         scope:
             "openid profile",
