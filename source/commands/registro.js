@@ -32,8 +32,6 @@ async function createTable(message, key) {
             return false;
 
         } catch {
-            // El mensaje ya no existe.
-            // Se crea uno nuevo y se actualiza el registro.
         }
     }
 
@@ -70,13 +68,7 @@ export default {
     async execute(message, args) {
         const target = args[0]?.toLowerCase();
 
-        if (
-            !target ||
-            (
-                target !== "all" &&
-                !SQUADRONS[target]
-            )
-        ) {
+        if (!target || !SQUADRONS[target]) {
             await message.react("❌");
             return;
         }
@@ -84,32 +76,16 @@ export default {
         try {
             await initializeSquadronRegistry();
 
-            if (target === "all") {
-                for (const key of Object.keys(SQUADRONS)) {
-                    try {
-                        await createTable(
-                            message,
-                            key
-                        );
-                    } catch (error) {
-                        console.error(
-                            `Error creando registro ${key}:`,
-                            error
-                        );
-                    }
-                }
-            } else {
-                await createTable(
-                    message,
-                    target
-                );
-            }
+            await createTable(
+                message,
+                target
+            );
 
             await message.react("✅");
 
         } catch (error) {
             console.error(
-                "Error ejecutando registro:",
+                "Error creando registro:",
                 error
             );
 
