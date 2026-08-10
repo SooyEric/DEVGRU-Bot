@@ -106,6 +106,15 @@ const RANK_NAMES = {
 
 const RANK_ROLES = Object.keys(RANK_NAMES);
 
+const TYPE_5_ROLES = [
+    "1373365833618690059",
+    "1373365835862642713",
+    "1373365837129318474",
+    "1373365839037988894",
+    "1373365839721529506",
+    "1373365840677703865"
+];
+
 const ALL_SQUADRON_ROLES = [
     ...new Set(
         Object.values(SQUADRONS).flatMap(squadron => squadron.roles)
@@ -165,6 +174,7 @@ export default {
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
                     ...RANK_ROLES,
+                    ...TYPE_5_ROLES,
                     GUEST_ROLE
                 ];
 
@@ -200,7 +210,10 @@ export default {
             }
 
             const rolesToRemove = member.roles.cache.filter(role =>
-                ALL_SQUADRON_ROLES.includes(role.id)
+                [
+                    ...ALL_SQUADRON_ROLES,
+                    ...TYPE_5_ROLES
+                ].includes(role.id)
             );
 
             if (rolesToRemove.size > 0) {
