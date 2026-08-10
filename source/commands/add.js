@@ -29,8 +29,7 @@ const GUEST_ROLE = "1373365890623602768";
 const ALL_GROUP_ROLES = [
     ...new Set([
         ...BLUE_ROLES,
-        ...RED_ROLES,
-        GUEST_ROLE
+        ...RED_ROLES
     ])
 ];
 
@@ -57,9 +56,9 @@ export default {
         let member;
 
         try {
-            member = message.mentions.members.first();
-
-            if (!member) {
+            if (message.mentions.members.first()) {
+                member = message.mentions.members.first();
+            } else {
                 const userId = target.replace(/[<@!>]/g, "");
 
                 if (!/^\d{17,20}$/.test(userId)) {
@@ -80,10 +79,14 @@ export default {
         }
 
         try {
+            // REMOVER TODO
             await member.roles.remove(ALL_GROUP_ROLES);
+            await member.roles.remove(GUEST_ROLE);
 
-            await wait(1000);
+            // Esperar 2 segundos para que Discord procese completamente
+            await wait(2000);
 
+            // GUEST
             if (group === "guest") {
                 await member.roles.add(GUEST_ROLE);
                 await member.setNickname(null);
@@ -92,6 +95,7 @@ export default {
                 return;
             }
 
+            // BLUE
             if (group === "blue") {
                 await member.roles.add(BLUE_ROLES);
                 await member.setNickname("SOE1 Bravo");
@@ -100,6 +104,7 @@ export default {
                 return;
             }
 
+            // RED
             if (group === "red") {
                 await member.roles.add(RED_ROLES);
                 await member.setNickname("SOE1 Alpha");
@@ -107,6 +112,7 @@ export default {
                 await message.react("✅");
                 return;
             }
+
         } catch (error) {
             await message.react("❌");
             throw error;
