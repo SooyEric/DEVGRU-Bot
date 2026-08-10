@@ -3,6 +3,7 @@ import config from "./config/config.js";
 import logger from "./utils/logger.js";
 import permissions from "./config/permissions.js";
 import { logCommandError } from "./utils/commandLogger.js";
+import { loadCommands } from "./utils/commandLoader.js";
 
 const client = new Client({
     intents: [
@@ -13,6 +14,8 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+
+await loadCommands(client);
 
 client.once("clientReady", () => {
     logger.info(`Logged in as ${client.user.tag}`);
@@ -41,12 +44,10 @@ client.on("messageCreate", async (message) => {
 
     if (!commandName) return;
 
-    // DIAGNÓSTICO: confirma que messageCreate detecta el comando
     logger.info(`Command detected: ${commandName}`);
 
     const command = client.commands.get(commandName);
 
-    // DIAGNÓSTICO: confirma si el comando está registrado
     if (!command) {
         logger.warn(`Command not found: ${commandName}`);
 
