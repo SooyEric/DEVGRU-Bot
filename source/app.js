@@ -2,7 +2,8 @@ import {
     Client,
     GatewayIntentBits,
     Collection,
-    EmbedBuilder
+    EmbedBuilder,
+    Partials
 } from "discord.js";
 
 import http from "http";
@@ -38,7 +39,12 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages
+    ],
+
+    partials: [
+        Partials.Channel
     ]
 });
 
@@ -175,6 +181,14 @@ client.on("interactionCreate", async (interaction) => {
 
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
+
+    /*
+     * Los mensajes DM se procesan por los collectors
+     * del sistema de aplicaciones.
+     *
+     * No intentar procesarlos como comandos del servidor.
+     */
+    if (!message.guild) return;
 
     if (!message.content.startsWith(config.discord.prefix)) return;
 
