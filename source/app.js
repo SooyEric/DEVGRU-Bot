@@ -68,6 +68,7 @@ client.on("interactionCreate", async (interaction) => {
             content: "❌ No tienes permiso para restaurar este usuario.",
             ephemeral: true
         });
+
         return;
     }
 
@@ -79,6 +80,7 @@ client.on("interactionCreate", async (interaction) => {
                 content: "❌ Este registro ya fue restaurado.",
                 ephemeral: true
             });
+
             return;
         }
 
@@ -91,6 +93,7 @@ client.on("interactionCreate", async (interaction) => {
                 content: "❌ El usuario todavía no ha regresado al servidor.",
                 ephemeral: true
             });
+
             return;
         }
 
@@ -185,6 +188,7 @@ client.on("messageCreate", async (message) => {
                 commandName,
                 "No se pudieron obtener los roles del usuario."
             );
+
             return;
         }
 
@@ -200,6 +204,7 @@ client.on("messageCreate", async (message) => {
                 commandName,
                 `Permiso insuficiente. Se requiere nivel ${requiredPermission}.`
             );
+
             return;
         }
     }
