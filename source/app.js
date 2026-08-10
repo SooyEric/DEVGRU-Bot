@@ -85,6 +85,7 @@ await loadCommands(
 client.once(
     "clientReady",
     async () => {
+
         logger.info(
             `Logged in as ${client.user.tag}`
         );
@@ -118,7 +119,9 @@ client.on(
         }
 
         /*
+         * ========================================
          * RESTORE BAN
+         * ========================================
          */
 
         if (
@@ -300,15 +303,282 @@ client.on(
         }
 
         /*
-         * APPLICATION BUTTONS
-         *
-         * Los botones de la aplicación
-         * se manejan dentro de aplicar.js.
-         *
-         * No procesarlos aquí para evitar
-         * duplicar interacciones.
+         * ========================================
+         * APLICACIONES DEVGRU
+         * ========================================
          */
 
+        if (
+            interaction.customId.startsWith(
+                "application_confirm:"
+            ) ||
+            interaction.customId.startsWith(
+                "application_reject:"
+            )
+        ) {
+
+            /*
+             * El ID del usuario está después
+             * de los dos puntos.
+             */
+
+            const userId =
+                interaction.customId
+                    .split(":")[1];
+
+            /*
+             * PERMISOS
+             */
+
+            const allowedRoles =
+                permissions[1];
+
+            const hasPermission =
+                allowedRoles?.some(
+                    roleId =>
+                        interaction.member?.roles.cache.has(
+                            roleId
+                        )
+                );
+
+            if (!hasPermission) {
+
+                await interaction.reply({
+                    content:
+                        "❌ No tienes permiso para revisar aplicaciones.",
+                    ephemeral: true
+                });
+
+                return;
+            }
+
+            /*
+             * Determinar si acepta o rechaza.
+             */
+
+            const accepted =
+                interaction.customId.startsWith(
+                    "application_confirm:"
+                );
+
+            try {
+
+                /*
+                 * Evitar que una aplicación
+                 * ya revisada vuelva a procesarse.
+                 */
+
+                const currentEmbed =
+                    interaction.message.embeds[0];
+
+                if (
+                    currentEmbed?.title ===
+                        "Aplicación aceptada" ||
+                    currentEmbed?.title ===
+                        "Aplicación rechazada"
+                ) {
+
+                    await interaction.reply({
+                        content:
+                            "❌ Esta aplicación ya fue revisada.",
+                        ephemeral: true
+                    });
+
+                    return;
+                }
+
+                /*
+                 * Datos del solicitante.
+                 */
+
+                let applicant = null;
+
+                try {
+
+                    applicant =
+                        await client.users.fetch(
+                            userId
+                        );
+
+                } catch (error) {
+
+                    logger.error(
+                        `No se pudo encontrar al solicitante ${userId}:`,
+                        error
+                    );
+                }
+
+                /*
+                 * ========================================
+                 * ACEPTADA
+                 * ========================================
+                 */
+
+                if (accepted) {
+
+                    const acceptedEmbed =
+                        new EmbedBuilder()
+                            .setColor(
+                                "#77DD77"
+                            )
+                            .setTitle(
+                                "Aplicación aceptada"
+                            )
+                            .setDescription(
+                                `**Discord:** <@${userId}>\n` +
+                                `**Discord ID:** \`${userId}\`\n\n` +
+                                `**Revisada por:** ${interaction.user}\n\n` +
+                                "✅ **La aplicación ha sido aceptada.**"
+                            );
+
+                    /*
+                     * Conserva la imagen original
+                     * si existía.
+                     */
+
+                    if (
+                        currentEmbed?.image?.url
+                    ) {
+
+                        acceptedEmbed.setImage(
+                            currentEmbed.image.url
+                        );
+                    }
+
+                    await interaction.update({
+                        embeds: [
+                            acceptedEmbed
+                        ],
+                        components: []
+                    });
+
+                    /*
+                     * DM AL SOLICITANTE
+                     */
+
+                    if (applicant) {
+
+                        await applicant.send({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setColor(
+                                        "#77DD77"
+                                    )
+                                    .setTitle(
+                                        "Aplicación aceptada"
+                                    )
+                                    .setDescription(
+                                        "✅ **Tu aplicación para DEVGRU ha sido aceptada.**\n\n" +
+                                        "Felicidades. Un miembro del staff continuará contigo con los siguientes pasos."
+                                    )
+                            ]
+                        }).catch(
+                            error =>
+                                logger.error(
+                                    "No se pudo enviar el DM de aceptación:",
+                                    error
+                                )
+                        );
+                    }
+
+                    return;
+                }
+
+                /*
+                 * ========================================
+                 * RECHAZADA
+                 * ========================================
+                 */
+
+                const rejectedEmbed =
+                    new EmbedBuilder()
+                        .setColor(
+                            "#FF6B6B"
+                        )
+                        .setTitle(
+                            "Aplicación rechazada"
+                        )
+                        .setDescription(
+                            `**Discord:** <@${userId}>\n` +
+                            `**Discord ID:** \`${userId}\`\n\n` +
+                            `**Revisada por:** ${interaction.user}\n\n` +
+                            "❌ **La aplicación ha sido rechazada.**"
+                        );
+
+                /*
+                 * Conserva la imagen original
+                 * si existía.
+                 */
+
+                if (
+                    currentEmbed?.image?.url
+                ) {
+
+                    rejectedEmbed.setImage(
+                        currentEmbed.image.url
+                    );
+                }
+
+                await interaction.update({
+                    embeds: [
+                        rejectedEmbed
+                    ],
+                    components: []
+                });
+
+                /*
+                 * DM AL SOLICITANTE
+                 */
+
+                if (applicant) {
+
+                    await applicant.send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setColor(
+                                    "#FF6B6B"
+                                )
+                                .setTitle(
+                                    "Aplicación rechazada"
+                                )
+                                .setDescription(
+                                    "❌ **Tu aplicación para DEVGRU ha sido rechazada.**\n\n" +
+                                    "Si consideras que se trata de un error, puedes contactar con un miembro del staff."
+                                )
+                        ]
+                    }).catch(
+                        error =>
+                            logger.error(
+                                "No se pudo enviar el DM de rechazo:",
+                                error
+                            )
+                    );
+                }
+
+                return;
+
+            } catch (error) {
+
+                logger.error(
+                    "Error procesando aplicación:",
+                    error
+                );
+
+                if (
+                    !interaction.replied &&
+                    !interaction.deferred
+                ) {
+
+                    await interaction.reply({
+                        content:
+                            "❌ Ocurrió un error al procesar esta aplicación.",
+                        ephemeral: true
+                    });
+                }
+            }
+
+            return;
+        }
     }
 );
 
@@ -323,9 +593,6 @@ client.on(
         /*
          * Los mensajes DM son utilizados
          * por el sistema de aplicaciones.
-         *
-         * Los collectors de aplicar.js
-         * reciben directamente esos mensajes.
          */
 
         if (!message.guild) {
@@ -443,7 +710,10 @@ client.on(
 );
 
 /*
+ * ========================================
  * HTTP SERVER
+ * ========================================
+ *
  * Railway: Target Port 8080
  */
 
@@ -485,7 +755,9 @@ const server =
             }
 
             /*
+             * ========================================
              * ROBLOX OAUTH CALLBACK
+             * ========================================
              */
 
             if (
@@ -590,8 +862,7 @@ const server =
                     );
 
                     /*
-                     * INTERCAMBIAR CODE
-                     * POR ACCESS TOKEN
+                     * CODE → ACCESS TOKEN
                      */
 
                     const tokenData =
@@ -600,7 +871,7 @@ const server =
                         );
 
                     /*
-                     * OBTENER USUARIO DE ROBLOX
+                     * OBTENER DATOS DEL USUARIO
                      */
 
                     const robloxUser =
@@ -609,8 +880,7 @@ const server =
                         );
 
                     /*
-                     * EL STATE YA FUE
-                     * VALIDADO Y UTILIZADO
+                     * EL STATE YA FUE UTILIZADO
                      */
 
                     deletePendingState(
@@ -636,7 +906,7 @@ const server =
                         );
 
                     /*
-                     * SI NO HAY UNA APLICACIÓN ACTIVA
+                     * SI NO EXISTE APLICACIÓN ACTIVA
                      */
 
                     if (
@@ -698,12 +968,15 @@ const server =
                     res.end(`
                         <!DOCTYPE html>
                         <html lang="es">
+
                         <head>
                             <meta charset="UTF-8">
+
                             <meta
                                 name="viewport"
                                 content="width=device-width, initial-scale=1.0"
                             >
+
                             <title>DEVGRU</title>
                         </head>
 
@@ -718,6 +991,7 @@ const server =
                             </p>
 
                         </body>
+
                         </html>
                     `);
 
@@ -770,7 +1044,6 @@ server.listen(
         logger.info(
             `HTTP server listening on port ${PORT}`
         );
-
     }
 );
 
