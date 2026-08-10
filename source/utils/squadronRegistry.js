@@ -134,7 +134,7 @@ export function getPlate(member) {
 }
 
 function mention(member) {
-    return `<@${member.id}>`;
+    return member ? `<@${member.id}>` : "";
 }
 
 function findMember(members, squadron, roleId) {
@@ -155,13 +155,15 @@ function findByPlate(members, squadron, roleId, plate) {
 }
 
 function buildSlot(member) {
-    return member ? mention(member) : "";
+    return mention(member);
 }
 
 export function buildTable(members, squadronKey) {
     const squadron = SQUADRONS[squadronKey];
 
-    if (!squadron) return "";
+    if (!squadron) {
+        throw new Error(`Escuadrón inválido: ${squadronKey}`);
+    }
 
     const commander = findMember(
         members,
@@ -249,17 +251,8 @@ export function buildTable(members, squadronKey) {
         );
     }
 
-    const operator10Text = operators10
-        .map(buildSlot)
-        .join("\n");
-
-    const operator20Text = operators20
-        .map(buildSlot)
-        .join("\n");
-
     return (
-        `# ${squadron.name} ${squadron.emoji}\n\n` +
-
+        `# ${squadron.name} ${squadron.emoji}\n` +
         `<@&${squadron.role}>\n\n` +
 
         `**Squadron Commander (00):**\n` +
@@ -283,7 +276,7 @@ export function buildTable(members, squadronKey) {
         `${buildSlot(squad12)}\n\n` +
 
         `**Team Operator (13/19):**\n` +
-        `${operator10Text}\n\n` +
+        `${operators10.map(buildSlot).join("\n")}\n\n` +
 
         `**Unidad 20**\n\n` +
 
@@ -297,9 +290,9 @@ export function buildTable(members, squadronKey) {
         `${buildSlot(squad22)}\n\n` +
 
         `**Team Operator (23/29):**\n` +
-        `${operator20Text}\n\n` +
+        `${operators20.map(buildSlot).join("\n")}\n\n` +
 
-        `*Última actualización: <t:${Math.floor(Date.now() / 1000)}:F>*`
+        `*Última actualización: <t:${Math.floor(Date.now() / 1000)}:f>*`
     );
 }
 
@@ -351,19 +344,14 @@ export async function assignPlate(member) {
         return false;
     }
 
-    const plateText = String(
-        availablePlate
-    ).padStart(2, "0");
+    const plateText = String(availablePlate).padStart(2, "0");
 
     const baseNickname =
         member.nickname ||
         member.user.username;
 
     const newNickname = /\d{2}$/.test(baseNickname)
-        ? baseNickname.replace(
-            /\d{2}$/,
-            plateText
-        )
+        ? baseNickname.replace(/\d{2}$/, plateText)
         : `${baseNickname} ${plateText}`;
 
     await member.setNickname(newNickname);
@@ -384,8 +372,6 @@ async function createSquadronMessage(
     );
 
     if (!channel) return null;
-
-    await guild.members.fetch();
 
     const members = [
         ...guild.members.cache.values()
@@ -430,7 +416,14 @@ export async function updateSquadronTable(
         squadronKey
     );
 
-    await guild.members.fetch();
+    if (!registry) {
+        await createSquadronMessage(
+            guild,
+            squadronKey
+        );
+
+        return;
+    }
 
     const members = [
         ...guild.members.cache.values()
@@ -440,15 +433,6 @@ export async function updateSquadronTable(
         members,
         squadronKey
     );
-
-    if (!registry) {
-        await createSquadronMessage(
-            guild,
-            squadronKey
-        );
-
-        return;
-    }
 
     let channel;
 
@@ -497,18 +481,6 @@ export async function recreateSquadronMessage(
     guild,
     squadronKey
 ) {
-    const registry = await getSquadronMessage(
-        squadronKey
-    );
-
-    if (registry) {
-        await saveSquadronMessage(
-            squadronKey,
-            SQUADRONS[squadronKey].channel,
-            ""
-        );
-    }
-
     return createSquadronMessage(
         guild,
         squadronKey
