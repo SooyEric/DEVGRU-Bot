@@ -213,31 +213,30 @@ export default {
 
             await member.setNickname(squadron.nickname);
 
-            const type3Role =
-                existingType3 ||
-                squadron.roles.find(roleId => TYPE_3_ROLES.includes(roleId));
-
-            const type5Role =
-                existingType5 ||
-                squadron.roles.find(roleId => TYPE_5_ROLES.includes(roleId));
-
-            if (type3Role) {
-                await member.roles.add(type3Role);
+            if (existingType3) {
+                await member.roles.add(existingType3);
             }
 
-            if (type5Role) {
-                await member.roles.add(type5Role);
+            if (existingType5) {
+                await member.roles.add(existingType5);
             }
 
-            const remainingRoles = squadron.roles.filter(roleId => {
-                if (roleId === type3Role) return false;
-                if (roleId === type5Role) return false;
+            for (const roleId of squadron.roles) {
+                if (
+                    TYPE_3_ROLES.includes(roleId) &&
+                    existingType3
+                ) {
+                    continue;
+                }
 
-                return true;
-            });
+                if (
+                    TYPE_5_ROLES.includes(roleId) &&
+                    existingType5
+                ) {
+                    continue;
+                }
 
-            if (remainingRoles.length > 0) {
-                await member.roles.add(remainingRoles);
+                await member.roles.add(roleId);
             }
 
             await message.react("✅");
