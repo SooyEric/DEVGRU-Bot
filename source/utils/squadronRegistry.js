@@ -1,13 +1,11 @@
-import {
-    EmbedBuilder
-} from "discord.js";
+import { EmbedBuilder } from "discord.js";
+import { getDatabase } from "../database/postgres.js";
 
-const EMBED_COLOR = "#ffaf1a";
+const COLOR = "#ffaf1a";
 
-const SQUADRONS = {
+export const SQUADRONS = {
     red: {
         name: "Red Squadron",
-        group: "Alpha",
         emoji: "<:red:1527450543692320869>",
         role: "1373365857928876243",
         channel: "1373366015576117459"
@@ -15,7 +13,6 @@ const SQUADRONS = {
 
     blue: {
         name: "Blue Squadron",
-        group: "Bravo",
         emoji: "<:blue:1527449963758358608>",
         role: "1373365858784514241",
         channel: "1373366016754847816"
@@ -23,7 +20,6 @@ const SQUADRONS = {
 
     gold: {
         name: "Gold Squadron",
-        group: "Charlie",
         emoji: "<:gold:1527451395848933626>",
         role: "1373365859640279124",
         channel: "1530329743465906338"
@@ -31,7 +27,6 @@ const SQUADRONS = {
 
     black: {
         name: "Black Squadron",
-        group: "Delta",
         emoji: "<:black:1527452013812650054>",
         role: "1420221604020879463",
         channel: "1420443595659280498"
@@ -39,20 +34,19 @@ const SQUADRONS = {
 
     silver: {
         name: "Silver Squadron",
-        group: "Echo",
         emoji: "<:silver:1535722714260578344>",
         role: "1535716558322540594",
         channel: "1535718026618478623"
     }
 };
 
-const POSITIONS = {
-    SQUADRON_COMMANDER: "1373365833618690059",
-    SQUADRON_DEPUTY_COMMANDER: "1373365835862642713",
-    EXECUTIVE_OFFICER: "1373365837129318474",
-    GROUP_COMMANDER: "1373365839037988894",
-    SQUAD_LEADER: "1373365839721529506",
-    TEAM_OPERATOR: "1373365840677703865"
+export const ROLES = {
+    commander: "1373365833618690059",
+    deputy: "1373365835862642713",
+    executive: "1373365837129318474",
+    groupCommander: "1373365839037988894",
+    squadLeader: "1373365839721529506",
+    operator: "1373365840677703865"
 };
 
 const AUTO_PLATES = [
@@ -60,233 +54,363 @@ const AUTO_PLATES = [
     23, 24, 25, 26, 27, 28, 29
 ];
 
-const TABLE_MESSAGES = new Map();
+export async function initializeSquadronRegistry() {
+    const database = getDatabase();
 
-function getSquadron(member) {
-    return Object.entries(SQUADRONS).find(
-        ([, squadron]) =>
-            member.roles.cache.has(squadron.role)
+    if (!database) return;
+
+    await database.query(`
+        CREATE TABLE IF NOT EXISTS squadron_registry (
+            squadron TEXT PRIMARY KEY,
+            channel_id TEXT NOT NULL,
+            message_id TEXT NOT NULL,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+    `);
+}
+
+export async function saveSquadronMessage(
+    squadron,
+    channelId,
+    messageId
+) {
+    const database = getDatabase();
+
+    if (!database) {
+        throw new Error("DATABASE_URL is not configured.");
+    }
+
+    await database.query(
+        `
+        INSERT INTO squadron_registry
+            (squadron, channel_id, message_id)
+        VALUES
+            ($1, $2, $3)
+
+        ON CONFLICT (squadron)
+        DO UPDATE SET
+            channel_id = EXCLUDED.channel_id,
+            message_id = EXCLUDED.message_id,
+            updated_at = NOW()
+        `,
+        [squadron, channelId, messageId]
     );
 }
 
-function getPlate(member) {
-    if (!member.nickname) return null;
+export async function getSquadronMessage(squadron) {
+    const database = getDatabase();
 
-    const match = member.nickname.match(/(\d{2})$/);
+    if (!database) return null;
+
+    const result = await database.query(
+        `
+        SELECT *
+        FROM squadron_registry
+        WHERE squadron = $1
+        `,
+        [squadron]
+    );
+
+    return result.rows[0] || null;
+}
+
+export function getSquadron(member) {
+    for (const [key, squadron] of Object.entries(SQUADRONS)) {
+        if (member.roles.cache.has(squadron.role)) {
+            return [key, squadron];
+        }
+    }
+
+    return null;
+}
+
+export function getPlate(member) {
+    const nickname = member.nickname;
+
+    if (!nickname) return null;
+
+    const match = nickname.match(/(\d{2})$/);
 
     if (!match) return null;
 
     return Number(match[1]);
 }
 
-function hasRole(member, roleId) {
-    return member.roles.cache.has(roleId);
-}
-
-function getPosition(member) {
-    if (hasRole(member, POSITIONS.SQUADRON_COMMANDER)) {
-        return {
-            type: "squadronCommander",
-            plate: 0
-        };
-    }
-
-    if (hasRole(member, POSITIONS.SQUADRON_DEPUTY_COMMANDER)) {
-        return {
-            type: "deputyCommander",
-            plate: 1
-        };
-    }
-
-    if (hasRole(member, POSITIONS.EXECUTIVE_OFFICER)) {
-        return {
-            type: "executiveOfficer",
-            plate: 2
-        };
-    }
-
-    const plate = getPlate(member);
-
-    if (hasRole(member, POSITIONS.GROUP_COMMANDER)) {
-        if (plate === 10 || plate === 20) {
-            return {
-                type: "groupCommander",
-                plate
-            };
-        }
-
-        return null;
-    }
-
-    if (hasRole(member, POSITIONS.SQUAD_LEADER)) {
-        if ([11, 12, 21, 22].includes(plate)) {
-            return {
-                type: "squadLeader",
-                plate
-            };
-        }
-
-        return null;
-    }
-
-    if (hasRole(member, POSITIONS.TEAM_OPERATOR)) {
-        if (AUTO_PLATES.includes(plate)) {
-            return {
-                type: "teamOperator",
-                plate
-            };
-        }
-
-        return null;
-    }
-
-    return null;
-}
-
-function findMember(members, predicate) {
-    return members.find(predicate);
-}
-
 function mention(member) {
-    return member ? `<@${member.id}>` : "";
+    return `<@${member.id}>`;
 }
 
-function findPlateMember(members, plate) {
-    return members.find(member => {
-        const memberPlate = getPlate(member);
-
-        return memberPlate === plate;
-    });
+function findMember(members, squadron, roleId) {
+    return members.find(
+        member =>
+            member.roles.cache.has(roleId) &&
+            member.roles.cache.has(squadron.role)
+    );
 }
 
-function buildTable(memberList, squadron) {
-    const members = memberList.filter(member => {
-        const result = getSquadron(member);
+function findByPlate(members, squadron, roleId, plate) {
+    return members.find(
+        member =>
+            member.roles.cache.has(roleId) &&
+            member.roles.cache.has(squadron.role) &&
+            getPlate(member) === plate
+    );
+}
 
-        return result?.[0] === squadron;
-    });
+function buildSlot(member) {
+    return member ? mention(member) : "";
+}
 
-    const getByPosition = (type, plate = null) => {
-        return members.find(member => {
-            const position = getPosition(member);
+export function buildTable(members, squadronKey) {
+    const squadron = SQUADRONS[squadronKey];
 
-            if (!position || position.type !== type) {
-                return false;
-            }
-
-            if (plate !== null && position.plate !== plate) {
-                return false;
-            }
-
-            return true;
-        });
-    };
-
-    const commander = getByPosition("squadronCommander");
-    const deputy = getByPosition("deputyCommander");
-    const executive = getByPosition("executiveOfficer");
-
-    const group10 = getByPosition("groupCommander", 10);
-    const leader11 = getByPosition("squadLeader", 11);
-    const leader12 = getByPosition("squadLeader", 12);
-
-    const group20 = getByPosition("groupCommander", 20);
-    const leader21 = getByPosition("squadLeader", 21);
-    const leader22 = getByPosition("squadLeader", 22);
-
-    const teamOperators = plate => {
-        const member = findPlateMember(members, plate);
-
-        if (!member) return "";
-
-        const position = getPosition(member);
-
-        if (!position || position.type !== "teamOperator") {
-            return "";
-        }
-
-        return mention(member);
-    };
-
-    const operatorPlates1 = AUTO_PLATES.filter(
-        plate => plate >= 13 && plate <= 19
+    const commander = findMember(
+        members,
+        squadron,
+        ROLES.commander
     );
 
-    const operatorPlates2 = AUTO_PLATES.filter(
-        plate => plate >= 23 && plate <= 29
+    const deputy = findMember(
+        members,
+        squadron,
+        ROLES.deputy
     );
 
-    const operators1 = operatorPlates1
-        .map(teamOperators)
-        .filter(Boolean);
+    const executive = findMember(
+        members,
+        squadron,
+        ROLES.executive
+    );
 
-    const operators2 = operatorPlates2
-        .map(teamOperators)
-        .filter(Boolean);
+    const group10 = findByPlate(
+        members,
+        squadron,
+        ROLES.groupCommander,
+        10
+    );
 
-    const lines = [
-        `# ${squadron.name} ${squadron.emoji}`,
-        `<@&${squadron.role}>`,
-        "",
-        `Squadron Commander (00):`,
-        mention(commander),
-        "",
-        `Squadron Deputy Commander (01):`,
-        mention(deputy),
-        "",
-        `Squadron Executive Officer (02):`,
-        mention(executive),
-        "",
-        "**Unidad 10**",
-        `Group Commander (10):`,
-        mention(group10),
-        "",
-        `Squad Leader (11):`,
-        mention(leader11),
-        "",
-        `Squad Leader (12):`,
-        mention(leader12),
-        "",
-        "Team Operator (13/19):",
-        ...operators1,
-        "",
-        "**Unidad 20**",
-        `Group Commander (20):`,
-        mention(group20),
-        "",
-        `Squad Leader (21):`,
-        mention(leader21),
-        "",
-        `Squad Leader (22):`,
-        mention(leader22),
-        "",
-        "Team Operator (23/29):",
-        ...operators2
+    const group20 = findByPlate(
+        members,
+        squadron,
+        ROLES.groupCommander,
+        20
+    );
+
+    const squad11 = findByPlate(
+        members,
+        squadron,
+        ROLES.squadLeader,
+        11
+    );
+
+    const squad12 = findByPlate(
+        members,
+        squadron,
+        ROLES.squadLeader,
+        12
+    );
+
+    const squad21 = findByPlate(
+        members,
+        squadron,
+        ROLES.squadLeader,
+        21
+    );
+
+    const squad22 = findByPlate(
+        members,
+        squadron,
+        ROLES.squadLeader,
+        22
+    );
+
+    const operators10 = [];
+
+    for (let plate = 13; plate <= 19; plate++) {
+        operators10.push(
+            findByPlate(
+                members,
+                squadron,
+                ROLES.operator,
+                plate
+            )
+        );
+    }
+
+    const operators20 = [];
+
+    for (let plate = 23; plate <= 29; plate++) {
+        operators20.push(
+            findByPlate(
+                members,
+                squadron,
+                ROLES.operator,
+                plate
+            )
+        );
+    }
+
+    const operator10Text = operators10
+        .map(member => buildSlot(member))
+        .join("\n");
+
+    const operator20Text = operators20
+        .map(member => buildSlot(member))
+        .join("\n");
+
+    return new EmbedBuilder()
+        .setColor(COLOR)
+        .setTitle(
+            `${squadron.name} ${squadron.emoji}`
+        )
+        .setDescription(
+            `<@&${squadron.role}>\n\n` +
+
+            `**Squadron Commander (00):**\n` +
+            `${buildSlot(commander)}\n\n` +
+
+            `**Squadron Deputy Commander (01):**\n` +
+            `${buildSlot(deputy)}\n\n` +
+
+            `**Squadron Executive Officer (02):**\n` +
+            `${buildSlot(executive)}\n\n` +
+
+            `**Unidad 10**\n` +
+
+            `**Group Commander (10):**\n` +
+            `${buildSlot(group10)}\n\n` +
+
+            `**Squad Leader (11):**\n` +
+            `${buildSlot(squad11)}\n\n` +
+
+            `**Squad Leader (12):**\n` +
+            `${buildSlot(squad12)}\n\n` +
+
+            `**Team Operator (13/19):**\n` +
+            `${operator10Text || ""}\n\n` +
+
+            `**Unidad 20**\n` +
+
+            `**Group Commander (20):**\n` +
+            `${buildSlot(group20)}\n\n` +
+
+            `**Squad Leader (21):**\n` +
+            `${buildSlot(squad21)}\n\n` +
+
+            `**Squad Leader (22):**\n` +
+            `${buildSlot(squad22)}\n\n` +
+
+            `**Team Operator (23/29):**\n` +
+            `${operator20Text || ""}`
+        )
+        .setFooter({
+            text: `Última actualización`
+        })
+        .setTimestamp();
+}
+
+export async function assignPlate(member) {
+    const squadronResult = getSquadron(member);
+
+    if (!squadronResult) return false;
+
+    const [squadronKey] = squadronResult;
+
+    if (!member.roles.cache.has(ROLES.operator)) {
+        return false;
+    }
+
+    if (getPlate(member) !== null) {
+        return false;
+    }
+
+    const members = [
+        ...member.guild.members.cache.values()
     ];
 
-    const embed = new EmbedBuilder()
-        .setColor(EMBED_COLOR)
-        .setDescription(lines.join("\n"))
-        .setFooter({
-            text: `Última actualización: ${new Date().toLocaleString(
-                "es-MX",
-                {
-                    timeZone: "America/Mexico_City",
-                    dateStyle: "short",
-                    timeStyle: "short"
-                }
-            )}`
-        });
+    const usedPlates = new Set();
 
-    return embed;
+    for (const other of members) {
+        if (other.id === member.id) continue;
+
+        const otherSquadron = getSquadron(other);
+
+        if (
+            !otherSquadron ||
+            otherSquadron[0] !== squadronKey
+        ) {
+            continue;
+        }
+
+        const plate = getPlate(other);
+
+        if (AUTO_PLATES.includes(plate)) {
+            usedPlates.add(plate);
+        }
+    }
+
+    const availablePlate = AUTO_PLATES.find(
+        plate => !usedPlates.has(plate)
+    );
+
+    if (availablePlate === undefined) {
+        return false;
+    }
+
+    const plateText = String(
+        availablePlate
+    ).padStart(2, "0");
+
+    const baseNickname =
+        member.nickname ||
+        member.user.username;
+
+    const newNickname = /\d{2}$/.test(baseNickname)
+        ? baseNickname.replace(
+            /\d{2}$/,
+            plateText
+        )
+        : `${baseNickname} ${plateText}`;
+
+    await member.setNickname(newNickname);
+
+    return true;
 }
 
-export {
-    SQUADRONS,
-    POSITIONS,
-    AUTO_PLATES,
-    getSquadron,
-    getPlate,
-    getPosition,
-    buildTable
-};
+export async function updateSquadronTable(
+    guild,
+    squadronKey
+) {
+    const squadron = SQUADRONS[squadronKey];
+
+    if (!squadron) return;
+
+    const registry = await getSquadronMessage(
+        squadronKey
+    );
+
+    if (!registry) return;
+
+    const channel = await guild.channels.fetch(
+        registry.channel_id
+    );
+
+    if (!channel) return;
+
+    const message = await channel.messages.fetch(
+        registry.message_id
+    );
+
+    const members = [
+        ...guild.members.cache.values()
+    ];
+
+    const embed = buildTable(
+        members,
+        squadronKey
+    );
+
+    await message.edit({
+        embeds: [embed]
+    });
+}
