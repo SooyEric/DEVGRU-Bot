@@ -3,6 +3,7 @@ import config from "./config/config.js";
 import logger from "./utils/logger.js";
 import permissions from "./config/permissions.js";
 import { logCommandError } from "./utils/commandLogger.js";
+import { logBotUpdate } from "./utils/updateLogger.js";
 import { loadCommands } from "./utils/commandLoader.js";
 
 const client = new Client({
@@ -17,7 +18,7 @@ client.commands = new Collection();
 
 await loadCommands(client);
 
-client.once("clientReady", () => {
+client.once("clientReady", async () => {
     logger.info(`Logged in as ${client.user.tag}`);
     logger.info("DEVGRU-Bot is online.");
 
@@ -28,6 +29,8 @@ client.once("clientReady", () => {
                 : "NONE"
         }`
     );
+
+    await logBotUpdate(client);
 });
 
 client.on("messageCreate", async (message) => {
@@ -44,21 +47,19 @@ client.on("messageCreate", async (message) => {
 
     if (!commandName) return;
 
-    logger.info(`Command detected: ${commandName}`);
-
     const command = client.commands.get(commandName);
 
-    if (!command) {
-        logger.warn(`Command not found: ${commandName}`);
+    /*
+     * Si no existe el comando, simplemente ignoramos el mensaje.
+     *
+     * Esto evita que mensajes normales como:
+     * "- punto numero 1"
+     *
+     * generen logs de error.
+     */
+    if (!command) return;
 
-        await logCommandError(
-            message,
-            commandName,
-            "El comando fue detectado, pero no está registrado en client.commands."
-        );
-
-        return;
-    }
+    logger.info(`Command detected: ${commandName}`);
 
     const requiredPermission = command.permission ?? null;
 
@@ -75,7 +76,9 @@ client.on("messageCreate", async (message) => {
             return;
         }
 
-        const hasPermission = permissions[requiredPermission]?.some(
+        const allowedRoles = permissions[requiredPermission];
+
+        const hasPermission = allowedRoles?.some(
             roleId => userRoles.has(roleId)
         );
 
@@ -93,12 +96,16 @@ client.on("messageCreate", async (message) => {
     try {
         await command.execute(message, args);
     } catch (error) {
-        logger.error(`Error executing command ${commandName}:`, error);
+        logger.error(
+            `Error executing command ${commandName}:`,
+            error
+        );
 
         await logCommandError(
             message,
             commandName,
-            error?.message || "Error desconocido al ejecutar el comando.",
+            error?.message ||
+                "Error desconocido al ejecutar el comando.",
             error
         );
     }
