@@ -1,1 +1,13 @@
-
+{
+  "name": "devgru-bot",
+  "version": "1.0.0",
+  "description": "Discord bot for the DEVGRU community",
+  "type": "module",
+  "main": "source/app.js",
+  "scripts": {
+    "start": "node source/app.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.22.1"
+  }
+}
