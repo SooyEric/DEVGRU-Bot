@@ -1,7 +1,5 @@
 import { getDatabase } from "../database/postgres.js";
 
-const COLOR = "#ffaf1a";
-
 export const SQUADRONS = {
     red: {
         name: "Red Squadron",
@@ -136,7 +134,7 @@ export function getPlate(member) {
 }
 
 function mention(member) {
-    return member ? `<@${member.id}>` : "";
+    return `<@${member.id}>`;
 }
 
 function findMember(members, squadron, roleId) {
@@ -157,11 +155,13 @@ function findByPlate(members, squadron, roleId, plate) {
 }
 
 function buildSlot(member) {
-    return mention(member);
+    return member ? mention(member) : "";
 }
 
 export function buildTable(members, squadronKey) {
     const squadron = SQUADRONS[squadronKey];
+
+    if (!squadron) return "";
 
     const commander = findMember(
         members,
@@ -258,7 +258,8 @@ export function buildTable(members, squadronKey) {
         .join("\n");
 
     return (
-        `# ${squadron.name} ${squadron.emoji}\n` +
+        `# ${squadron.name} ${squadron.emoji}\n\n` +
+
         `<@&${squadron.role}>\n\n` +
 
         `**Squadron Commander (00):**\n` +
@@ -270,7 +271,7 @@ export function buildTable(members, squadronKey) {
         `**Squadron Executive Officer (02):**\n` +
         `${buildSlot(executive)}\n\n` +
 
-        `**Unidad 10**\n` +
+        `**Unidad 10**\n\n` +
 
         `**Group Commander (10):**\n` +
         `${buildSlot(group10)}\n\n` +
@@ -284,7 +285,7 @@ export function buildTable(members, squadronKey) {
         `**Team Operator (13/19):**\n` +
         `${operator10Text}\n\n` +
 
-        `**Unidad 20**\n` +
+        `**Unidad 20**\n\n` +
 
         `**Group Commander (20):**\n` +
         `${buildSlot(group20)}\n\n` +
@@ -384,6 +385,8 @@ async function createSquadronMessage(
 
     if (!channel) return null;
 
+    await guild.members.fetch();
+
     const members = [
         ...guild.members.cache.values()
     ];
@@ -426,6 +429,8 @@ export async function updateSquadronTable(
     const registry = await getSquadronMessage(
         squadronKey
     );
+
+    await guild.members.fetch();
 
     const members = [
         ...guild.members.cache.values()
