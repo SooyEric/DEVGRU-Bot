@@ -23,6 +23,13 @@ import {
     initializeSquadronRegistry
 } from "./utils/squadronRegistry.js";
 
+import {
+    getPendingState,
+    deletePendingState,
+    exchangeRobloxCode,
+    getRobloxUser
+} from "./utils/robloxOAuth.js";
+
 import squadronRegistry from "./events/squadronRegistry.js";
 import antiRaid from "./events/antiRaid.js";
 
@@ -243,7 +250,7 @@ client.on("messageCreate", async (message) => {
 
 const PORT = process.env.PORT || 8080;
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
 
     const url = new URL(
         req.url,
@@ -261,6 +268,7 @@ const server = http.createServer((req, res) => {
 
     if (url.pathname === "/roblox/callback") {
         const code = url.searchParams.get("code");
+        const state = url.searchParams.get("state");
         const error = url.searchParams.get("error");
 
         if (error) {
@@ -279,39 +287,102 @@ const server = http.createServer((req, res) => {
             return;
         }
 
-        if (!code) {
+        if (!code || !state) {
             res.writeHead(400, {
                 "Content-Type": "text/plain; charset=utf-8"
             });
 
             res.end(
-                "No se recibió el código de autorización."
+                "No se recibió un código o estado válido."
             );
 
             return;
         }
 
-        logger.info(
-            "Roblox OAuth authorization code received."
-        );
+        const pending = getPendingState(state);
 
-        res.writeHead(200, {
-            "Content-Type": "text/html; charset=utf-8"
-        });
+        if (!pending) {
+            res.writeHead(400, {
+                "Content-Type": "text/plain; charset=utf-8"
+            });
 
-        res.end(`
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <title>DEVGRU</title>
-            </head>
-            <body>
-                <h2>Autorización completada</h2>
-                <p>Puedes regresar a Discord.</p>
-            </body>
-            </html>
-        `);
+            res.end(
+                "Esta autorización expiró o ya fue utilizada."
+            );
+
+            return;
+        }
+
+        try {
+            logger.info(
+                `Roblox OAuth callback recibido para Discord ID: ${pending.userId}`
+            );
+
+            const tokenData = await exchangeRobloxCode(
+                code
+            );
+
+            const robloxUser = await getRobloxUser(
+                tokenData.access_token
+            );
+
+            deletePendingState(state);
+
+            logger.info(
+                `Roblox account verified: ${robloxUser.preferred_username || robloxUser.name} (${robloxUser.sub})`
+            );
+
+            try {
+                const discordUser = await client.users.fetch(
+                    pending.userId
+                );
+
+                await discordUser.send(
+                    "✅ **Cuenta de Roblox verificada correctamente.**\n\n" +
+                    `**Usuario:** ${robloxUser.preferred_username || robloxUser.name}\n` +
+                    `**ID:** \`${robloxUser.sub}\``
+                );
+
+            } catch (error) {
+                logger.error(
+                    "No se pudo enviar el DM de Roblox:",
+                    error
+                );
+            }
+
+            res.writeHead(200, {
+                "Content-Type": "text/html; charset=utf-8"
+            });
+
+            res.end(`
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>DEVGRU</title>
+                </head>
+                <body>
+                    <h2>✅ Cuenta de Roblox verificada</h2>
+                    <p>Puedes regresar a Discord.</p>
+                </body>
+                </html>
+            `);
+
+        } catch (error) {
+            logger.error(
+                "Error procesando Roblox OAuth:",
+                error
+            );
+
+            res.writeHead(500, {
+                "Content-Type": "text/plain; charset=utf-8"
+            });
+
+            res.end(
+                "No se pudo verificar la cuenta de Roblox."
+            );
+        }
 
         return;
     }
