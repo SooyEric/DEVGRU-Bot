@@ -103,6 +103,10 @@ client.on("interactionCreate", async (interaction) => {
             components: []
         });
 
+        await interaction.channel.send(
+            `✅ Los roles y el nickname de ${member} fueron restaurados correctamente por ${interaction.user}.`
+        );
+
     } catch (error) {
         logger.error("Error restoring banned member:", error);
 
