@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Collection } from "discord.js";
+import { Client, GatewayIntentBits, Collection, EmbedBuilder } from "discord.js";
 import config from "./config/config.js";
 import logger from "./utils/logger.js";
 import permissions from "./config/permissions.js";
@@ -106,9 +106,29 @@ client.on("interactionCreate", async (interaction) => {
             components: []
         });
 
-        await interaction.channel.send(
-            `✅ Los roles y el nickname de ${member} fueron restaurados correctamente por ${interaction.user}.`
-        );
+        const restoredEmbed = new EmbedBuilder()
+            .setColor("#ffaf1a")
+            .setTitle("Roles restaurados")
+            .setDescription(
+                `**Usuario:** ${member}\n` +
+                `**ID:** \`${member.id}\`\n` +
+                `**Ejecutado por:** ${interaction.user}\n\n` +
+                `**Nickname restaurado:** ${
+                    bannedMember.nickname || "Ninguno"
+                }\n\n` +
+                `**Roles restaurados:**\n` +
+                `${
+                    bannedMember.role_ids.length > 0
+                        ? bannedMember.role_ids
+                            .map(id => `<@&${id}>`)
+                            .join(" ")
+                        : "Ninguno"
+                }`
+            );
+
+        await interaction.channel.send({
+            embeds: [restoredEmbed]
+        });
 
     } catch (error) {
         logger.error("Error restoring banned member:", error);
