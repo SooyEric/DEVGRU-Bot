@@ -1,13 +1,17 @@
 {
   "name": "devgru-bot",
   "version": "1.0.0",
-  "description": "Discord bot for DEVGRU",
+  "description": "Official Discord bot for DEVGRU",
   "type": "module",
   "main": "source/app.js",
   "scripts": {
     "start": "node source/app.js"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
-    "discord.js": "^14.22.1"
+    "discord.js": "^14.21.0",
+    "pg": "^8.16.3"
   }
 }
