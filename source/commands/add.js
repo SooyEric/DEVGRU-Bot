@@ -106,7 +106,7 @@ const RANK_NAMES = {
 
 const RANK_ROLES = Object.keys(RANK_NAMES);
 
-const TYPE_5_ROLES = [
+const REMOVABLE_ROLES = [
     "1373365833618690059",
     "1373365835862642713",
     "1373365837129318474",
@@ -174,7 +174,7 @@ export default {
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
                     ...RANK_ROLES,
-                    ...TYPE_5_ROLES,
+                    ...REMOVABLE_ROLES,
                     GUEST_ROLE
                 ];
 
@@ -212,7 +212,7 @@ export default {
             const rolesToRemove = member.roles.cache.filter(role =>
                 [
                     ...ALL_SQUADRON_ROLES,
-                    ...TYPE_5_ROLES
+                    ...REMOVABLE_ROLES
                 ].includes(role.id)
             );
 
