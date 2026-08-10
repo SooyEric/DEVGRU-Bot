@@ -1,45 +1,3 @@
-import { Client, GatewayIntentBits, Collection } from "discord.js";
-import config from "./config/config.js";
-import logger from "./utils/logger.js";
-import permissions from "./config/permissions.js";
-import { logCommandError } from "./utils/commandLogger.js";
-import { logBotUpdate } from "./utils/updateLogger.js";
-import { loadCommands } from "./utils/commandLoader.js";
-import {
-    initializeBanTable,
-    getBannedMember,
-    markRestored
-} from "./utils/banManager.js";
-
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
-});
-
-client.commands = new Collection();
-
-await initializeBanTable();
-
-await loadCommands(client);
-
-client.once("clientReady", async () => {
-    logger.info(`Logged in as ${client.user.tag}`);
-    logger.info("DEVGRU-Bot is online.");
-
-    logger.info(
-        `Commands loaded: ${
-            client.commands.size > 0
-                ? [...client.commands.keys()].join(", ")
-                : "NONE"
-        }`
-    );
-
-    await logBotUpdate(client);
-});
-
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isButton()) return;
 
@@ -47,8 +5,7 @@ client.on("interactionCreate", async (interaction) => {
 
     const userId = interaction.customId.split(":")[1];
 
-    const requiredPermission = 1;
-    const allowedRoles = permissions[requiredPermission];
+    const allowedRoles = permissions[1];
 
     const hasPermission = allowedRoles?.some(
         roleId => interaction.member?.roles.cache.has(roleId)
@@ -91,11 +48,14 @@ client.on("interactionCreate", async (interaction) => {
         for (const roleId of bannedMember.role_ids) {
             try {
                 await member.roles.add(roleId);
-            } catch {
-            }
+            } catch {}
         }
 
-        await member.setNickname(bannedMember.nickname);
+        if (bannedMember.nickname !== null) {
+            try {
+                await member.setNickname(bannedMember.nickname);
+            } catch {}
+        }
 
         await markRestored(userId);
 
@@ -103,9 +63,18 @@ client.on("interactionCreate", async (interaction) => {
             components: []
         });
 
-        await interaction.channel.send(
-            `✅ Los roles y el nickname de ${member} fueron restaurados correctamente por ${interaction.user}.`
-        );
+        const logEmbed = new EmbedBuilder()
+            .setColor("#ffaf1a")
+            .setTitle("Roles restaurados")
+            .setDescription(
+                `Los roles de ${member} fueron restaurados correctamente.\n\n` +
+                `**ID:** \`${userId}\`\n` +
+                `**Restaurado por:** ${interaction.user}`
+            );
+
+        await interaction.channel.send({
+            embeds: [logEmbed]
+        });
 
     } catch (error) {
         logger.error("Error restoring banned member:", error);
@@ -118,75 +87,3 @@ client.on("interactionCreate", async (interaction) => {
         }
     }
 });
-
-client.on("messageCreate", async (message) => {
-    if (message.author.bot) return;
-
-    if (!message.content.startsWith(config.discord.prefix)) return;
-
-    const args = message.content
-        .slice(config.discord.prefix.length)
-        .trim()
-        .split(/\s+/);
-
-    const commandName = args.shift()?.toLowerCase();
-
-    if (!commandName) return;
-
-    const command = client.commands.get(commandName);
-
-    if (!command) return;
-
-    logger.info(`Command detected: ${commandName}`);
-
-    const requiredPermission = command.permission ?? null;
-
-    if (requiredPermission !== null) {
-        const userRoles = message.member?.roles.cache;
-
-        if (!userRoles) {
-            await logCommandError(
-                message,
-                commandName,
-                "No se pudieron obtener los roles del usuario."
-            );
-
-            return;
-        }
-
-        const allowedRoles = permissions[requiredPermission];
-
-        const hasPermission = allowedRoles?.some(
-            roleId => userRoles.has(roleId)
-        );
-
-        if (!hasPermission) {
-            await logCommandError(
-                message,
-                commandName,
-                `Permiso insuficiente. Se requiere nivel ${requiredPermission}.`
-            );
-
-            return;
-        }
-    }
-
-    try {
-        await command.execute(message, args);
-    } catch (error) {
-        logger.error(
-            `Error executing command ${commandName}:`,
-            error
-        );
-
-        await logCommandError(
-            message,
-            commandName,
-            error?.message ||
-                "Error desconocido al ejecutar el comando.",
-            error
-        );
-    }
-});
-
-client.login(config.discord.token);
