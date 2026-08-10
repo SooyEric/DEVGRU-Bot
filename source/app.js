@@ -18,6 +18,10 @@ import {
     markRestored
 } from "./utils/banManager.js";
 
+import {
+    initializeSquadronRegistry
+} from "./utils/squadronRegistry.js";
+
 import squadronRegistry from "./events/squadronRegistry.js";
 
 const client = new Client({
@@ -31,9 +35,11 @@ const client = new Client({
 
 client.commands = new Collection();
 
+await initializeBanTable();
+await initializeSquadronRegistry();
+
 squadronRegistry.register(client);
 
-await initializeBanTable();
 await loadCommands(client);
 
 client.once("clientReady", async () => {
