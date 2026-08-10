@@ -19,8 +19,16 @@ const APPLICATION_TIMEOUT =
 const COLOR =
     "#ffaf1a";
 
+const GROUP_ID =
+    process.env.ROBLOX_GROUP_ID;
+
 const GROUP_URL =
-    process.env.ROBLOX_GROUP_URL;
+    process.env.ROBLOX_GROUP_URL ||
+    (
+        GROUP_ID
+            ? `https://www.roblox.com/communities/${GROUP_ID}`
+            : null
+    );
 
 const APPLICATION_LOG_CHANNEL_ID =
     process.env.APPLICATION_LOG_CHANNEL_ID;
