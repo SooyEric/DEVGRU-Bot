@@ -11,7 +11,6 @@ import {
 } from "../utils/banManager.js";
 
 const LOG_CHANNEL_ID = "1525379838095921172";
-
 const OWNER_ID = "1458405471181476001";
 
 const ANTIBAN_USERS = [
@@ -63,14 +62,6 @@ export default {
             return;
         }
 
-        /*
-         * ANTIBAN
-         *
-         * Los usuarios de ANTIBAN no pueden ser baneados
-         * por usuarios normales con permiso nivel 1.
-         *
-         * OWNER_ID puede saltarse esta protección.
-         */
         if (
             ANTIBAN_USERS.includes(member.id) &&
             message.author.id !== OWNER_ID
@@ -79,32 +70,25 @@ export default {
             return;
         }
 
-        /*
-         * El dueño del servidor tampoco puede ser baneado
-         * por el bot.
-         */
-        if (
-            member.id === message.guild.ownerId &&
-            message.author.id !== OWNER_ID
-        ) {
+        if (member.id === message.guild.ownerId) {
             await message.react("❌");
             return;
         }
 
         try {
+            if (!member.bannable) {
+                await message.react("❌");
+                return;
+            }
+
             await initializeBanTable();
 
-            /*
-             * Guardamos todos los roles del usuario
-             * excepto @everyone.
-             */
             const roleIds = member.roles.cache
                 .filter(role => role.id !== message.guild.id)
                 .map(role => role.id);
 
-            /*
-             * DM antes del ban.
-             */
+            const nickname = member.nickname;
+
             const userEmbed = new EmbedBuilder()
                 .setColor(EMBED_COLOR)
                 .setTitle("Baneado de DEVGRU")
@@ -117,9 +101,6 @@ export default {
                 embeds: [userEmbed]
             }).catch(() => {});
 
-            /*
-             * Embed del registro.
-             */
             const logEmbed = new EmbedBuilder()
                 .setColor(EMBED_COLOR)
                 .setTitle("Usuario baneado")
@@ -127,6 +108,7 @@ export default {
                     `**Usuario:** ${member}\n` +
                     `**ID:** \`${member.id}\`\n` +
                     `**Ejecutado por:** ${message.author}\n\n` +
+                    `**Nickname guardado:** ${nickname || "Ninguno"}\n\n` +
                     `**Roles guardados:**\n` +
                     `${
                         roleIds.length > 0
@@ -135,12 +117,6 @@ export default {
                     }`
                 );
 
-            /*
-             * Botón Restaurar.
-             *
-             * Discord no tiene un ButtonStyle amarillo nativo.
-             * Secondary es el estilo neutral disponible.
-             */
             const restoreButton = new ButtonBuilder()
                 .setCustomId(`restore_ban:${member.id}`)
                 .setLabel("Restaurar")
@@ -158,10 +134,6 @@ export default {
                 return;
             }
 
-            /*
-             * IMPORTANTE:
-             * Primero guardamos la información en PostgreSQL.
-             */
             const logMessage = await logChannel.send({
                 embeds: [logEmbed],
                 components: [row]
@@ -170,13 +142,11 @@ export default {
             await saveBannedMember(
                 member.id,
                 roleIds,
+                nickname,
                 logMessage.id
             );
 
-            /*
-             * BAN REAL DEL USUARIO.
-             */
-            await member.ban({
+            await message.guild.members.ban(member.id, {
                 reason: `Ban ejecutado por ${message.author.tag}`
             });
 
