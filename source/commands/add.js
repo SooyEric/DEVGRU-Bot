@@ -17,7 +17,9 @@ const SQUADRONS = {
             "1373365804279791839",
             "1373365857928876243",
             "1373365867576033440"
-        ]
+        ],
+        type3: "1373365831454556312",
+        type5: "1373365840677703865"
     },
 
     blue: {
@@ -38,7 +40,9 @@ const SQUADRONS = {
             "1373365805693009920",
             "1373365858784514241",
             "1373365868569952298"
-        ]
+        ],
+        type3: "1373365831454556312",
+        type5: "1373365840677703865"
     },
 
     gold: {
@@ -59,7 +63,9 @@ const SQUADRONS = {
             "1373365806775406693",
             "1373365859640279124",
             "1373365870226571325"
-        ]
+        ],
+        type3: "1373365831454556312",
+        type5: "1373365840677703865"
     },
 
     black: {
@@ -80,7 +86,9 @@ const SQUADRONS = {
             "1373365808969023529",
             "1420221604020879463",
             "1420443645558919308"
-        ]
+        ],
+        type3: "1373365831454556312",
+        type5: "1373365840677703865"
     },
 
     silver: {
@@ -101,7 +109,9 @@ const SQUADRONS = {
             "1535720824257122476",
             "1535716558322540594",
             "1535716769417666653"
-        ]
+        ],
+        type3: "1373365831454556312",
+        type5: "1373365840677703865"
     }
 };
 
@@ -152,10 +162,6 @@ export default {
         const group = args[0]?.toLowerCase();
         const targetInput = args[1];
 
-        // =========================
-        // VALIDAR GRUPO
-        // =========================
-
         const validGroups = [
             "red",
             "blue",
@@ -165,13 +171,17 @@ export default {
             "guest"
         ];
 
+        // =========================
+        // VALIDACIÓN DEL GRUPO
+        // =========================
+
         if (!group || !validGroups.includes(group)) {
             await message.react("❌");
             return;
         }
 
         // =========================
-        // VALIDAR USUARIO
+        // VALIDACIÓN DEL USUARIO
         // =========================
 
         if (!targetInput) {
@@ -194,69 +204,67 @@ export default {
 
                 member = await message.guild.members.fetch(userId);
             }
+
+            if (!member) {
+                await message.react("❌");
+                return;
+            }
+
+            // Obtener roles actualizados
+            member = await message.guild.members.fetch({
+                user: member.id,
+                force: true
+            });
+
         } catch {
             await message.react("❌");
             return;
         }
 
-        if (!member) {
-            await message.react("❌");
-            return;
-        }
+        try {
 
-        // =========================
-        // GUEST
-        // =========================
+            // =========================================================
+            // GUEST
+            // =========================================================
 
-        if (group === "guest") {
-            try {
-                for (const roleId of ALL_SQUADRON_ROLES) {
-                    if (member.roles.cache.has(roleId)) {
-                        await member.roles.remove(roleId);
-                    }
+            if (group === "guest") {
+
+                const rolesToRemove = [
+                    ...ALL_SQUADRON_ROLES,
+                    ...TYPE_3_ROLES,
+                    ...TYPE_5_ROLES
+                ];
+
+                const removableRoles = member.roles.cache.filter(role =>
+                    rolesToRemove.includes(role.id)
+                );
+
+                if (removableRoles.size > 0) {
+                    await member.roles.remove(removableRoles);
                 }
 
-                for (const roleId of TYPE_3_ROLES) {
-                    if (member.roles.cache.has(roleId)) {
-                        await member.roles.remove(roleId);
-                    }
-                }
-
-                for (const roleId of TYPE_5_ROLES) {
-                    if (member.roles.cache.has(roleId)) {
-                        await member.roles.remove(roleId);
-                    }
-                }
-
+                // Solo se agrega Guest
                 if (!member.roles.cache.has(GUEST_ROLE)) {
                     await member.roles.add(GUEST_ROLE);
                 }
 
+                // Restaurar nickname original
                 await member.setNickname(null);
 
                 await message.react("✅");
                 return;
-
-            } catch (error) {
-                await message.react("❌");
-                throw error;
             }
-        }
 
-        // =========================
-        // ESCUADRÓN SOLICITADO
-        // =========================
+            const squadron = SQUADRONS[group];
 
-        const squadron = SQUADRONS[group];
-
-        try {
-            // =========================
+            // =========================================================
             // DETECTAR ESCUADRÓN ACTUAL
-            // =========================
+            // =========================================================
 
             let currentSquadron = null;
 
             for (const [name, data] of Object.entries(SQUADRONS)) {
+
                 const belongsToSquadron = data.identifiers.every(roleId =>
                     member.roles.cache.has(roleId)
                 );
@@ -267,37 +275,74 @@ export default {
                 }
             }
 
-            // =========================
-            // YA ESTÁ EN EL MISMO
-            // =========================
+            // =========================================================
+            // COMPROBAR TYPE 3 Y TYPE 5 EXISTENTES
+            // =========================================================
+
+            const existingType3 = TYPE_3_ROLES.find(roleId =>
+                member.roles.cache.has(roleId)
+            );
+
+            const existingType5 = TYPE_5_ROLES.find(roleId =>
+                member.roles.cache.has(roleId)
+            );
+
+            // =========================================================
+            // YA ESTÁ EN EL MISMO ESCUADRÓN
+            // =========================================================
 
             if (currentSquadron === group) {
-                const hasType3 = TYPE_3_ROLES.some(roleId =>
-                    member.roles.cache.has(roleId)
-                );
 
-                const hasType5 = TYPE_5_ROLES.some(roleId =>
-                    member.roles.cache.has(roleId)
-                );
+                /*
+                 * Si ya tiene un Tipo 3 y un Tipo 5,
+                 * no agregamos absolutamente ninguno.
+                 */
 
-                // Tiene todo lo necesario.
-                // No hacer absolutamente nada.
-                if (hasType3 && hasType5) {
+                if (existingType3 && existingType5) {
+
+                    // Guest nunca debe coexistir con un escuadrón
+                    if (member.roles.cache.has(GUEST_ROLE)) {
+                        await member.roles.remove(GUEST_ROLE);
+                    }
+
+                    await member.setNickname(squadron.nickname);
+
                     await message.react("✅");
                     return;
                 }
 
-                // Le falta Tipo 3 o Tipo 5.
-                // Reparar el paquete completo.
-                const missingRoles = squadron.roles.filter(roleId =>
-                    !member.roles.cache.has(roleId)
-                );
+                /*
+                 * Reparar solamente los roles faltantes.
+                 */
+
+                const missingRoles = squadron.roles.filter(roleId => {
+
+                    // Si es el Tipo 3 predeterminado y ya existe
+                    // cualquier Tipo 3, NO agregarlo.
+                    if (
+                        roleId === squadron.type3 &&
+                        existingType3
+                    ) {
+                        return false;
+                    }
+
+                    // Si es el Tipo 5 predeterminado y ya existe
+                    // cualquier Tipo 5, NO agregarlo.
+                    if (
+                        roleId === squadron.type5 &&
+                        existingType5
+                    ) {
+                        return false;
+                    }
+
+                    return !member.roles.cache.has(roleId);
+                });
 
                 if (missingRoles.length > 0) {
                     await member.roles.add(missingRoles);
                 }
 
-                // Un escuadrón nunca debe conservar Guest.
+                // Guest nunca debe coexistir con un escuadrón
                 if (member.roles.cache.has(GUEST_ROLE)) {
                     await member.roles.remove(GUEST_ROLE);
                 }
@@ -308,60 +353,97 @@ export default {
                 return;
             }
 
-            // =========================
-            // CAMBIO DE ESCUADRÓN
-            // =========================
+            // =========================================================
+            // CAMBIO DESDE OTRO ESCUADRÓN
+            // =========================================================
 
             if (currentSquadron) {
+
                 const oldSquadron = SQUADRONS[currentSquadron];
 
                 /*
-                 * EXACTAMENTE como el comando YAGPDB:
+                 * SOLO eliminamos los roles exclusivos del
+                 * escuadrón anterior.
                  *
-                 * Solamente quitamos los 3 identificadores
-                 * del escuadrón anterior.
-                 *
-                 * Los roles compartidos permanecen.
+                 * Los Tipo 3 y Tipo 5 JAMÁS se eliminan aquí.
                  */
 
-                for (const roleId of oldSquadron.identifiers) {
-                    if (member.roles.cache.has(roleId)) {
-                        await member.roles.remove(roleId);
-                    }
+                const oldExclusiveRoles = oldSquadron.roles.filter(
+                    roleId =>
+                        !TYPE_3_ROLES.includes(roleId) &&
+                        !TYPE_5_ROLES.includes(roleId)
+                );
+
+                const rolesToRemove = oldExclusiveRoles.filter(roleId =>
+                    member.roles.cache.has(roleId)
+                );
+
+                if (rolesToRemove.length > 0) {
+                    await member.roles.remove(rolesToRemove);
                 }
             }
 
-            // =========================
-            // QUITAR GUEST
-            // =========================
+            // =========================================================
+            // ELIMINAR GUEST
+            // =========================================================
 
             if (member.roles.cache.has(GUEST_ROLE)) {
                 await member.roles.remove(GUEST_ROLE);
             }
 
-            // =========================
-            // AGREGAR NUEVO ESCUADRÓN
-            // =========================
+            // =========================================================
+            // ASIGNAR NUEVO ESCUADRÓN
+            // =========================================================
 
-            for (const roleId of squadron.roles) {
-                if (!member.roles.cache.has(roleId)) {
-                    await member.roles.add(roleId);
+            /*
+             * Agregamos los roles del nuevo escuadrón.
+             *
+             * EXCEPCIÓN:
+             *
+             * Si el usuario ya posee cualquier Tipo 3,
+             * NO recibe el Tipo 3 predeterminado.
+             *
+             * Si ya posee cualquier Tipo 5,
+             * NO recibe el Tipo 5 predeterminado.
+             */
+
+            const missingSquadronRoles = squadron.roles.filter(roleId => {
+
+                if (
+                    roleId === squadron.type3 &&
+                    existingType3
+                ) {
+                    return false;
                 }
+
+                if (
+                    roleId === squadron.type5 &&
+                    existingType5
+                ) {
+                    return false;
+                }
+
+                return !member.roles.cache.has(roleId);
+            });
+
+            if (missingSquadronRoles.length > 0) {
+                await member.roles.add(missingSquadronRoles);
             }
 
-            // =========================
+            // =========================================================
             // NICKNAME
-            // =========================
+            // =========================================================
 
             await member.setNickname(squadron.nickname);
 
-            // =========================
+            // =========================================================
             // ÉXITO
-            // =========================
+            // =========================================================
 
             await message.react("✅");
 
         } catch (error) {
+
             await message.react("❌");
             throw error;
         }
