@@ -255,44 +255,44 @@ export function buildTable(members, squadronKey) {
         `# ${squadron.name} ${squadron.emoji}\n` +
         `<@&${squadron.role}>\n\n` +
 
-        `**Squadron Commander (00):**\n` +
+        `Squadron Commander (00):\n` +
         `${buildSlot(commander)}\n\n` +
 
-        `**Squadron Deputy Commander (01):**\n` +
+        `Squadron Deputy Commander (01):\n` +
         `${buildSlot(deputy)}\n\n` +
 
-        `**Squadron Executive Officer (02):**\n` +
+        `Squadron Executive Officer (02):\n` +
         `${buildSlot(executive)}\n\n` +
 
         `**Unidad 10**\n\n` +
 
-        `**Group Commander (10):**\n` +
+        `Group Commander (10):\n` +
         `${buildSlot(group10)}\n\n` +
 
-        `**Squad Leader (11):**\n` +
+        `Squad Leader (11):\n` +
         `${buildSlot(squad11)}\n\n` +
 
-        `**Squad Leader (12):**\n` +
+        `Squad Leader (12):\n` +
         `${buildSlot(squad12)}\n\n` +
 
-        `**Team Operator (13/19):**\n` +
+        `Team Operator (13/19):\n` +
         `${operators10.map(buildSlot).join("\n")}\n\n` +
 
         `**Unidad 20**\n\n` +
 
-        `**Group Commander (20):**\n` +
+        `Group Commander (20):\n` +
         `${buildSlot(group20)}\n\n` +
 
-        `**Squad Leader (21):**\n` +
+        `Squad Leader (21):\n` +
         `${buildSlot(squad21)}\n\n` +
 
-        `**Squad Leader (22):**\n` +
+        `Squad Leader (22):\n` +
         `${buildSlot(squad22)}\n\n` +
 
-        `**Team Operator (23/29):**\n` +
+        `Team Operator (23/29):\n` +
         `${operators20.map(buildSlot).join("\n")}\n\n` +
 
-        `*Última actualización: <t:${Math.floor(Date.now() / 1000)}:f>*`
+        `Última actualización: <t:${Math.floor(Date.now() / 1000)}:f>`
     );
 }
 
