@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits, Collection } from "discord.js";
 import config from "./config/config.js";
 import logger from "./utils/logger.js";
+import permissions from "./config/permissions.js";
 
 const client = new Client({
     intents: [
