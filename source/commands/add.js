@@ -136,18 +136,10 @@ export default {
             "guest"
         ];
 
-        // =========================
-        // VALIDAR GRUPO
-        // =========================
-
         if (!group || !validGroups.includes(group)) {
             await message.react("❌");
             return;
         }
-
-        // =========================
-        // VALIDAR USUARIO
-        // =========================
 
         if (!targetInput) {
             await message.react("❌");
@@ -193,10 +185,6 @@ export default {
 
             if (group === "guest") {
 
-                // Eliminar TODOS los roles de escuadrón
-                // + Tipo 3
-                // + Tipo 5
-                // + Guest por si ya lo tenía.
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
                     ...TYPE_3_ROLES,
@@ -212,7 +200,7 @@ export default {
                     await member.roles.remove(removableRoles);
                 }
 
-                // AQUÍ Y SOLAMENTE AQUÍ se agrega Guest.
+                // Guest SOLO se agrega aquí.
                 await member.roles.add(GUEST_ROLE);
 
                 // Restaurar nickname original.
@@ -223,13 +211,13 @@ export default {
             }
 
             // =========================================================
-            // RED / BLUE / GOLD / BLACK / SILVER
+            // ESCUADRÓN
             // =========================================================
 
             const squadron = SQUADRONS[group];
 
             // ---------------------------------------------------------
-            // 1. ELIMINAR TODOS LOS ROLES DE CUALQUIER ESCUADRÓN
+            // 1. ELIMINAR TODOS LOS ROLES DE ESCUADRONES
             // ---------------------------------------------------------
 
             const squadronRolesToRemove = member.roles.cache.filter(role =>
@@ -243,12 +231,12 @@ export default {
             // ---------------------------------------------------------
             // 2. ELIMINAR GUEST
             //
-            // NUNCA se agrega Guest aquí.
+            // IMPORTANTE:
+            // Se intenta eliminar SIEMPRE.
+            // No usamos .has() para decidir.
             // ---------------------------------------------------------
 
-            if (member.roles.cache.has(GUEST_ROLE)) {
-                await member.roles.remove(GUEST_ROLE);
-            }
+            await member.roles.remove(GUEST_ROLE);
 
             // ---------------------------------------------------------
             // 3. AGREGAR LOS ROLES DEL NUEVO ESCUADRÓN
