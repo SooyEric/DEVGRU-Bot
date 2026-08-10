@@ -78,7 +78,7 @@ const RANKS = [
     }
 ];
 
-const MAX_RANK_INDEX = 5;
+const MAX_RANK_INDEX = 14;
 
 const RANK_LOG_CHANNEL_ID = "1525393053656027136";
 
@@ -92,15 +92,15 @@ export default {
             return;
         }
 
-        let targetInput;
         let requestedRank = null;
+        let targetInput = null;
 
-        const possibleRank = RANKS.find(
+        const rankIndex = RANKS.findIndex(
             rank => rank.short.toLowerCase() === args[0].toLowerCase()
         );
 
-        if (possibleRank) {
-            requestedRank = possibleRank;
+        if (rankIndex !== -1) {
+            requestedRank = RANKS[rankIndex];
             targetInput = args[1];
         } else {
             targetInput = args[0];
@@ -210,7 +210,6 @@ export default {
 
         } catch (error) {
             console.error("Error en comando rango:", error);
-
             await message.react("❌");
         }
     }
