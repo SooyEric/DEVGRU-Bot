@@ -95,6 +95,8 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
+        await member.setNickname(bannedMember.nickname);
+
         await markRestored(userId);
 
         await interaction.update({
