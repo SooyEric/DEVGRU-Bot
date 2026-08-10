@@ -1,6 +1,7 @@
 const SQUADRONS = {
     red: {
-        group: "Alpha",
+        name: "Alpha",
+        nickname: "SOE1 Alpha",
         roles: [
             "1373365804279791839",
             "1373365810910859265",
@@ -16,7 +17,8 @@ const SQUADRONS = {
     },
 
     blue: {
-        group: "Bravo",
+        name: "Bravo",
+        nickname: "SOE1 Bravo",
         roles: [
             "1373365805693009920",
             "1373365810910859265",
@@ -32,7 +34,8 @@ const SQUADRONS = {
     },
 
     gold: {
-        group: "Charlie",
+        name: "Charlie",
+        nickname: "SOE1 Charlie",
         roles: [
             "1373365806775406693",
             "1373365810910859265",
@@ -48,7 +51,8 @@ const SQUADRONS = {
     },
 
     black: {
-        group: "Delta",
+        name: "Delta",
+        nickname: "SOE1 Delta",
         roles: [
             "1373365808969023529",
             "1373365810910859265",
@@ -64,7 +68,8 @@ const SQUADRONS = {
     },
 
     silver: {
-        group: "Echo",
+        name: "Echo",
+        nickname: "SOE1 Echo",
         roles: [
             "1535720824257122476",
             "1373365810910859265",
@@ -82,26 +87,35 @@ const SQUADRONS = {
 
 const GUEST_ROLE = "1373365890623602768";
 
-const RANK_ROLES = [
-    "1373365811858768005",
-    "1373365812383187047",
-    "1373365813490483313",
-    "1373365814341799958",
-    "1373365815524724966",
-    "1373365816539480267",
-    "1373365817386860729",
-    "1373365818112348235",
-    "1373365819383480370",
-    "1373365820217884815",
-    "1373365821543284796",
-    "1373365822281748637",
-    "1373365823841894531",
-    "1373365824932548679",
-    "1373365827239280751",
-    "1373365828388655196",
-    "1373365829860593735",
-    "1373365830359847036",
-    "1373365831454556312"
+const RANKS = {
+    "1373365811858768005": "SO10",
+    "1373365812383187047": "SO9",
+    "1373365813490483313": "SO8",
+    "1373365814341799958": "SO7",
+    "1373365815524724966": "SO6",
+    "1373365816539480267": "SO5",
+    "1373365817386860729": "SO4",
+    "1373365818112348235": "SO3",
+    "1373365819383480370": "SO2",
+    "1373365820217884815": "SO1",
+    "1373365821543284796": "SOE9",
+    "1373365822281748637": "SOE8",
+    "1373365823841894531": "SOE7",
+    "1373365824932548679": "SOE6",
+    "1373365827239280751": "SOE5",
+    "1373365828388655196": "SOE4",
+    "1373365829860593735": "SOE3",
+    "1373365830359847036": "SOE2",
+    "1373365831454556312": "SOE1"
+};
+
+const TYPE_5_ROLES = [
+    "1373365833618690059",
+    "1373365835862642713",
+    "1373365837129318474",
+    "1373365839037988894",
+    "1373365839721529506",
+    "1373365840677703865"
 ];
 
 const ALL_SQUADRON_ROLES = [
@@ -110,12 +124,7 @@ const ALL_SQUADRON_ROLES = [
     )
 ];
 
-const RANK_NAMES = new Map(
-    RANK_ROLES.map((roleId, index) => [
-        roleId,
-        `SOE${RANK_ROLES.length - index}`
-    ])
-);
+const ALL_RANK_ROLES = Object.keys(RANKS);
 
 export default {
     name: "add",
@@ -151,11 +160,6 @@ export default {
                 member = await message.guild.members.fetch(userId);
             }
 
-            if (!member) {
-                await message.react("❌");
-                return;
-            }
-
             member = await message.guild.members.fetch({
                 user: member.id,
                 force: true
@@ -166,23 +170,18 @@ export default {
         }
 
         try {
-            // =========================
-            // GUEST
-            // =========================
-
             if (group === "guest") {
-                const rolesToRemove = [
-                    ...ALL_SQUADRON_ROLES,
-                    ...RANK_ROLES,
-                    GUEST_ROLE
-                ];
-
-                const removableRoles = member.roles.cache.filter(role =>
-                    rolesToRemove.includes(role.id)
+                const rolesToRemove = member.roles.cache.filter(role =>
+                    [
+                        ...ALL_SQUADRON_ROLES,
+                        ...ALL_RANK_ROLES,
+                        ...TYPE_5_ROLES,
+                        GUEST_ROLE
+                    ].includes(role.id)
                 );
 
-                if (removableRoles.size > 0) {
-                    await member.roles.remove(removableRoles);
+                if (rolesToRemove.size > 0) {
+                    await member.roles.remove(rolesToRemove);
                 }
 
                 await member.setNickname(null);
@@ -194,87 +193,60 @@ export default {
 
             const squadron = SQUADRONS[group];
 
-            // =========================
-            // DETECTAR RANGO ACTUAL
-            // =========================
-
-            let existingRank = RANK_ROLES.find(roleId =>
+            const existingRank = ALL_RANK_ROLES.find(roleId =>
                 member.roles.cache.has(roleId)
             );
 
-            // =========================
-            // DETECTAR PLACA ACTUAL
-            // =========================
+            let rankName = "SOE1";
+
+            if (existingRank) {
+                rankName = RANKS[existingRank];
+            }
 
             let plate = null;
 
-            const nickname = member.nickname;
-
-            if (nickname) {
-                const match = nickname.match(/\s(\d{2})$/);
+            if (member.nickname) {
+                const match = member.nickname.match(/\s(\d+)$/);
 
                 if (match) {
                     plate = match[1];
                 }
             }
 
-            // =========================
-            // ELIMINAR ESCUADRÓN ACTUAL
-            // =========================
-
             const rolesToRemove = member.roles.cache.filter(role =>
-                ALL_SQUADRON_ROLES.includes(role.id)
+                [
+                    ...ALL_SQUADRON_ROLES,
+                    ...ALL_RANK_ROLES,
+                    ...TYPE_5_ROLES,
+                    GUEST_ROLE
+                ].includes(role.id)
             );
 
             if (rolesToRemove.size > 0) {
                 await member.roles.remove(rolesToRemove);
             }
 
-            await member.roles.remove(GUEST_ROLE);
-
-            // =========================
-            // NICKNAME
-            // =========================
-
-            let rankName;
-
-            if (existingRank) {
-                rankName = RANK_NAMES.get(existingRank);
-            } else {
-                rankName = "SOE1";
-                existingRank = "1373365831454556312";
-            }
-
             const newNickname = plate
-                ? `${rankName} ${squadron.group} ${plate}`
-                : `${rankName} ${squadron.group}`;
+                ? `${rankName} ${squadron.name} ${plate}`
+                : `${rankName} ${squadron.name}`;
 
             await member.setNickname(newNickname);
-
-            // =========================
-            // RESTAURAR / ASIGNAR RANGO
-            // =========================
 
             if (existingRank) {
                 await member.roles.add(existingRank);
             }
 
-            // =========================
-            // AGREGAR ESCUADRÓN
-            // =========================
-
-            for (const roleId of squadron.roles) {
-                if (roleId === "1373365831454556312") {
-                    if (existingRank) {
-                        continue;
-                    }
+            const rolesToAdd = squadron.roles.filter(roleId => {
+                if (ALL_RANK_ROLES.includes(roleId)) {
+                    return !existingRank;
                 }
 
-                await member.roles.add(roleId);
-            }
+                return true;
+            });
+
+            await member.roles.add(rolesToAdd);
 
             await message.react("✅");
-
         } catch (error) {
             await message.react("❌");
             throw error;
