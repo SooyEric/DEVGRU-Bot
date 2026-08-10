@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Collection, REST, Routes } from "discord.js";
+import { Client, GatewayIntentBits, Collection } from "discord.js";
 import config from "./config/config.js";
 import logger from "./utils/logger.js";
 import permissions from "./config/permissions.js";
@@ -56,28 +56,5 @@ client.on("messageCreate", async (message) => {
         logger.error(`Error executing command ${commandName}:`, error);
     }
 });
-
-const rest = new REST({ version: "10" }).setToken(config.discord.token);
-
-try {
-    logger.info("Eliminando slash commands registrados...");
-
-    await rest.put(
-        Routes.applicationCommands(config.discord.clientId),
-        { body: [] }
-    );
-
-    await rest.put(
-        Routes.applicationGuildCommands(
-            config.discord.clientId,
-            process.env.GUILD_ID
-        ),
-        { body: [] }
-    );
-
-    logger.info("Slash commands eliminados correctamente.");
-} catch (error) {
-    logger.error("Error eliminando slash commands:", error);
-}
 
 client.login(config.discord.token);
