@@ -10,7 +10,10 @@ const USERINFO_URL = "https://apis.roblox.com/oauth/v1/userinfo";
 
 const pendingStates = new Map();
 
-export function createRobloxAuthorization(userId) {
+export function createRobloxAuthorization(
+    userId,
+    robloxUsername = null
+) {
     if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
         throw new Error(
             "Faltan variables de entorno de Roblox."
@@ -21,6 +24,7 @@ export function createRobloxAuthorization(userId) {
 
     pendingStates.set(state, {
         userId,
+        robloxUsername,
         createdAt: Date.now()
     });
 
