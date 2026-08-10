@@ -17,6 +17,14 @@ client.commands = new Collection();
 client.once("clientReady", () => {
     logger.info(`Logged in as ${client.user.tag}`);
     logger.info("DEVGRU-Bot is online.");
+
+    logger.info(
+        `Commands loaded: ${
+            client.commands.size > 0
+                ? [...client.commands.keys()].join(", ")
+                : "NONE"
+        }`
+    );
 });
 
 client.on("messageCreate", async (message) => {
@@ -33,9 +41,23 @@ client.on("messageCreate", async (message) => {
 
     if (!commandName) return;
 
+    // DIAGNÓSTICO: confirma que messageCreate detecta el comando
+    logger.info(`Command detected: ${commandName}`);
+
     const command = client.commands.get(commandName);
 
-    if (!command) return;
+    // DIAGNÓSTICO: confirma si el comando está registrado
+    if (!command) {
+        logger.warn(`Command not found: ${commandName}`);
+
+        await logCommandError(
+            message,
+            commandName,
+            "El comando fue detectado, pero no está registrado en client.commands."
+        );
+
+        return;
+    }
 
     const requiredPermission = command.permission ?? null;
 
