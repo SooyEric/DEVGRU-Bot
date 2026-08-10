@@ -140,6 +140,9 @@ const MAIN_CHANNELS = [
 
 const EMBED_COLOR = "#ffaf1a";
 
+const getSquadronName = (key, squadron) =>
+    `${key.charAt(0).toUpperCase() + key.slice(1)} Squadron (${squadron.group})`;
+
 export default {
     name: "add",
     permission: 1,
@@ -303,8 +306,8 @@ export default {
                     .setTitle("Cambio de Escuadrón")
                     .setDescription(
                         `Se ha actualizado la asignación de tu escuadrón.\n\n` +
-                        `- **Escuadrón Anterior**: ${previousSquadron.group} ${previousSquadron.emoji}\n` +
-                        `- **Nuevo Escuadrón**: ${squadron.group} ${squadron.emoji}\n` +
+                        `- **Escuadrón Anterior**: ${getSquadronName(previousSquadronKey, previousSquadron)} ${previousSquadron.emoji}\n` +
+                        `- **Nuevo Escuadrón**: ${getSquadronName(group, squadron)} ${squadron.emoji}\n` +
                         `- **Estado**: Activo <a:online:1536302690613862461>`
                     );
 
@@ -315,7 +318,7 @@ export default {
                     .setTitle(`¡Bienvenido a DEVGRU, ${member.user}!`)
                     .setDescription(
                         `Tu ingreso a DEVGRU ha sido aprobado y tu verificación como miembro ha sido completada correctamente.\n\n` +
-                        `- **Escuadrón**: ${squadron.group} ${squadron.emoji}\n` +
+                        `- **Escuadrón**: ${getSquadronName(group, squadron)} ${squadron.emoji}\n` +
                         `- **Rango**: ${rankName}\n` +
                         `- **Estado**: Activo <a:online:1536302690613862461>\n\n` +
                         `A partir de este momento tendrás acceso a todos los canales generales y los correspondientes a tu unidad.\n\n` +
