@@ -146,19 +146,20 @@ const ALL_SQUADRON_ROLES = [
 
 export default {
     name: "add",
-    permissionLevel: 1,
+    permission: 1,
 
     async execute(message, args) {
         const group = args[0]?.toLowerCase();
         const targetInput = args[1];
 
-        // Validación del grupo
-        if (!group || !["red", "blue", "gold", "black", "silver", "guest"].includes(group)) {
+        if (
+            !group ||
+            !["red", "blue", "gold", "black", "silver", "guest"].includes(group)
+        ) {
             await message.react("❌");
             return;
         }
 
-        // Validación del usuario
         if (!targetInput) {
             await message.react("❌");
             return;
@@ -167,10 +168,8 @@ export default {
         let member;
 
         try {
-            // Primero intentamos obtener una mención
             member = message.mentions.members.first();
 
-            // Si no hay mención, intentamos usar ID
             if (!member) {
                 const userId = targetInput.replace(/[<@!>]/g, "");
 
@@ -192,12 +191,6 @@ export default {
         }
 
         try {
-            /*
-             * =========================
-             * GUEST
-             * =========================
-             */
-
             if (group === "guest") {
                 const rolesToRemove = new Set([
                     ...ALL_SQUADRON_ROLES,
@@ -215,24 +208,14 @@ export default {
                 }
 
                 await member.roles.add(GUEST_ROLE);
-
-                // Restaurar nickname original
                 await member.setNickname(null);
 
                 await message.react("✅");
                 return;
             }
 
-            /*
-             * =========================
-             * SQUADRON
-             * =========================
-             */
-
             const squadron = SQUADRONS[group];
 
-            // Detectar escuadrón actual utilizando EXCLUSIVAMENTE
-            // los 3 roles identificadores.
             let currentSquadron = null;
 
             for (const [name, data] of Object.entries(SQUADRONS)) {
@@ -245,15 +228,6 @@ export default {
                     break;
                 }
             }
-
-            /*
-             * Si ya pertenece al escuadrón solicitado:
-             *
-             * - Tiene al menos un Tipo 3
-             * - Tiene al menos un Tipo 5
-             *
-             * No hacemos absolutamente nada.
-             */
 
             if (currentSquadron === group) {
                 const hasType3 = TYPE_3_ROLES.some(roleId =>
@@ -269,13 +243,6 @@ export default {
                     return;
                 }
 
-                /*
-                 * Le falta Tipo 3 o Tipo 5.
-                 *
-                 * Reparar el paquete de 10 roles.
-                 * Los Tipo 3/5 existentes NO se eliminan.
-                 */
-
                 const missingRoles = squadron.roles.filter(roleId =>
                     !member.roles.cache.has(roleId)
                 );
@@ -289,18 +256,9 @@ export default {
                 }
 
                 await member.setNickname(squadron.nickname);
-
                 await message.react("✅");
                 return;
             }
-
-            /*
-             * Si pertenece a otro escuadrón:
-             *
-             * SOLO eliminamos los 3 identificadores del anterior.
-             *
-             * Los roles compartidos permanecen.
-             */
 
             if (currentSquadron) {
                 const oldIdentifiers = SQUADRONS[currentSquadron].identifiers;
@@ -314,20 +272,9 @@ export default {
                 }
             }
 
-            /*
-             * Quitar Guest
-             */
-
             if (member.roles.cache.has(GUEST_ROLE)) {
                 await member.roles.remove(GUEST_ROLE);
             }
-
-            /*
-             * Asignar el paquete completo del nuevo escuadrón.
-             *
-             * Los roles compartidos no generan problema:
-             * Discord simplemente conserva los que ya existen.
-             */
 
             const missingSquadronRoles = squadron.roles.filter(roleId =>
                 !member.roles.cache.has(roleId)
@@ -337,12 +284,7 @@ export default {
                 await member.roles.add(missingSquadronRoles);
             }
 
-            /*
-             * Cambiar nickname
-             */
-
             await member.setNickname(squadron.nickname);
-
             await message.react("✅");
 
         } catch (error) {
