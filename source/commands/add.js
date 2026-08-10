@@ -119,6 +119,15 @@ const ALL_SQUADRON_ROLES = [
     )
 ];
 
+const ALL_MANAGED_ROLES = [
+    ...new Set([
+        ...ALL_SQUADRON_ROLES,
+        ...TYPE_3_ROLES,
+        ...TYPE_5_ROLES,
+        GUEST_ROLE
+    ])
+];
+
 export default {
     name: "add",
     permission: 1,
@@ -126,6 +135,10 @@ export default {
     async execute(message, args) {
         const group = args[0]?.toLowerCase();
         const targetInput = args[1];
+
+        // =========================
+        // VALIDAR GRUPO
+        // =========================
 
         const validGroups = [
             "red",
@@ -140,6 +153,10 @@ export default {
             await message.react("❌");
             return;
         }
+
+        // =========================
+        // VALIDAR USUARIO
+        // =========================
 
         if (!targetInput) {
             await message.react("❌");
@@ -161,105 +178,91 @@ export default {
 
                 member = await message.guild.members.fetch(userId);
             }
-
-            if (!member) {
-                await message.react("❌");
-                return;
-            }
-
-            member = await message.guild.members.fetch({
-                user: member.id,
-                force: true
-            });
-
-        } catch (error) {
+        } catch {
             await message.react("❌");
-            throw error;
+            return;
         }
 
-        try {
+        if (!member) {
+            await message.react("❌");
+            return;
+        }
 
-            // =========================================================
-            // GUEST
-            // =========================================================
+        // =========================
+        // GUEST
+        // =========================
 
-            if (group === "guest") {
-
-                const rolesToRemove = [
-                    ...ALL_SQUADRON_ROLES,
-                    ...TYPE_3_ROLES,
-                    ...TYPE_5_ROLES,
-                    GUEST_ROLE
-                ];
-
-                const removableRoles = member.roles.cache.filter(role =>
-                    rolesToRemove.includes(role.id)
+        if (group === "guest") {
+            try {
+                const rolesToRemove = member.roles.cache.filter(role =>
+                    ALL_MANAGED_ROLES.includes(role.id)
                 );
 
-                if (removableRoles.size > 0) {
-                    await member.roles.remove(removableRoles);
+                if (rolesToRemove.size > 0) {
+                    await member.roles.remove(rolesToRemove);
                 }
 
-                // Guest SOLO se agrega aquí.
                 await member.roles.add(GUEST_ROLE);
 
-                // Restaurar nickname original.
                 await member.setNickname(null);
 
                 await message.react("✅");
                 return;
+
+            } catch (error) {
+                await message.react("❌");
+                throw error;
             }
+        }
 
-            // =========================================================
-            // ESCUADRÓN
-            // =========================================================
+        // =========================
+        // ESCUADRÓN
+        // =========================
 
-            const squadron = SQUADRONS[group];
+        const squadron = SQUADRONS[group];
 
-            // ---------------------------------------------------------
-            // 1. ELIMINAR TODOS LOS ROLES DE ESCUADRONES
-            // ---------------------------------------------------------
+        try {
+            /*
+             * IMPORTANTE:
+             *
+             * Primero eliminamos TODOS los roles administrados
+             * de cualquier escuadrón.
+             *
+             * Esto evita que un rol de Gold, por ejemplo,
+             * permanezca o vuelva a aparecer al pasar a Red.
+             */
 
-            const squadronRolesToRemove = member.roles.cache.filter(role =>
-                ALL_SQUADRON_ROLES.includes(role.id)
+            const rolesToRemove = member.roles.cache.filter(role =>
+                ALL_SQUADRON_ROLES.includes(role.id) ||
+                role.id === GUEST_ROLE
             );
 
-            if (squadronRolesToRemove.size > 0) {
-                await member.roles.remove(squadronRolesToRemove);
+            if (rolesToRemove.size > 0) {
+                await member.roles.remove(rolesToRemove);
             }
 
-            // ---------------------------------------------------------
-            // 2. ELIMINAR GUEST
-            //
-            // IMPORTANTE:
-            // Se intenta eliminar SIEMPRE.
-            // No usamos .has() para decidir.
-            // ---------------------------------------------------------
-
-            await member.roles.remove(GUEST_ROLE);
-
-            // ---------------------------------------------------------
-            // 3. AGREGAR LOS ROLES DEL NUEVO ESCUADRÓN
-            // ---------------------------------------------------------
+            /*
+             * Ahora que el usuario está limpio de cualquier
+             * escuadrón y de Guest, agregamos EXCLUSIVAMENTE
+             * los roles del escuadrón solicitado.
+             */
 
             await member.roles.add(squadron.roles);
 
-            // ---------------------------------------------------------
-            // 4. CAMBIAR NICKNAME
-            // ---------------------------------------------------------
+            /*
+             * Cambiar nickname
+             */
 
             await member.setNickname(squadron.nickname);
 
-            // ---------------------------------------------------------
-            // 5. ÉXITO
-            // ---------------------------------------------------------
+            /*
+             * ÉXITO
+             */
 
             await message.react("✅");
 
         } catch (error) {
-
             await message.react("❌");
-
             throw error;
         }
     }
