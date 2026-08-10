@@ -236,9 +236,24 @@ client.on("messageCreate", async (message) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
+/*
+ * HTTP SERVER
+ * Railway debe tener Target Port: 8080
+ */
+
+const PORT = process.env.PORT || 8080;
 
 const server = http.createServer((req, res) => {
+
+    if (req.url === "/") {
+        res.writeHead(200, {
+            "Content-Type": "text/plain; charset=utf-8"
+        });
+
+        res.end("DEVGRU-Bot online.");
+        return;
+    }
+
     if (req.url === "/roblox/callback") {
         res.writeHead(200, {
             "Content-Type": "text/plain; charset=utf-8"
