@@ -87,7 +87,7 @@ export default {
     permission: 1,
 
     async execute(message, args) {
-        if (!args.length) {
+        if (!args[0]) {
             await message.react("❌");
             return;
         }
@@ -95,8 +95,12 @@ export default {
         let targetInput;
         let requestedRank = null;
 
-        if (RANKS.some(rank => rank.short.toLowerCase() === args[0].toLowerCase())) {
-            requestedRank = args[0].toUpperCase();
+        const possibleRank = RANKS.find(
+            rank => rank.short.toLowerCase() === args[0].toLowerCase()
+        );
+
+        if (possibleRank) {
+            requestedRank = possibleRank;
             targetInput = args[1];
         } else {
             targetInput = args[0];
@@ -132,6 +136,7 @@ export default {
                 user: member.id,
                 force: true
             });
+
         } catch {
             await message.react("❌");
             return;
@@ -151,23 +156,17 @@ export default {
 
             if (requestedRank) {
                 newRankIndex = RANKS.findIndex(
-                    rank => rank.short.toLowerCase() === requestedRank.toLowerCase()
+                    rank => rank.id === requestedRank.id
                 );
-
-                if (newRankIndex === -1) {
-                    await message.react("❌");
-                    return;
-                }
             } else {
                 newRankIndex = currentRankIndex + 1;
             }
 
-            if (newRankIndex > MAX_RANK_INDEX) {
-                await message.react("❌");
-                return;
-            }
-
-            if (newRankIndex === currentRankIndex) {
+            if (
+                newRankIndex < 0 ||
+                newRankIndex > MAX_RANK_INDEX ||
+                newRankIndex === currentRankIndex
+            ) {
                 await message.react("❌");
                 return;
             }
@@ -175,16 +174,14 @@ export default {
             const currentRank = RANKS[currentRankIndex];
             const newRank = RANKS[newRankIndex];
 
-            const nickname = member.nickname;
+            let newNickname = member.nickname;
 
-            let newNickname;
+            if (newNickname) {
+                const parts = newNickname.split(" ");
 
-            if (nickname) {
-                const nicknameParts = nickname.split(" ");
+                parts[0] = newRank.short;
 
-                nicknameParts[0] = newRank.short;
-
-                newNickname = nicknameParts.join(" ");
+                newNickname = parts.join(" ");
             } else {
                 newNickname = newRank.short;
             }
@@ -193,18 +190,18 @@ export default {
             await member.roles.add(newRank.id);
             await member.setNickname(newNickname);
 
-            const channel = await message.guild.channels.fetch(
+            const logChannel = await message.guild.channels.fetch(
                 RANK_LOG_CHANNEL_ID
             );
 
-            if (channel) {
+            if (logChannel) {
                 const embed = new EmbedBuilder()
                     .setColor("#ffaf1a")
                     .setDescription(
                         `El usuario ${member} fue ascendido a **${newRank.name} (${newRank.short})** por ${message.author}.`
                     );
 
-                await channel.send({
+                await logChannel.send({
                     embeds: [embed]
                 });
             }
@@ -212,8 +209,9 @@ export default {
             await message.react("✅");
 
         } catch (error) {
+            console.error("Error en comando rango:", error);
+
             await message.react("❌");
-            throw error;
         }
     }
 };
