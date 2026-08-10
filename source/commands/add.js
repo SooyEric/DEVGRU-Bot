@@ -18,43 +18,47 @@ export default {
     permission: 1,
 
     async execute(message, args) {
-        // Validar argumentos
         if (args.length < 2) {
             await message.react("❌");
             return;
         }
 
-        // El único grupo disponible actualmente
         const group = args[0].toLowerCase();
-
-        if (group !== "blue") {
-            await message.react("❌");
-            return;
-        }
-
-        // Obtener persona mencionada
         const member = message.mentions.members.first();
 
-        if (!member) {
+        if (!["blue", "guest"].includes(group) || !member) {
             await message.react("❌");
             return;
         }
 
         try {
-            // Agregar todos los roles de Blue
-            await member.roles.add(BLUE_ROLES);
+            if (group === "blue") {
+                await member.roles.add(BLUE_ROLES);
 
-            // Remover Guest si lo tiene
-            if (member.roles.cache.has(GUEST_ROLE)) {
-                await member.roles.remove(GUEST_ROLE);
+                if (member.roles.cache.has(GUEST_ROLE)) {
+                    await member.roles.remove(GUEST_ROLE);
+                }
+
+                await member.setNickname("SOE1 Bravo");
             }
 
-            // Cambiar nickname
-            await member.setNickname("SOE1 Bravo");
+            if (group === "guest") {
+                const blueRoles = member.roles.cache.filter(role =>
+                    BLUE_ROLES.includes(role.id)
+                );
 
-            // Éxito
+                if (blueRoles.size > 0) {
+                    await member.roles.remove(blueRoles);
+                }
+
+                if (!member.roles.cache.has(GUEST_ROLE)) {
+                    await member.roles.add(GUEST_ROLE);
+                }
+
+                await member.setNickname(null);
+            }
+
             await message.react("✅");
-
         } catch (error) {
             await message.react("❌");
             throw error;
