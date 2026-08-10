@@ -26,6 +26,11 @@ const RED_ROLES = [
 
 const GUEST_ROLE = "1373365890623602768";
 
+const GROUP_ROLES = [
+    ...BLUE_ROLES,
+    ...RED_ROLES
+];
+
 export default {
     name: "add",
     permission: 1,
@@ -59,27 +64,53 @@ export default {
 
                 member = await message.guild.members.fetch(userId);
             }
-        } catch {
-            await message.react("❌");
-            return;
-        }
 
-        if (!member) {
+            if (!member) {
+                await message.react("❌");
+                return;
+            }
+
+            // Obtener estado actual directamente de Discord
+            member = await message.guild.members.fetch({
+                user: member.id,
+                force: true
+            });
+
+        } catch {
             await message.react("❌");
             return;
         }
 
         try {
             // =====================================================
-            // QUITAR TODO
+            // 1. QUITAR TODOS LOS ROLES DE GRUPO
             // =====================================================
 
-            await member.roles.remove(BLUE_ROLES);
-            await member.roles.remove(RED_ROLES);
-            await member.roles.remove(GUEST_ROLE);
+            for (const roleId of GROUP_ROLES) {
+                if (member.roles.cache.has(roleId)) {
+                    await member.roles.remove(roleId);
+                }
+            }
 
             // =====================================================
-            // GUEST
+            // 2. QUITAR GUEST
+            // =====================================================
+
+            if (member.roles.cache.has(GUEST_ROLE)) {
+                await member.roles.remove(GUEST_ROLE);
+            }
+
+            // =====================================================
+            // 3. VOLVER A OBTENER EL ESTADO REAL DEL USUARIO
+            // =====================================================
+
+            member = await message.guild.members.fetch({
+                user: member.id,
+                force: true
+            });
+
+            // =====================================================
+            // 4. GUEST
             // =====================================================
 
             if (group === "guest") {
@@ -91,28 +122,35 @@ export default {
             }
 
             // =====================================================
-            // BLUE
+            // 5. SELECCIONAR EXCLUSIVAMENTE EL GRUPO SOLICITADO
+            // =====================================================
+
+            const rolesToAdd =
+                group === "blue"
+                    ? BLUE_ROLES
+                    : RED_ROLES;
+
+            // =====================================================
+            // 6. AGREGAR ÚNICAMENTE LOS ROLES DEL GRUPO
+            // =====================================================
+
+            for (const roleId of rolesToAdd) {
+                await member.roles.add(roleId);
+            }
+
+            // =====================================================
+            // 7. NICKNAME
             // =====================================================
 
             if (group === "blue") {
-                await member.roles.add(BLUE_ROLES);
                 await member.setNickname("SOE1 Bravo");
-
-                await message.react("✅");
-                return;
             }
-
-            // =====================================================
-            // RED
-            // =====================================================
 
             if (group === "red") {
-                await member.roles.add(RED_ROLES);
                 await member.setNickname("SOE1 Alpha");
-
-                await message.react("✅");
-                return;
             }
+
+            await message.react("✅");
 
         } catch (error) {
             await message.react("❌");
