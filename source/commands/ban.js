@@ -47,11 +47,6 @@ export default {
                 member = await message.guild.members.fetch(userId);
             }
 
-            if (!member) {
-                await message.react("❌");
-                return;
-            }
-
             member = await message.guild.members.fetch({
                 user: member.id,
                 force: true
@@ -77,11 +72,15 @@ export default {
 
         try {
             if (!member.bannable) {
+                console.error(
+                    `No se puede banear a ${member.user.tag}. ` +
+                    `Bot: ${message.guild.members.me?.roles.highest?.name} ` +
+                    `Objetivo: ${member.roles.highest?.name}`
+                );
+
                 await message.react("❌");
                 return;
             }
-
-            await initializeBanTable();
 
             const roleIds = member.roles.cache
                 .filter(role => role.id !== message.guild.id)
@@ -111,7 +110,7 @@ export default {
                     `**Nickname guardado:** ${nickname || "Ninguno"}\n\n` +
                     `**Roles guardados:**\n` +
                     `${
-                        roleIds.length > 0
+                        roleIds.length
                             ? roleIds.map(id => `<@&${id}>`).join(" ")
                             : "Ninguno"
                     }`
@@ -146,9 +145,19 @@ export default {
                 logMessage.id
             );
 
-            await message.guild.members.ban(member.id, {
-                reason: `Ban ejecutado por ${message.author.tag}`
+            await message.guild.bans.create(member.id, {
+                reason: `Ban ejecutado por ${message.author.tag}`,
+                deleteMessageSeconds: 0
             });
+
+            const banCheck = await message.guild.bans.fetch(member.id)
+                .catch(() => null);
+
+            if (!banCheck) {
+                throw new Error(
+                    "Discord no confirmó el ban del usuario."
+                );
+            }
 
             await message.react("✅");
 
