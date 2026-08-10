@@ -170,10 +170,6 @@ export default {
         }
 
         try {
-            // =========================
-            // GUEST
-            // =========================
-
             if (group === "guest") {
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
@@ -190,20 +186,16 @@ export default {
                     await member.roles.remove(removableRoles);
                 }
 
-                await wait(2000);
+                await wait(4000);
 
-                await member.roles.add(GUEST_ROLE);
                 await member.setNickname(null);
+                await member.roles.add(GUEST_ROLE);
 
                 await message.react("✅");
                 return;
             }
 
             const squadron = SQUADRONS[group];
-
-            // =========================
-            // GUARDAR TYPE 3 / TYPE 5
-            // =========================
 
             const existingType3 = TYPE_3_ROLES.find(roleId =>
                 member.roles.cache.has(roleId)
@@ -212,10 +204,6 @@ export default {
             const existingType5 = TYPE_5_ROLES.find(roleId =>
                 member.roles.cache.has(roleId)
             );
-
-            // =========================
-            // REMOVE MASIVO
-            // =========================
 
             const rolesToRemove = member.roles.cache.filter(role =>
                 ALL_SQUADRON_ROLES.includes(role.id)
@@ -227,55 +215,39 @@ export default {
 
             await member.roles.remove(GUEST_ROLE);
 
-            // =========================
-            // COOLDOWN
-            // =========================
+            await wait(4000);
 
-            await wait(2000);
+            await member.setNickname(squadron.nickname);
 
-            // =========================
-            // RESTAURAR TYPE 3 / TYPE 5
-            // =========================
-
-            if (existingType3) {
-                await member.roles.add(existingType3);
-            }
-
-            if (existingType5) {
-                await member.roles.add(existingType5);
-            }
-
-            // =========================
-            // AGREGAR ESCUADRÓN
-            // =========================
-
-            for (const roleId of squadron.roles) {
-
+            const rolesToAdd = squadron.roles.filter(roleId => {
                 if (
                     TYPE_3_ROLES.includes(roleId) &&
                     existingType3
                 ) {
-                    continue;
+                    return false;
                 }
 
                 if (
                     TYPE_5_ROLES.includes(roleId) &&
                     existingType5
                 ) {
-                    continue;
+                    return false;
                 }
 
-                await member.roles.add(roleId);
+                return true;
+            });
+
+            if (existingType3) {
+                rolesToAdd.push(existingType3);
             }
 
-            // =========================
-            // NICKNAME
-            // =========================
+            if (existingType5) {
+                rolesToAdd.push(existingType5);
+            }
 
-            await member.setNickname(squadron.nickname);
+            await member.roles.add([...new Set(rolesToAdd)]);
 
             await message.react("✅");
-
         } catch (error) {
             await message.react("❌");
             throw error;
