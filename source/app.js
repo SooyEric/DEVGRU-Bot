@@ -1,25 +1,37 @@
-import { Client, GatewayIntentBits, Collection, EmbedBuilder } from "discord.js";
+import {
+    Client,
+    GatewayIntentBits,
+    Collection,
+    EmbedBuilder
+} from "discord.js";
+
 import config from "./config/config.js";
 import logger from "./utils/logger.js";
 import permissions from "./config/permissions.js";
 import { logCommandError } from "./utils/commandLogger.js";
 import { logBotUpdate } from "./utils/updateLogger.js";
 import { loadCommands } from "./utils/commandLoader.js";
+
 import {
     initializeBanTable,
     getBannedMember,
     markRestored
 } from "./utils/banManager.js";
 
+import squadronRegistry from "./events/squadronRegistry.js";
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
 });
 
 client.commands = new Collection();
+
+squadronRegistry.register(client);
 
 await initializeBanTable();
 await loadCommands(client);
