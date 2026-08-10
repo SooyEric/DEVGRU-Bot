@@ -92,23 +92,31 @@ export default {
             return;
         }
 
+        let targetInput;
         let requestedRank = null;
-        let targetInput = null;
 
-        const rankIndex = RANKS.findIndex(
+        const firstArgIsRank = RANKS.some(
             rank => rank.short.toLowerCase() === args[0].toLowerCase()
         );
 
-        if (rankIndex !== -1) {
-            requestedRank = RANKS[rankIndex];
-            targetInput = args[1];
-        } else {
-            targetInput = args[0];
-        }
-
-        if (!targetInput) {
+        if (firstArgIsRank) {
             await message.react("❌");
             return;
+        }
+
+        targetInput = args[0];
+
+        if (args[1]) {
+            const rankIndex = RANKS.findIndex(
+                rank => rank.short.toLowerCase() === args[1].toLowerCase()
+            );
+
+            if (rankIndex !== -1) {
+                requestedRank = RANKS[rankIndex];
+            } else {
+                await message.react("❌");
+                return;
+            }
         }
 
         let member;
