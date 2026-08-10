@@ -5,6 +5,7 @@ import {
     EmbedBuilder
 } from "discord.js";
 
+import http from "http";
 import config from "./config/config.js";
 import logger from "./utils/logger.js";
 import permissions from "./config/permissions.js";
@@ -233,6 +234,29 @@ client.on("messageCreate", async (message) => {
             error
         );
     }
+});
+
+const PORT = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+    if (req.url === "/roblox/callback") {
+        res.writeHead(200, {
+            "Content-Type": "text/plain; charset=utf-8"
+        });
+
+        res.end("DEVGRU-Bot: autorización recibida.");
+        return;
+    }
+
+    res.writeHead(404, {
+        "Content-Type": "text/plain; charset=utf-8"
+    });
+
+    res.end("Not Found");
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+    logger.info(`HTTP server listening on port ${PORT}`);
 });
 
 client.login(config.discord.token);
