@@ -1,7 +1,7 @@
 export default {
-  name: "funcionando",
+    name: "funcionando",
 
-  async execute(message) {
-    await message.reply("funcionando");
-  },
+    async execute(message, args) {
+        await message.reply("funcionando");
+    }
 };
