@@ -26,47 +26,87 @@ const RED_ROLES = [
 
 const GUEST_ROLE = "1373365890623602768";
 
+const ALL_GROUP_ROLES = [
+    ...new Set([
+        ...BLUE_ROLES,
+        ...RED_ROLES
+    ])
+];
+
 export default {
     name: "add",
     permission: 1,
 
     async execute(message, args) {
-        if (args.length < 2) {
+        const group = args[0]?.toLowerCase();
+        const target = args[1];
+
+        if (!["blue", "red", "guest"].includes(group)) {
             await message.react("❌");
             return;
         }
 
-        const group = args[0].toLowerCase();
-        const member = message.mentions.members.first();
+        if (!target) {
+            await message.react("❌");
+            return;
+        }
 
-        if (!["blue", "red", "guest"].includes(group) || !member) {
+        let member;
+
+        try {
+            if (message.mentions.members.first()) {
+                member = message.mentions.members.first();
+            } else {
+                const userId = target.replace(/[<@!>]/g, "");
+
+                if (!/^\d{17,20}$/.test(userId)) {
+                    await message.react("❌");
+                    return;
+                }
+
+                member = await message.guild.members.fetch(userId);
+            }
+        } catch {
+            await message.react("❌");
+            return;
+        }
+
+        if (!member) {
             await message.react("❌");
             return;
         }
 
         try {
+            // Siempre eliminar primero TODOS los grupos
+            // antes de agregar el grupo solicitado.
+            await member.roles.remove(ALL_GROUP_ROLES);
+
+            // El Guest también se elimina al asignar cualquier grupo.
+            await member.roles.remove(GUEST_ROLE);
+
+            if (group === "guest") {
+                await member.roles.add(GUEST_ROLE);
+                await member.setNickname(null);
+
+                await message.react("✅");
+                return;
+            }
+
             if (group === "blue") {
-                await member.roles.remove(RED_ROLES);
-                await member.roles.remove(GUEST_ROLE);
                 await member.roles.add(BLUE_ROLES);
                 await member.setNickname("SOE1 Bravo");
+
+                await message.react("✅");
+                return;
             }
 
             if (group === "red") {
-                await member.roles.remove(BLUE_ROLES);
-                await member.roles.remove(GUEST_ROLE);
                 await member.roles.add(RED_ROLES);
                 await member.setNickname("SOE1 Alpha");
-            }
 
-            if (group === "guest") {
-                await member.roles.remove(BLUE_ROLES);
-                await member.roles.remove(RED_ROLES);
-                await member.roles.add(GUEST_ROLE);
-                await member.setNickname(null);
+                await message.react("✅");
+                return;
             }
-
-            await message.react("✅");
         } catch (error) {
             await message.react("❌");
             throw error;
