@@ -25,7 +25,6 @@ const ANTIBAN_USERS = [
     "1024737406483701781",
     "1414816775610306631"
 ];
-];
 
 const EMBED_COLOR = "#ffaf1a";
 
