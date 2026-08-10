@@ -119,6 +119,8 @@ const ALL_SQUADRON_ROLES = [
     )
 ];
 
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 export default {
     name: "add",
     permission: 1,
@@ -184,6 +186,8 @@ export default {
                     await member.roles.remove(removableRoles);
                 }
 
+                await wait(2000);
+
                 await member.roles.add(GUEST_ROLE);
                 await member.setNickname(null);
 
@@ -203,7 +207,11 @@ export default {
 
             await member.roles.remove(GUEST_ROLE);
 
-            await member.roles.add(squadron.roles);
+            await wait(2000);
+
+            for (const roleId of squadron.roles) {
+                await member.roles.add(roleId);
+            }
 
             await member.setNickname(squadron.nickname);
 
