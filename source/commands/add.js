@@ -26,24 +26,6 @@ const RED_ROLES = [
 
 const GUEST_ROLE = "1373365890623602768";
 
-const SHARED_ROLES = [
-    "1373365810910859265",
-    "1373365831454556312",
-    "1373365832914178179",
-    "1373365840677703865",
-    "1373365856524046488",
-    "1373365865734738070",
-    "1373365866657222819"
-];
-
-const BLUE_EXCLUSIVE_ROLES = BLUE_ROLES.filter(
-    roleId => !SHARED_ROLES.includes(roleId)
-);
-
-const RED_EXCLUSIVE_ROLES = RED_ROLES.filter(
-    roleId => !SHARED_ROLES.includes(roleId)
-);
-
 export default {
     name: "add",
     permission: 1,
@@ -52,7 +34,12 @@ export default {
         const group = args[0]?.toLowerCase();
         const target = args[1];
 
-        if (!["blue", "red", "guest"].includes(group) || !target) {
+        if (!["blue", "red", "guest"].includes(group)) {
+            await message.react("❌");
+            return;
+        }
+
+        if (!target) {
             await message.react("❌");
             return;
         }
@@ -60,9 +47,9 @@ export default {
         let member;
 
         try {
-            if (message.mentions.members.first()) {
-                member = message.mentions.members.first();
-            } else {
+            member = message.mentions.members.first();
+
+            if (!member) {
                 const userId = target.replace(/[<@!>]/g, "");
 
                 if (!/^\d{17,20}$/.test(userId)) {
@@ -77,36 +64,56 @@ export default {
             return;
         }
 
+        if (!member) {
+            await message.react("❌");
+            return;
+        }
+
         try {
-            if (group === "blue") {
-                await member.roles.remove(RED_EXCLUSIVE_ROLES);
-                await member.roles.remove(GUEST_ROLE);
+            // =====================================================
+            // QUITAR TODO
+            // =====================================================
 
-                await member.roles.add(BLUE_ROLES);
+            await member.roles.remove(BLUE_ROLES);
+            await member.roles.remove(RED_ROLES);
+            await member.roles.remove(GUEST_ROLE);
 
-                await member.setNickname("SOE1 Bravo");
-            }
-
-            if (group === "red") {
-                await member.roles.remove(BLUE_EXCLUSIVE_ROLES);
-                await member.roles.remove(GUEST_ROLE);
-
-                await member.roles.add(RED_ROLES);
-
-                await member.setNickname("SOE1 Alpha");
-            }
+            // =====================================================
+            // GUEST
+            // =====================================================
 
             if (group === "guest") {
-                await member.roles.remove(BLUE_ROLES);
-                await member.roles.remove(RED_ROLES);
-                await member.roles.remove(GUEST_ROLE);
-
                 await member.roles.add(GUEST_ROLE);
-
                 await member.setNickname(null);
+
+                await message.react("✅");
+                return;
             }
 
-            await message.react("✅");
+            // =====================================================
+            // BLUE
+            // =====================================================
+
+            if (group === "blue") {
+                await member.roles.add(BLUE_ROLES);
+                await member.setNickname("SOE1 Bravo");
+
+                await message.react("✅");
+                return;
+            }
+
+            // =====================================================
+            // RED
+            // =====================================================
+
+            if (group === "red") {
+                await member.roles.add(RED_ROLES);
+                await member.setNickname("SOE1 Alpha");
+
+                await message.react("✅");
+                return;
+            }
+
         } catch (error) {
             await message.react("❌");
             throw error;
