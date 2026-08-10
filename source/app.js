@@ -5,6 +5,11 @@ import permissions from "./config/permissions.js";
 import { logCommandError } from "./utils/commandLogger.js";
 import { logBotUpdate } from "./utils/updateLogger.js";
 import { loadCommands } from "./utils/commandLoader.js";
+import {
+    initializeBanTable,
+    getBannedMember,
+    markRestored
+} from "./utils/banManager.js";
 
 const client = new Client({
     intents: [
@@ -15,6 +20,8 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+
+await initializeBanTable();
 
 await loadCommands(client);
 
@@ -33,6 +40,79 @@ client.once("clientReady", async () => {
     await logBotUpdate(client);
 });
 
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    if (!interaction.customId.startsWith("restore_ban:")) return;
+
+    const userId = interaction.customId.split(":")[1];
+
+    const requiredPermission = 1;
+    const allowedRoles = permissions[requiredPermission];
+
+    const hasPermission = allowedRoles?.some(
+        roleId => interaction.member?.roles.cache.has(roleId)
+    );
+
+    if (!hasPermission) {
+        await interaction.reply({
+            content: "❌ No tienes permiso para restaurar este usuario.",
+            ephemeral: true
+        });
+
+        return;
+    }
+
+    try {
+        const bannedMember = await getBannedMember(userId);
+
+        if (!bannedMember || bannedMember.restored) {
+            await interaction.reply({
+                content: "❌ Este registro ya fue restaurado.",
+                ephemeral: true
+            });
+
+            return;
+        }
+
+        let member;
+
+        try {
+            member = await interaction.guild.members.fetch(userId);
+        } catch {
+            await interaction.reply({
+                content: "❌ El usuario todavía no ha regresado al servidor.",
+                ephemeral: true
+            });
+
+            return;
+        }
+
+        for (const roleId of bannedMember.role_ids) {
+            try {
+                await member.roles.add(roleId);
+            } catch {
+            }
+        }
+
+        await markRestored(userId);
+
+        await interaction.update({
+            components: []
+        });
+
+    } catch (error) {
+        logger.error("Error restoring banned member:", error);
+
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: "❌ No se pudo restaurar al usuario.",
+                ephemeral: true
+            });
+        }
+    }
+});
+
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
 
@@ -49,14 +129,6 @@ client.on("messageCreate", async (message) => {
 
     const command = client.commands.get(commandName);
 
-    /*
-     * Si no existe el comando, simplemente ignoramos el mensaje.
-     *
-     * Esto evita que mensajes normales como:
-     * "- punto numero 1"
-     *
-     * generen logs de error.
-     */
     if (!command) return;
 
     logger.info(`Command detected: ${commandName}`);
