@@ -26,10 +26,15 @@ const RED_ROLES = [
 
 const GUEST_ROLE = "1373365890623602768";
 
-const GROUP_ROLES = [
-    ...BLUE_ROLES,
-    ...RED_ROLES
+const ALL_GROUP_ROLES = [
+    ...new Set([
+        ...BLUE_ROLES,
+        ...RED_ROLES,
+        GUEST_ROLE
+    ])
 ];
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export default {
     name: "add",
@@ -64,54 +69,20 @@ export default {
 
                 member = await message.guild.members.fetch(userId);
             }
-
-            if (!member) {
-                await message.react("❌");
-                return;
-            }
-
-            // Obtener estado actual directamente de Discord
-            member = await message.guild.members.fetch({
-                user: member.id,
-                force: true
-            });
-
         } catch {
             await message.react("❌");
             return;
         }
 
+        if (!member) {
+            await message.react("❌");
+            return;
+        }
+
         try {
-            // =====================================================
-            // 1. QUITAR TODOS LOS ROLES DE GRUPO
-            // =====================================================
+            await member.roles.remove(ALL_GROUP_ROLES);
 
-            for (const roleId of GROUP_ROLES) {
-                if (member.roles.cache.has(roleId)) {
-                    await member.roles.remove(roleId);
-                }
-            }
-
-            // =====================================================
-            // 2. QUITAR GUEST
-            // =====================================================
-
-            if (member.roles.cache.has(GUEST_ROLE)) {
-                await member.roles.remove(GUEST_ROLE);
-            }
-
-            // =====================================================
-            // 3. VOLVER A OBTENER EL ESTADO REAL DEL USUARIO
-            // =====================================================
-
-            member = await message.guild.members.fetch({
-                user: member.id,
-                force: true
-            });
-
-            // =====================================================
-            // 4. GUEST
-            // =====================================================
+            await wait(1000);
 
             if (group === "guest") {
                 await member.roles.add(GUEST_ROLE);
@@ -121,37 +92,21 @@ export default {
                 return;
             }
 
-            // =====================================================
-            // 5. SELECCIONAR EXCLUSIVAMENTE EL GRUPO SOLICITADO
-            // =====================================================
-
-            const rolesToAdd =
-                group === "blue"
-                    ? BLUE_ROLES
-                    : RED_ROLES;
-
-            // =====================================================
-            // 6. AGREGAR ÚNICAMENTE LOS ROLES DEL GRUPO
-            // =====================================================
-
-            for (const roleId of rolesToAdd) {
-                await member.roles.add(roleId);
-            }
-
-            // =====================================================
-            // 7. NICKNAME
-            // =====================================================
-
             if (group === "blue") {
+                await member.roles.add(BLUE_ROLES);
                 await member.setNickname("SOE1 Bravo");
+
+                await message.react("✅");
+                return;
             }
 
             if (group === "red") {
+                await member.roles.add(RED_ROLES);
                 await member.setNickname("SOE1 Alpha");
+
+                await message.react("✅");
+                return;
             }
-
-            await message.react("✅");
-
         } catch (error) {
             await message.react("❌");
             throw error;
