@@ -26,14 +26,20 @@ const RED_ROLES = [
 
 const GUEST_ROLE = "1373365890623602768";
 
-const ALL_GROUP_ROLES = [
+const GROUP_ROLES = [
     ...new Set([
         ...BLUE_ROLES,
         ...RED_ROLES
     ])
 ];
 
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const ALL_MANAGED_ROLES = [
+    ...GROUP_ROLES,
+    GUEST_ROLE
+];
+
+const wait = ms =>
+    new Promise(resolve => setTimeout(resolve, ms));
 
 export default {
     name: "add",
@@ -56,9 +62,9 @@ export default {
         let member;
 
         try {
-            if (message.mentions.members.first()) {
-                member = message.mentions.members.first();
-            } else {
+            member = message.mentions.members.first();
+
+            if (!member) {
                 const userId = target.replace(/[<@!>]/g, "");
 
                 if (!/^\d{17,20}$/.test(userId)) {
@@ -68,25 +74,48 @@ export default {
 
                 member = await message.guild.members.fetch(userId);
             }
+
+            if (!member) {
+                await message.react("❌");
+                return;
+            }
+
+            member = await message.guild.members.fetch({
+                user: member.id,
+                force: true
+            });
+
         } catch {
             await message.react("❌");
             return;
         }
 
-        if (!member) {
-            await message.react("❌");
-            return;
-        }
-
         try {
-            // REMOVER TODO
-            await member.roles.remove(ALL_GROUP_ROLES);
-            await member.roles.remove(GUEST_ROLE);
+            // =====================================================
+            // 1. REMOVER TODOS LOS ROLES DE UNA SOLA OPERACIÓN
+            // =====================================================
 
-            // Esperar 2 segundos para que Discord procese completamente
+            await member.roles.remove(ALL_MANAGED_ROLES);
+
+            // =====================================================
+            // 2. ESPERAR A QUE DISCORD PROCESE EL REMOVE
+            // =====================================================
+
             await wait(2000);
 
-            // GUEST
+            // =====================================================
+            // 3. OBTENER EL ESTADO ACTUALIZADO
+            // =====================================================
+
+            member = await message.guild.members.fetch({
+                user: member.id,
+                force: true
+            });
+
+            // =====================================================
+            // 4. GUEST
+            // =====================================================
+
             if (group === "guest") {
                 await member.roles.add(GUEST_ROLE);
                 await member.setNickname(null);
@@ -95,23 +124,36 @@ export default {
                 return;
             }
 
-            // BLUE
+            // =====================================================
+            // 5. SELECCIONAR ÚNICAMENTE EL GRUPO SOLICITADO
+            // =====================================================
+
+            const rolesToAdd =
+                group === "blue"
+                    ? BLUE_ROLES
+                    : RED_ROLES;
+
+            // =====================================================
+            // 6. AGREGAR UNO POR UNO
+            // =====================================================
+
+            for (const roleId of rolesToAdd) {
+                await member.roles.add(roleId);
+            }
+
+            // =====================================================
+            // 7. NICKNAME
+            // =====================================================
+
             if (group === "blue") {
-                await member.roles.add(BLUE_ROLES);
                 await member.setNickname("SOE1 Bravo");
-
-                await message.react("✅");
-                return;
             }
 
-            // RED
             if (group === "red") {
-                await member.roles.add(RED_ROLES);
                 await member.setNickname("SOE1 Alpha");
-
-                await message.react("✅");
-                return;
             }
+
+            await message.react("✅");
 
         } catch (error) {
             await message.react("❌");
