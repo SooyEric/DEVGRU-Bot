@@ -23,6 +23,7 @@ import {
 } from "./utils/squadronRegistry.js";
 
 import squadronRegistry from "./events/squadronRegistry.js";
+import antiRaid from "./events/antiRaid.js";
 
 const client = new Client({
     intents: [
@@ -39,6 +40,7 @@ await initializeBanTable();
 await initializeSquadronRegistry();
 
 squadronRegistry.register(client);
+antiRaid.register(client);
 
 await loadCommands(client);
 
