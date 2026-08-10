@@ -35,6 +35,14 @@ function timeoutError() {
     return new Error("APPLICATION_TIMEOUT");
 }
 
+async function deleteMessage(message) {
+    if (!message) return;
+
+    try {
+        await message.delete();
+    } catch {}
+}
+
 async function waitForMessage(
     dm,
     userId,
@@ -78,13 +86,15 @@ async function waitForConfirmation(
         throw timeoutError();
     }
 
-    const confirmButton =
+    const submitButton =
         new ButtonBuilder()
             .setCustomId(
                 `application_submit:${userId}`
             )
             .setLabel("Enviar")
-            .setStyle(ButtonStyle.Success);
+            .setStyle(
+                ButtonStyle.Success
+            );
 
     const cancelButton =
         new ButtonBuilder()
@@ -92,12 +102,14 @@ async function waitForConfirmation(
                 `application_cancel:${userId}`
             )
             .setLabel("Cancelar")
-            .setStyle(ButtonStyle.Danger);
+            .setStyle(
+                ButtonStyle.Danger
+            );
 
     const row =
         new ActionRowBuilder()
             .addComponents(
-                confirmButton,
+                submitButton,
                 cancelButton
             );
 
@@ -115,14 +127,21 @@ async function waitForConfirmation(
         });
 
     const interaction =
-        await confirmationMessage.awaitMessageComponent({
-            filter: interaction =>
-                interaction.user.id === userId,
+        await confirmationMessage
+            .awaitMessageComponent({
+                filter: component =>
+                    component.user.id ===
+                    userId,
 
-            time: remaining
-        }).catch(() => null);
+                time: remaining
+            })
+            .catch(() => null);
 
     if (!interaction) {
+        await deleteMessage(
+            confirmationMessage
+        );
+
         throw timeoutError();
     }
 
@@ -148,7 +167,7 @@ async function waitForConfirmation(
             embed(
                 "Solicitud enviada",
                 "Tu información fue recibida correctamente.\n\n" +
-                "Ahora debes enviar tu solicitud para unirte al grupo de Roblox de **DEVGRU**."
+                "Ahora debes enviar tu solicitud para unirte al grupo oficial de Roblox de **DEVGRU**."
             )
         ],
         components: []
@@ -168,17 +187,18 @@ async function waitForGroupRequest(
         );
     }
 
-    await dm.send({
-        embeds: [
-            embed(
-                "Solicitud al grupo de Roblox",
-                "Antes de finalizar tu aplicación debes enviar una solicitud para unirte al grupo oficial de DEVGRU.\n\n" +
-                `[**Unirse al grupo de DEVGRU**](${GROUP_URL})\n\n` +
-                "Después de enviar la solicitud, vuelve a este DM.\n\n" +
-                "⏳ **Esperando confirmación…**"
-            )
-        ]
-    });
+    const groupMessage =
+        await dm.send({
+            embeds: [
+                embed(
+                    "Solicitud al grupo de Roblox",
+                    "Antes de finalizar tu aplicación debes enviar una solicitud para unirte al grupo oficial de DEVGRU.\n\n" +
+                    `[**Unirse al grupo de DEVGRU**](${GROUP_URL})\n\n` +
+                    "Después de enviar la solicitud, vuelve a este DM.\n\n" +
+                    "⏳ **Esperando confirmación…**"
+                )
+            ]
+        });
 
     while (Date.now() < endTime) {
         try {
@@ -188,6 +208,10 @@ async function waitForGroupRequest(
                 );
 
             if (requested) {
+                await deleteMessage(
+                    groupMessage
+                );
+
                 await dm.send({
                     embeds: [
                         embed(
@@ -207,10 +231,18 @@ async function waitForGroupRequest(
             );
         }
 
-        await new Promise(resolve =>
-            setTimeout(resolve, 10000)
+        await new Promise(
+            resolve =>
+                setTimeout(
+                    resolve,
+                    10000
+                )
         );
     }
+
+    await deleteMessage(
+        groupMessage
+    );
 
     throw timeoutError();
 }
@@ -226,8 +258,12 @@ async function continueApplication(
         robloxUsername
     } = application;
 
-    if (Date.now() >= endTime) {
-        applications.delete(userId);
+    if (
+        Date.now() >= endTime
+    ) {
+        applications.delete(
+            userId
+        );
 
         await dm.send({
             embeds: [
@@ -245,6 +281,11 @@ async function continueApplication(
         robloxUser;
 
     try {
+        /*
+         * CUENTA VERIFICADA
+         * Este mensaje se conserva.
+         */
+
         await dm.send({
             embeds: [
                 embed(
@@ -260,18 +301,23 @@ async function continueApplication(
             ]
         });
 
-        await dm.send({
-            embeds: [
-                embed(
-                    "2. ¿Cómo encontraste el servidor?",
-                    "Responde con el número correspondiente:\n\n" +
-                    "**1.** Vanity — `discord.gg/devgru`\n" +
-                    "**2.** Tag de SEALs\n" +
-                    "**3.** Invitación de un usuario\n" +
-                    "**4.** Promoción en otro servidor"
-                )
-            ]
-        });
+        /*
+         * PREGUNTA 2
+         */
+
+        const discoveryQuestion =
+            await dm.send({
+                embeds: [
+                    embed(
+                        "2. ¿Cómo encontraste el servidor?",
+                        "Responde con el número correspondiente:\n\n" +
+                        "**1.** Vanity — `discord.gg/devgru`\n" +
+                        "**2.** Tag de SEALs\n" +
+                        "**3.** Invitación de un usuario\n" +
+                        "**4.** Promoción en otro servidor"
+                    )
+                ]
+            });
 
         const sourceMessage =
             await waitForMessage(
@@ -279,36 +325,61 @@ async function continueApplication(
                 userId,
                 endTime,
                 message =>
-                    ["1", "2", "3", "4"]
-                        .includes(
-                            message.content.trim()
-                        )
+                    [
+                        "1",
+                        "2",
+                        "3",
+                        "4"
+                    ].includes(
+                        message.content.trim()
+                    )
             );
 
         const source =
             sourceMessage.content.trim();
 
+        await deleteMessage(
+            discoveryQuestion
+        );
+
+        await deleteMessage(
+            sourceMessage
+        );
+
         let sourceText;
+
+        /*
+         * VANITY
+         */
 
         if (source === "1") {
             sourceText =
                 "Vanity — discord.gg/devgru";
         }
 
+        /*
+         * TAG DE SEALS
+         */
+
         if (source === "2") {
             sourceText =
                 "Tag de SEALs";
         }
 
+        /*
+         * INVITACIÓN
+         */
+
         if (source === "3") {
-            await dm.send({
-                embeds: [
-                    embed(
-                        "Usuario que te invitó",
-                        "¿Cuál es el usuario de Discord de la persona que te invitó?"
-                    )
-                ]
-            });
+            const invitedByQuestion =
+                await dm.send({
+                    embeds: [
+                        embed(
+                            "Usuario que te invitó",
+                            "¿Cuál es el usuario de Discord de la persona que te invitó?"
+                        )
+                    ]
+                });
 
             const invitedBy =
                 await waitForMessage(
@@ -317,19 +388,32 @@ async function continueApplication(
                     endTime
                 );
 
+            await deleteMessage(
+                invitedByQuestion
+            );
+
+            await deleteMessage(
+                invitedBy
+            );
+
             sourceText =
                 `Invitación de: ${invitedBy.content.trim()}`;
         }
 
+        /*
+         * PROMOCIÓN
+         */
+
         if (source === "4") {
-            await dm.send({
-                embeds: [
-                    embed(
-                        "Servidor de promoción",
-                        "¿En qué servidor viste la promoción de DEVGRU?"
-                    )
-                ]
-            });
+            const promotedInQuestion =
+                await dm.send({
+                    embeds: [
+                        embed(
+                            "Servidor de promoción",
+                            "¿En qué servidor viste la promoción de DEVGRU?"
+                        )
+                    ]
+                });
 
             const promotedIn =
                 await waitForMessage(
@@ -338,6 +422,14 @@ async function continueApplication(
                     endTime
                 );
 
+            await deleteMessage(
+                promotedInQuestion
+            );
+
+            await deleteMessage(
+                promotedIn
+            );
+
             sourceText =
                 `Promoción en: ${promotedIn.content.trim()}`;
         }
@@ -345,16 +437,21 @@ async function continueApplication(
         application.discovery =
             sourceText;
 
-        await dm.send({
-            embeds: [
-                embed(
-                    "3. Servidores de Discord",
-                    "Envía una **foto de tus servidores de Discord**.\n\n" +
-                    "La imagen debe permitirnos comprobar los servidores en los que te encuentras.\n\n" +
-                    "⚠️ Si las fotografías no son suficientemente claras, se te solicitará entrar a un **voice chat y compartir pantalla**."
-                )
-            ]
-        });
+        /*
+         * PREGUNTA 3
+         */
+
+        const imageQuestion =
+            await dm.send({
+                embeds: [
+                    embed(
+                        "3. Servidores de Discord",
+                        "Envía una **foto de tus servidores de Discord**.\n\n" +
+                        "La imagen debe permitirnos comprobar los servidores en los que te encuentras.\n\n" +
+                        "⚠️ Si las fotografías no son suficientemente claras, se te solicitará entrar a un **voice chat y compartir pantalla**."
+                    )
+                ]
+            });
 
         const imageMessage =
             await waitForMessage(
@@ -381,6 +478,19 @@ async function continueApplication(
         application.discordImage =
             image.url;
 
+        await deleteMessage(
+            imageQuestion
+        );
+
+        await deleteMessage(
+            imageMessage
+        );
+
+        /*
+         * INFORMACIÓN RECIBIDA
+         * Este mensaje se conserva.
+         */
+
         await dm.send({
             embeds: [
                 embed(
@@ -396,6 +506,10 @@ async function continueApplication(
             ]
         });
 
+        /*
+         * REVISIÓN
+         */
+
         const submitted =
             await waitForConfirmation(
                 dm,
@@ -404,9 +518,16 @@ async function continueApplication(
             );
 
         if (!submitted) {
-            applications.delete(userId);
+            applications.delete(
+                userId
+            );
+
             return;
         }
+
+        /*
+         * GRUPO DE ROBLOX
+         */
 
         await waitForGroupRequest(
             dm,
@@ -417,14 +538,22 @@ async function continueApplication(
         application.status =
             "ready_for_review";
 
-        applications.delete(userId);
+        /*
+         * YA ESTÁ LISTA PARA STAFF
+         */
+
+        applications.delete(
+            userId
+        );
 
         await sendApplicationToLogs(
             application
         );
 
     } catch (error) {
-        applications.delete(userId);
+        applications.delete(
+            userId
+        );
 
         if (
             error?.message ===
@@ -461,10 +590,13 @@ async function continueApplication(
 async function sendApplicationToLogs(
     application
 ) {
-    if (!APPLICATION_LOG_CHANNEL_ID) {
+    if (
+        !APPLICATION_LOG_CHANNEL_ID
+    ) {
         console.error(
-            "APPLICATION_LOG_CHANNEL_ID no está configurado."
+            "APPLICATION_LOG_CHANNEL_ID no está configurada."
         );
+
         return;
     }
 
@@ -477,6 +609,7 @@ async function sendApplicationToLogs(
         console.error(
             "No se encontró el canal de logs de aplicaciones."
         );
+
         return;
     }
 
@@ -501,7 +634,9 @@ async function sendApplicationToLogs(
                 `**Estado:** Solicitud recibida — pendiente de revisión`
             );
 
-    if (application.discordImage) {
+    if (
+        application.discordImage
+    ) {
         logEmbed.setImage(
             application.discordImage
         );
@@ -524,8 +659,12 @@ async function sendApplicationToLogs(
             );
 
     await channel.send({
-        embeds: [logEmbed],
-        components: [row]
+        embeds: [
+            logEmbed
+        ],
+        components: [
+            row
+        ]
     });
 }
 
@@ -535,14 +674,43 @@ export function resumeRobloxApplication(
     client
 ) {
     const application =
-        applications.get(userId);
+        applications.get(
+            userId
+        );
 
     if (!application) {
         return false;
     }
 
+    /*
+     * Guardamos el cliente para
+     * poder enviar la aplicación
+     * al canal de logs.
+     */
+
     application.client =
         client;
+
+    /*
+     * Eliminamos los mensajes
+     * temporales de OAuth.
+     */
+
+    if (
+        application.robloxVerificationMessage
+    ) {
+        deleteMessage(
+            application.robloxVerificationMessage
+        );
+    }
+
+    if (
+        application.robloxAuthorizationMessage
+    ) {
+        deleteMessage(
+            application.robloxAuthorizationMessage
+        );
+    }
 
     continueApplication(
         application,
@@ -562,7 +730,10 @@ export default {
                 REQUIRED_ROLE
             )
         ) {
-            await message.react("❌");
+            await message.react(
+                "❌"
+            );
+
             return;
         }
 
@@ -571,7 +742,10 @@ export default {
                 message.author.id
             )
         ) {
-            await message.react("❌");
+            await message.react(
+                "❌"
+            );
+
             return;
         }
 
@@ -604,13 +778,26 @@ export default {
                     null,
 
                 discordImage:
-                    null
+                    null,
+
+                robloxVerificationMessage:
+                    null,
+
+                robloxAuthorizationMessage:
+                    null,
+
+                status:
+                    "in_progress"
             };
 
             applications.set(
                 message.author.id,
                 application
             );
+
+            /*
+             * ESTE MENSAJE SE CONSERVA.
+             */
 
             await dm.send({
                 embeds: [
@@ -623,15 +810,20 @@ export default {
                 ]
             });
 
-            await dm.send({
-                embeds: [
-                    embed(
-                        "1. Usuario de Roblox",
-                        "¿Cuál es tu usuario de Roblox?\n\n" +
-                        "Escribe únicamente tu **nombre de usuario de Roblox**."
-                    )
-                ]
-            });
+            /*
+             * PREGUNTA DE ROBLOX
+             */
+
+            const robloxQuestion =
+                await dm.send({
+                    embeds: [
+                        embed(
+                            "1. Usuario de Roblox",
+                            "¿Cuál es tu usuario de Roblox?\n\n" +
+                            "Escribe únicamente tu **nombre de usuario de Roblox**."
+                        )
+                    ]
+                });
 
             const collectedMessage =
                 await waitForMessage(
@@ -650,9 +842,27 @@ export default {
             application.robloxUsername =
                 robloxUsername;
 
+            /*
+             * BORRAR PREGUNTA + RESPUESTA
+             */
+
+            await deleteMessage(
+                robloxQuestion
+            );
+
+            await deleteMessage(
+                collectedMessage
+            );
+
+            /*
+             * OAUTH
+             */
+
             const verifyButton =
                 new ButtonBuilder()
-                    .setLabel("Verificar")
+                    .setLabel(
+                        "Verificar"
+                    )
                     .setStyle(
                         ButtonStyle.Link
                     )
@@ -668,7 +878,9 @@ export default {
                     .setCustomId(
                         `aplicar_back:${message.author.id}`
                     )
-                    .setLabel("Atrás")
+                    .setLabel(
+                        "Atrás"
+                    )
                     .setStyle(
                         ButtonStyle.Secondary
                     );
@@ -680,29 +892,41 @@ export default {
                         backButton
                     );
 
-            await dm.send({
-                embeds: [
-                    embed(
-                        "Verificación de cuenta",
-                        `Usuario indicado: **${robloxUsername}**\n\n` +
-                        "Para continuar, debes verificar que esta cuenta de Roblox te pertenece.\n\n" +
-                        "Presiona **Verificar** para autorizar tu cuenta de Roblox."
-                    )
-                ],
-                components: [row]
-            });
+            /*
+             * ESTOS DOS MENSAJES
+             * SE ELIMINARÁN AL
+             * COMPLETAR OAUTH.
+             */
 
-            await dm.send({
-                embeds: [
-                    embed(
-                        "Autorización requerida",
-                        "Después de completar la autorización, regresa a este DM.\n\n" +
-                        "El formulario continuará automáticamente cuando Roblox confirme tu cuenta."
-                    )
-                ]
-            });
+            application.robloxVerificationMessage =
+                await dm.send({
+                    embeds: [
+                        embed(
+                            "Verificación de cuenta",
+                            `Usuario indicado: **${robloxUsername}**\n\n` +
+                            "Para continuar, debes verificar que esta cuenta de Roblox te pertenece.\n\n" +
+                            "Presiona **Verificar** para autorizar tu cuenta de Roblox."
+                        )
+                    ],
+                    components: [
+                        row
+                    ]
+                });
 
-            await message.react("✅");
+            application.robloxAuthorizationMessage =
+                await dm.send({
+                    embeds: [
+                        embed(
+                            "Autorización requerida",
+                            "Después de completar la autorización, regresa a este DM.\n\n" +
+                            "El formulario continuará automáticamente cuando Roblox confirme tu cuenta."
+                        )
+                    ]
+                });
+
+            await message.react(
+                "✅"
+            );
 
         } catch (error) {
             applications.delete(
@@ -713,7 +937,8 @@ export default {
                 error?.message ===
                 "APPLICATION_TIMEOUT"
             ) {
-                await message.author.createDM()
+                await message.author
+                    .createDM()
                     .then(dm =>
                         dm.send({
                             embeds: [
@@ -724,9 +949,14 @@ export default {
                             ]
                         })
                     )
-                    .catch(() => {});
+                    .catch(
+                        () => {}
+                    );
 
-                await message.react("❌");
+                await message.react(
+                    "❌"
+                );
+
                 return;
             }
 
@@ -735,7 +965,9 @@ export default {
                 error
             );
 
-            await message.react("❌");
+            await message.react(
+                "❌"
+            );
         }
     }
 };
