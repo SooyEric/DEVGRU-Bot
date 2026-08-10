@@ -1,5 +1,6 @@
 const config = {
     discord: {
+        prefix: "-",
         token: process.env.DISCORD_TOKEN,
         clientId: process.env.CLIENT_ID
     },
