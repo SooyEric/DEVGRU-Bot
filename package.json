@@ -1,7 +1,7 @@
 {
   "name": "devgru-bot",
   "version": "1.0.0",
-  "description": "Discord bot for the DEVGRU community",
+  "description": "Discord bot for DEVGRU",
   "type": "module",
   "main": "source/app.js",
   "scripts": {
