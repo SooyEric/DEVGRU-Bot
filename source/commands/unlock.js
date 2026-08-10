@@ -9,7 +9,7 @@ export default {
             await message.channel.permissionOverwrites.edit(
                 PERMISSION_ROLE_ID,
                 {
-                    SendMessages: null
+                    SendMessages: true
                 }
             );
 
