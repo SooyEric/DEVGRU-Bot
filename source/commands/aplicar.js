@@ -12,13 +12,15 @@ import {
 
 const REQUIRED_ROLE = "1373365890623602768";
 
-const APPLICATION_TIMEOUT =
-    30 * 60 * 1000;
+const APPLICATION_TIMEOUT = 30 * 60 * 1000;
 
 const COLOR = "#ffaf1a";
 
 const GROUP_URL =
-    "https://www.roblox.com/communities/34479953/DEVGRU-Seal-Team-Six#!/about";
+    process.env.ROBLOX_GROUP_URL;
+
+const APPLICATION_LOG_CHANNEL_ID =
+    process.env.APPLICATION_LOG_CHANNEL_ID;
 
 const applications = new Map();
 
@@ -157,10 +159,15 @@ async function waitForConfirmation(
 
 async function waitForGroupRequest(
     dm,
-    userId,
     robloxUserId,
     endTime
 ) {
+    if (!GROUP_URL) {
+        throw new Error(
+            "ROBLOX_GROUP_URL no está configurada."
+        );
+    }
+
     await dm.send({
         embeds: [
             embed(
@@ -234,7 +241,8 @@ async function continueApplication(
         return;
     }
 
-    application.robloxUser = robloxUser;
+    application.robloxUser =
+        robloxUser;
 
     try {
         await dm.send({
@@ -242,7 +250,10 @@ async function continueApplication(
                 embed(
                     "Cuenta verificada",
                     "✅ Tu cuenta de Roblox fue verificada correctamente.\n\n" +
-                    `**Usuario:** ${robloxUser.preferred_username || robloxUser.name}\n` +
+                    `**Usuario:** ${
+                        robloxUser.preferred_username ||
+                        robloxUser.name
+                    }\n` +
                     `**ID:** \`${robloxUser.sub}\`\n\n` +
                     "Continuemos con tu aplicación."
                 )
@@ -374,8 +385,12 @@ async function continueApplication(
             embeds: [
                 embed(
                     "Información recibida",
-                    `**Roblox:** ${robloxUsername}\n` +
-                    `**Encontró DEVGRU mediante:** ${sourceText}\n\n` +
+                    `**Roblox:** ${
+                        robloxUsername
+                    }\n` +
+                    `**Encontró DEVGRU mediante:** ${
+                        sourceText
+                    }\n\n` +
                     "La fotografía de tus servidores fue recibida correctamente."
                 )
             ]
@@ -395,7 +410,6 @@ async function continueApplication(
 
         await waitForGroupRequest(
             dm,
-            userId,
             robloxUser.sub,
             endTime
         );
@@ -447,9 +461,16 @@ async function continueApplication(
 async function sendApplicationToLogs(
     application
 ) {
+    if (!APPLICATION_LOG_CHANNEL_ID) {
+        console.error(
+            "APPLICATION_LOG_CHANNEL_ID no está configurado."
+        );
+        return;
+    }
+
     const channel =
         application.client.channels.cache.get(
-            "1536396530930557049"
+            APPLICATION_LOG_CHANNEL_ID
         );
 
     if (!channel) {
@@ -471,7 +492,10 @@ async function sendApplicationToLogs(
             .setDescription(
                 `**Discord:** <@${application.userId}>\n` +
                 `**Discord ID:** \`${application.userId}\`\n\n` +
-                `**Roblox:** ${roblox.preferred_username || roblox.name}\n` +
+                `**Roblox:** ${
+                    roblox.preferred_username ||
+                    roblox.name
+                }\n` +
                 `**Roblox ID:** \`${roblox.sub}\`\n\n` +
                 `**Encontró DEVGRU mediante:**\n${application.discovery}\n\n` +
                 `**Estado:** Solicitud recibida — pendiente de revisión`
@@ -489,11 +513,15 @@ async function sendApplicationToLogs(
                 `application_confirm:${application.userId}`
             )
             .setLabel("Confirmar")
-            .setStyle(ButtonStyle.Success);
+            .setStyle(
+                ButtonStyle.Success
+            );
 
     const row =
         new ActionRowBuilder()
-            .addComponents(confirmButton);
+            .addComponents(
+                confirmButton
+            );
 
     await channel.send({
         embeds: [logEmbed],
@@ -513,7 +541,8 @@ export function resumeRobloxApplication(
         return false;
     }
 
-    application.client = client;
+    application.client =
+        client;
 
     continueApplication(
         application,
@@ -537,7 +566,11 @@ export default {
             return;
         }
 
-        if (applications.has(message.author.id)) {
+        if (
+            applications.has(
+                message.author.id
+            )
+        ) {
             await message.react("❌");
             return;
         }
@@ -551,14 +584,27 @@ export default {
                 APPLICATION_TIMEOUT;
 
             const application = {
-                userId: message.author.id,
+                userId:
+                    message.author.id,
+
                 dm,
+
                 endTime,
-                client: message.client,
-                robloxUsername: null,
-                robloxUser: null,
-                discovery: null,
-                discordImage: null
+
+                client:
+                    message.client,
+
+                robloxUsername:
+                    null,
+
+                robloxUser:
+                    null,
+
+                discovery:
+                    null,
+
+                discordImage:
+                    null
             };
 
             applications.set(
