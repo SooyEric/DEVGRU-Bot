@@ -1,4 +1,4 @@
-import { getDatabase } from "../database/index.js";
+import { getDatabase } from "../database/postgres.js";
 
 export async function initializeBanTable() {
     const database = getDatabase();
