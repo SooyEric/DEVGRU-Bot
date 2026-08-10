@@ -36,6 +36,20 @@ client.on("messageCreate", async (message) => {
 
     if (!command) return;
 
+    const requiredPermission = command.permission ?? null;
+
+    if (requiredPermission !== null) {
+        const userRoles = message.member?.roles.cache;
+
+        if (!userRoles) return;
+
+        const hasPermission = permissions[requiredPermission]?.some(
+            roleId => userRoles.has(roleId)
+        );
+
+        if (!hasPermission) return;
+    }
+
     try {
         await command.execute(message, args);
     } catch (error) {
