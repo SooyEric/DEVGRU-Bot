@@ -1,6 +1,6 @@
 const SQUADRONS = {
     red: {
-        nickname: "SOE1 Alpha",
+        group: "Alpha",
         roles: [
             "1373365804279791839",
             "1373365810910859265",
@@ -16,7 +16,7 @@ const SQUADRONS = {
     },
 
     blue: {
-        nickname: "SOE1 Bravo",
+        group: "Bravo",
         roles: [
             "1373365805693009920",
             "1373365810910859265",
@@ -32,7 +32,7 @@ const SQUADRONS = {
     },
 
     gold: {
-        nickname: "SOE1 Charlie",
+        group: "Charlie",
         roles: [
             "1373365806775406693",
             "1373365810910859265",
@@ -48,7 +48,7 @@ const SQUADRONS = {
     },
 
     black: {
-        nickname: "SOE1 Delta",
+        group: "Delta",
         roles: [
             "1373365808969023529",
             "1373365810910859265",
@@ -64,7 +64,7 @@ const SQUADRONS = {
     },
 
     silver: {
-        nickname: "SOE1 Echo",
+        group: "Echo",
         roles: [
             "1535720824257122476",
             "1373365810910859265",
@@ -82,7 +82,7 @@ const SQUADRONS = {
 
 const GUEST_ROLE = "1373365890623602768";
 
-const TYPE_3_ROLES = [
+const RANK_ROLES = [
     "1373365811858768005",
     "1373365812383187047",
     "1373365813490483313",
@@ -104,20 +104,18 @@ const TYPE_3_ROLES = [
     "1373365831454556312"
 ];
 
-const TYPE_5_ROLES = [
-    "1373365833618690059",
-    "1373365835862642713",
-    "1373365837129318474",
-    "1373365839037988894",
-    "1373365839721529506",
-    "1373365840677703865"
-];
-
 const ALL_SQUADRON_ROLES = [
     ...new Set(
         Object.values(SQUADRONS).flatMap(squadron => squadron.roles)
     )
 ];
+
+const RANK_NAMES = new Map(
+    RANK_ROLES.map((roleId, index) => [
+        roleId,
+        `SOE${RANK_ROLES.length - index}`
+    ])
+);
 
 export default {
     name: "add",
@@ -168,11 +166,14 @@ export default {
         }
 
         try {
+            // =========================
+            // GUEST
+            // =========================
+
             if (group === "guest") {
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
-                    ...TYPE_3_ROLES,
-                    ...TYPE_5_ROLES,
+                    ...RANK_ROLES,
                     GUEST_ROLE
                 ];
 
@@ -193,13 +194,33 @@ export default {
 
             const squadron = SQUADRONS[group];
 
-            const existingType3 = TYPE_3_ROLES.find(roleId =>
+            // =========================
+            // DETECTAR RANGO ACTUAL
+            // =========================
+
+            let existingRank = RANK_ROLES.find(roleId =>
                 member.roles.cache.has(roleId)
             );
 
-            const existingType5 = TYPE_5_ROLES.find(roleId =>
-                member.roles.cache.has(roleId)
-            );
+            // =========================
+            // DETECTAR PLACA ACTUAL
+            // =========================
+
+            let plate = null;
+
+            const nickname = member.nickname;
+
+            if (nickname) {
+                const match = nickname.match(/\s(\d{2})$/);
+
+                if (match) {
+                    plate = match[1];
+                }
+            }
+
+            // =========================
+            // ELIMINAR ESCUADRÓN ACTUAL
+            // =========================
 
             const rolesToRemove = member.roles.cache.filter(role =>
                 ALL_SQUADRON_ROLES.includes(role.id)
@@ -211,35 +232,49 @@ export default {
 
             await member.roles.remove(GUEST_ROLE);
 
-            await member.setNickname(squadron.nickname);
+            // =========================
+            // NICKNAME
+            // =========================
 
-            if (existingType3) {
-                await member.roles.add(existingType3);
+            let rankName;
+
+            if (existingRank) {
+                rankName = RANK_NAMES.get(existingRank);
+            } else {
+                rankName = "SOE1";
+                existingRank = "1373365831454556312";
             }
 
-            if (existingType5) {
-                await member.roles.add(existingType5);
+            const newNickname = plate
+                ? `${rankName} ${squadron.group} ${plate}`
+                : `${rankName} ${squadron.group}`;
+
+            await member.setNickname(newNickname);
+
+            // =========================
+            // RESTAURAR / ASIGNAR RANGO
+            // =========================
+
+            if (existingRank) {
+                await member.roles.add(existingRank);
             }
+
+            // =========================
+            // AGREGAR ESCUADRÓN
+            // =========================
 
             for (const roleId of squadron.roles) {
-                if (
-                    TYPE_3_ROLES.includes(roleId) &&
-                    existingType3
-                ) {
-                    continue;
-                }
-
-                if (
-                    TYPE_5_ROLES.includes(roleId) &&
-                    existingType5
-                ) {
-                    continue;
+                if (roleId === "1373365831454556312") {
+                    if (existingRank) {
+                        continue;
+                    }
                 }
 
                 await member.roles.add(roleId);
             }
 
             await message.react("✅");
+
         } catch (error) {
             await message.react("❌");
             throw error;
