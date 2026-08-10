@@ -1,8 +1,15 @@
 const COMMAND_LOG_CHANNEL_ID = "1525379838095921172";
 
-export async function logCommandError(message, commandName, reason, error = null) {
+export async function logCommandError(
+    message,
+    commandName,
+    reason,
+    error = null
+) {
     try {
-        const channel = await message.client.channels.fetch(COMMAND_LOG_CHANNEL_ID);
+        const channel = await message.client.channels.fetch(
+            COMMAND_LOG_CHANNEL_ID
+        );
 
         if (!channel) return;
 
@@ -54,8 +61,13 @@ export async function logCommandError(message, commandName, reason, error = null
             });
         }
 
-        await channel.send({ embeds: [embed] });
+        await channel.send({
+            embeds: [embed]
+        });
     } catch (loggingError) {
-        console.error("Failed to send command error log:", loggingError);
+        console.error(
+            "Failed to send command error log:",
+            loggingError
+        );
     }
 }
