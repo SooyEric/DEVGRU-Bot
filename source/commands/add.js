@@ -46,55 +46,23 @@ export default {
 
         try {
             if (group === "blue") {
-                const redRoles = member.roles.cache.filter(role =>
-                    RED_ROLES.includes(role.id)
-                );
-
-                if (redRoles.size > 0) {
-                    await member.roles.remove(redRoles);
-                }
-
+                await member.roles.remove(RED_ROLES);
+                await member.roles.remove(GUEST_ROLE);
                 await member.roles.add(BLUE_ROLES);
-
-                if (member.roles.cache.has(GUEST_ROLE)) {
-                    await member.roles.remove(GUEST_ROLE);
-                }
-
                 await member.setNickname("SOE1 Bravo");
             }
 
             if (group === "red") {
-                const blueRoles = member.roles.cache.filter(role =>
-                    BLUE_ROLES.includes(role.id)
-                );
-
-                if (blueRoles.size > 0) {
-                    await member.roles.remove(blueRoles);
-                }
-
+                await member.roles.remove(BLUE_ROLES);
+                await member.roles.remove(GUEST_ROLE);
                 await member.roles.add(RED_ROLES);
-
-                if (member.roles.cache.has(GUEST_ROLE)) {
-                    await member.roles.remove(GUEST_ROLE);
-                }
-
                 await member.setNickname("SOE1 Alpha");
             }
 
             if (group === "guest") {
-                const rolesToRemove = member.roles.cache.filter(role =>
-                    BLUE_ROLES.includes(role.id) ||
-                    RED_ROLES.includes(role.id)
-                );
-
-                if (rolesToRemove.size > 0) {
-                    await member.roles.remove(rolesToRemove);
-                }
-
-                if (!member.roles.cache.has(GUEST_ROLE)) {
-                    await member.roles.add(GUEST_ROLE);
-                }
-
+                await member.roles.remove(BLUE_ROLES);
+                await member.roles.remove(RED_ROLES);
+                await member.roles.add(GUEST_ROLE);
                 await member.setNickname(null);
             }
 
