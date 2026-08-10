@@ -198,24 +198,24 @@ export async function hasGroupJoinRequest(
         );
     }
 
-    const url =
+    const membershipUrl =
         new URL(
-            `https://apis.roblox.com/cloud/v2/groups/${groupId}/join-requests`
+            `https://apis.roblox.com/cloud/v2/groups/${groupId}/memberships`
         );
 
-    url.searchParams.set(
+    membershipUrl.searchParams.set(
         "maxPageSize",
         "100"
     );
 
-    url.searchParams.set(
+    membershipUrl.searchParams.set(
         "filter",
         `user == 'users/${robloxUserId}'`
     );
 
-    const response =
+    const membershipResponse =
         await fetch(
-            url,
+            membershipUrl,
             {
                 headers: {
                     "x-api-key":
@@ -224,23 +224,72 @@ export async function hasGroupJoinRequest(
             }
         );
 
-    if (!response.ok) {
+    if (!membershipResponse.ok) {
         const errorText =
-            await response.text();
+            await membershipResponse.text();
 
         throw new Error(
-            `Roblox group API error: ${response.status} ${errorText}`
+            `Roblox group membership API error: ${membershipResponse.status} ${errorText}`
         );
     }
 
-    const data =
-        await response.json();
+    const membershipData =
+        await membershipResponse.json();
+
+    const isMember =
+        Array.isArray(
+            membershipData.groupMemberships
+        ) &&
+        membershipData.groupMemberships.length >
+            0;
+
+    if (isMember) {
+        return true;
+    }
+
+    const requestUrl =
+        new URL(
+            `https://apis.roblox.com/cloud/v2/groups/${groupId}/join-requests`
+        );
+
+    requestUrl.searchParams.set(
+        "maxPageSize",
+        "100"
+    );
+
+    requestUrl.searchParams.set(
+        "filter",
+        `user == 'users/${robloxUserId}'`
+    );
+
+    const requestResponse =
+        await fetch(
+            requestUrl,
+            {
+                headers: {
+                    "x-api-key":
+                        apiKey
+                }
+            }
+        );
+
+    if (!requestResponse.ok) {
+        const errorText =
+            await requestResponse.text();
+
+        throw new Error(
+            `Roblox group join request API error: ${requestResponse.status} ${errorText}`
+        );
+    }
+
+    const requestData =
+        await requestResponse.json();
 
     return (
         Array.isArray(
-            data.groupJoinRequests
+            requestData.groupJoinRequests
         ) &&
-        data.groupJoinRequests.length >
+        requestData.groupJoinRequests.length >
             0
     );
 }
