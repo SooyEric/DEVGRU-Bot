@@ -3,162 +3,142 @@ import { EmbedBuilder } from "discord.js";
 const RANKS = [
     {
         id: "1373365831454556312",
-        short: "SOE1",
-        name: "Seaman Recruit (SOE1)"
+        name: "Seaman Recruit",
+        short: "SOE1"
     },
     {
         id: "1373365830359847036",
-        short: "SOE2",
-        name: "Seaman Apprentice (SOE2)"
+        name: "Seaman Apprentice",
+        short: "SOE2"
     },
     {
         id: "1373365829860593735",
-        short: "SOE3",
-        name: "Seaman (SOE3)"
+        name: "Seaman",
+        short: "SOE3"
     },
     {
         id: "1373365828388655196",
-        short: "SOE4",
-        name: "Petty Officer Third Class (SOE4)"
+        name: "Petty Officer Third Class",
+        short: "SOE4"
     },
     {
         id: "1373365827239280751",
-        short: "SOE5",
-        name: "Petty Officer Second Class (SOE5)"
-    },
-    {
-        id: "1373365815524724966",
-        short: "SOE6",
-        name: "Petty Officer First Class (SOE6)"
+        name: "Petty Officer Second Class",
+        short: "SOE5"
     },
     {
         id: "1373365824932548679",
-        short: "SOE7",
-        name: "Chief Petty Officer (SOE7)"
+        name: "Petty Officer First Class",
+        short: "SOE6"
     },
     {
         id: "1373365823841894531",
-        short: "SOE8",
-        name: "Senior Chief Petty Officer (SOE8)"
+        name: "Chief Petty Officer",
+        short: "SOE7"
     },
     {
         id: "1373365822281748637",
-        short: "SOE9",
-        name: "Master Chief Petty Officer (SOE9)"
+        name: "Senior Chief Petty Officer",
+        short: "SOE8"
     },
     {
         id: "1373365821543284796",
-        short: "SO1",
-        name: "Ensign (SO1)"
+        name: "Master Chief Petty Officer",
+        short: "SOE9"
     },
     {
         id: "1373365820217884815",
-        short: "SO2",
-        name: "Lieutenant Junior Grade (SO2)"
+        name: "Ensign",
+        short: "SO1"
     },
     {
         id: "1373365819383480370",
-        short: "SO3",
-        name: "Lieutenant (SO3)"
+        name: "Lieutenant Junior Grade",
+        short: "SO2"
     },
     {
         id: "1373365818112348235",
-        short: "SO4",
-        name: "Lieutenant Commander (SO4)"
+        name: "Lieutenant",
+        short: "SO3"
     },
     {
         id: "1373365817386860729",
-        short: "SO5",
-        name: "Commander (SO5)"
+        name: "Lieutenant Commander",
+        short: "SO4"
     },
     {
         id: "1373365816539480267",
-        short: "SO6",
-        name: "Captain (SO6)"
+        name: "Commander",
+        short: "SO5"
+    },
+    {
+        id: "1373365815524724966",
+        name: "Captain",
+        short: "SO6"
     }
 ];
 
-const OBTAINABLE_RANKS = RANKS.slice(0, 6);
+const MAX_RANK_INDEX = 5;
 
-const LOG_CHANNEL_ID = "1525393053656027136";
+const RANK_LOG_CHANNEL_ID = "1525393053656027136";
 
 export default {
-    name: "rangos",
+    name: "rango",
     permission: 1,
 
     async execute(message, args) {
-        const firstArg = args[0];
-        const secondArg = args[1];
+        if (!args.length) {
+            await message.react("❌");
+            return;
+        }
 
-        if (!firstArg) {
+        let targetInput;
+        let requestedRank = null;
+
+        if (RANKS.some(rank => rank.short.toLowerCase() === args[0].toLowerCase())) {
+            requestedRank = args[0].toUpperCase();
+            targetInput = args[1];
+        } else {
+            targetInput = args[0];
+        }
+
+        if (!targetInput) {
             await message.react("❌");
             return;
         }
 
         let member;
-        let targetRank = null;
 
-        const rankInput = firstArg.toUpperCase();
+        try {
+            member = message.mentions.members.first();
 
-        targetRank = OBTAINABLE_RANKS.find(
-            rank => rank.short === rankInput
-        );
+            if (!member) {
+                const userId = targetInput.replace(/[<@!>]/g, "");
 
-        if (targetRank) {
-            if (!secondArg) {
+                if (!/^\d{17,20}$/.test(userId)) {
+                    await message.react("❌");
+                    return;
+                }
+
+                member = await message.guild.members.fetch(userId);
+            }
+
+            if (!member) {
                 await message.react("❌");
                 return;
             }
 
-            member = message.mentions.members.first();
-
-            if (!member) {
-                const userId = secondArg.replace(/[<@!>]/g, "");
-
-                if (!/^\d{17,20}$/.test(userId)) {
-                    await message.react("❌");
-                    return;
-                }
-
-                try {
-                    member = await message.guild.members.fetch(userId);
-                } catch {
-                    await message.react("❌");
-                    return;
-                }
-            }
-        } else {
-            member = message.mentions.members.first();
-
-            if (!member) {
-                const userId = firstArg.replace(/[<@!>]/g, "");
-
-                if (!/^\d{17,20}$/.test(userId)) {
-                    await message.react("❌");
-                    return;
-                }
-
-                try {
-                    member = await message.guild.members.fetch(userId);
-                } catch {
-                    await message.react("❌");
-                    return;
-                }
-            }
-        }
-
-        if (!member) {
+            member = await message.guild.members.fetch({
+                user: member.id,
+                force: true
+            });
+        } catch {
             await message.react("❌");
             return;
         }
 
         try {
-            member = await message.guild.members.fetch({
-                user: member.id,
-                force: true
-            });
-
-            const currentRankIndex = OBTAINABLE_RANKS.findIndex(rank =>
+            const currentRankIndex = RANKS.findIndex(rank =>
                 member.roles.cache.has(rank.id)
             );
 
@@ -169,36 +149,42 @@ export default {
 
             let newRankIndex;
 
-            if (targetRank) {
-                newRankIndex = OBTAINABLE_RANKS.findIndex(
-                    rank => rank.id === targetRank.id
+            if (requestedRank) {
+                newRankIndex = RANKS.findIndex(
+                    rank => rank.short.toLowerCase() === requestedRank.toLowerCase()
                 );
 
-                if (newRankIndex === currentRankIndex) {
+                if (newRankIndex === -1) {
                     await message.react("❌");
                     return;
                 }
             } else {
                 newRankIndex = currentRankIndex + 1;
-
-                if (newRankIndex >= OBTAINABLE_RANKS.length) {
-                    await message.react("❌");
-                    return;
-                }
             }
 
-            const newRank = OBTAINABLE_RANKS[newRankIndex];
-            const currentRank = OBTAINABLE_RANKS[currentRankIndex];
+            if (newRankIndex > MAX_RANK_INDEX) {
+                await message.react("❌");
+                return;
+            }
 
-            let newNickname = member.nickname;
+            if (newRankIndex === currentRankIndex) {
+                await message.react("❌");
+                return;
+            }
 
-            if (newNickname) {
-                const parts = newNickname.trim().split(/\s+/);
+            const currentRank = RANKS[currentRankIndex];
+            const newRank = RANKS[newRankIndex];
 
-                if (parts.length > 0) {
-                    parts[0] = newRank.short;
-                    newNickname = parts.join(" ");
-                }
+            const nickname = member.nickname;
+
+            let newNickname;
+
+            if (nickname) {
+                const nicknameParts = nickname.split(" ");
+
+                nicknameParts[0] = newRank.short;
+
+                newNickname = nicknameParts.join(" ");
             } else {
                 newNickname = newRank.short;
             }
@@ -207,21 +193,18 @@ export default {
             await member.roles.add(newRank.id);
             await member.setNickname(newNickname);
 
-            const logChannel =
-                await message.guild.channels.fetch(LOG_CHANNEL_ID);
+            const channel = await message.guild.channels.fetch(
+                RANK_LOG_CHANNEL_ID
+            );
 
-            if (logChannel) {
+            if (channel) {
                 const embed = new EmbedBuilder()
                     .setColor("#ffaf1a")
                     .setDescription(
-                        `El usuario ${member} fue ${
-                            newRankIndex > currentRankIndex
-                                ? "ascendido"
-                                : "descendido"
-                        } a **${newRank.name}** por ${message.author}.`
+                        `El usuario ${member} fue ascendido a **${newRank.name} (${newRank.short})** por ${message.author}.`
                     );
 
-                await logChannel.send({
+                await channel.send({
                     embeds: [embed]
                 });
             }
