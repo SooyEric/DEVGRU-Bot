@@ -1,7 +1,6 @@
 import { Client, GatewayIntentBits, Collection } from "discord.js";
 import config from "./config/config.js";
 import logger from "./utils/logger.js";
-import funcionando from "./commands/funcionando.js";
 
 const client = new Client({
     intents: [
@@ -12,8 +11,6 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-
-client.commands.set(funcionando.name, funcionando);
 
 client.once("clientReady", () => {
     logger.info(`Logged in as ${client.user.tag}`);
