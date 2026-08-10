@@ -144,16 +144,6 @@ const ALL_SQUADRON_ROLES = [
     )
 ];
 
-const SHARED_SQUADRON_ROLES = [
-    ...new Set(
-        ALL_SQUADRON_ROLES.filter(roleId => {
-            return Object.values(SQUADRONS).filter(squadron =>
-                squadron.roles.includes(roleId)
-            ).length > 1;
-        })
-    )
-];
-
 export default {
     name: "add",
     permission: 1,
@@ -210,7 +200,7 @@ export default {
                 return;
             }
 
-            // Obtener información actualizada del miembro
+            // Obtener roles actualizados
             member = await message.guild.members.fetch({
                 user: member.id,
                 force: true
@@ -222,80 +212,119 @@ export default {
         }
 
         try {
+
             // =====================================================
             // GUEST
             // =====================================================
 
             if (group === "guest") {
+
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
                     ...TYPE_3_ROLES,
                     ...TYPE_5_ROLES
                 ];
 
-                const removableRoles = member.roles.cache.filter(role =>
-                    rolesToRemove.includes(role.id)
+                const rolesPresent = rolesToRemove.filter(roleId =>
+                    member.roles.cache.has(roleId)
                 );
 
-                if (removableRoles.size > 0) {
-                    await member.roles.remove(
-                        [...removableRoles.keys()]
-                    );
+                if (rolesPresent.length > 0) {
+                    await member.roles.remove(rolesPresent);
                 }
 
                 if (!member.roles.cache.has(GUEST_ROLE)) {
                     await member.roles.add(GUEST_ROLE);
                 }
 
+                // Restaurar nickname original
                 await member.setNickname(null);
 
                 await message.react("✅");
                 return;
             }
 
+            // =====================================================
+            // ESCUADRÓN SOLICITADO
+            // =====================================================
+
             const squadron = SQUADRONS[group];
 
             // =====================================================
             // DETECTAR ESCUADRÓN ACTUAL
+            //
+            // SOLO se considera miembro si tiene
+            // simultáneamente los roles 1, 7 y 10.
             // =====================================================
 
             let currentSquadron = null;
 
             for (const [name, data] of Object.entries(SQUADRONS)) {
-                const isMember = data.identifiers.every(roleId =>
+
+                const hasAllIdentifiers = data.identifiers.every(roleId =>
                     member.roles.cache.has(roleId)
                 );
 
-                if (isMember) {
+                if (hasAllIdentifiers) {
                     currentSquadron = name;
                     break;
                 }
             }
 
             // =====================================================
+            // YA ESTÁ EN EL ESCUADRÓN SOLICITADO
+            // =====================================================
+
+            if (currentSquadron === group) {
+
+                // Guest jamás debe coexistir con un escuadrón
+                if (member.roles.cache.has(GUEST_ROLE)) {
+                    await member.roles.remove(GUEST_ROLE);
+                }
+
+                // Verificar si tiene los 10 roles
+                const missingRoles = squadron.roles.filter(roleId =>
+                    !member.roles.cache.has(roleId)
+                );
+
+                // Si falta alguno, reparar el paquete
+                if (missingRoles.length > 0) {
+                    await member.roles.add(missingRoles);
+                }
+
+                // Asegurar nickname
+                await member.setNickname(squadron.nickname);
+
+                await message.react("✅");
+                return;
+            }
+
+            // =====================================================
             // CAMBIO DE ESCUADRÓN
             // =====================================================
 
-            if (currentSquadron && currentSquadron !== group) {
+            if (currentSquadron) {
+
                 const oldSquadron = SQUADRONS[currentSquadron];
 
                 /*
-                 * Eliminar TODOS los roles exclusivos
+                 * IMPORTANTE:
+                 *
+                 * SOLO eliminamos los 3 identificadores
                  * del escuadrón anterior.
                  *
-                 * Los roles compartidos permanecen.
+                 * NO eliminamos:
+                 * - Roles compartidos
+                 * - Tipo 3
+                 * - Tipo 5
                  */
 
-                const oldExclusiveRoles = oldSquadron.roles.filter(
-                    roleId => !SHARED_SQUADRON_ROLES.includes(roleId)
+                const oldIdentifiers = oldSquadron.identifiers.filter(
+                    roleId => member.roles.cache.has(roleId)
                 );
 
-                const rolesToRemove = oldExclusiveRoles.filter(roleId =>
-                    member.roles.cache.has(roleId)
-                );
-
-                if (rolesToRemove.length > 0) {
-                    await member.roles.remove(rolesToRemove);
+                if (oldIdentifiers.length > 0) {
+                    await member.roles.remove(oldIdentifiers);
                 }
             }
 
@@ -308,7 +337,7 @@ export default {
             }
 
             // =====================================================
-            // ASIGNAR ROLES DEL NUEVO ESCUADRÓN
+            // ASIGNAR LOS 10 ROLES DEL NUEVO ESCUADRÓN
             // =====================================================
 
             const missingRoles = squadron.roles.filter(roleId =>
@@ -320,7 +349,7 @@ export default {
             }
 
             // =====================================================
-            // NICKNAME
+            // CAMBIAR NICKNAME
             // =====================================================
 
             await member.setNickname(squadron.nickname);
@@ -332,7 +361,9 @@ export default {
             await message.react("✅");
 
         } catch (error) {
+
             await message.react("❌");
+
             throw error;
         }
     }
