@@ -113,9 +113,6 @@ const TYPE_5_ROLES = [
     "1373365840677703865"
 ];
 
-// TODOS los roles que pertenecen a algún escuadrón.
-// Si el usuario cambia de escuadrón, se eliminan TODOS
-// los roles de este conjunto antes de asignar el nuevo paquete.
 const ALL_SQUADRON_ROLES = [
     ...new Set(
         Object.values(SQUADRONS).flatMap(squadron => squadron.roles)
@@ -130,10 +127,6 @@ export default {
         const group = args[0]?.toLowerCase();
         const targetInput = args[1];
 
-        // =========================
-        // VALIDAR GRUPO
-        // =========================
-
         const validGroups = [
             "red",
             "blue",
@@ -142,6 +135,10 @@ export default {
             "silver",
             "guest"
         ];
+
+        // =========================
+        // VALIDAR GRUPO
+        // =========================
 
         if (!group || !validGroups.includes(group)) {
             await message.react("❌");
@@ -160,10 +157,8 @@ export default {
         let member;
 
         try {
-            // Intentar obtener usuario mediante mención
             member = message.mentions.members.first();
 
-            // Si no existe mención, intentar mediante ID
             if (!member) {
                 const userId = targetInput.replace(/[<@!>]/g, "");
 
@@ -180,7 +175,6 @@ export default {
                 return;
             }
 
-            // Obtener información actualizada de los roles
             member = await message.guild.members.fetch({
                 user: member.id,
                 force: true
@@ -199,8 +193,10 @@ export default {
 
             if (group === "guest") {
 
-                // Guest elimina absolutamente todos los roles
-                // de escuadrón + Tipo 3 + Tipo 5.
+                // Eliminar TODOS los roles de escuadrón
+                // + Tipo 3
+                // + Tipo 5
+                // + Guest por si ya lo tenía.
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
                     ...TYPE_3_ROLES,
@@ -216,10 +212,10 @@ export default {
                     await member.roles.remove(removableRoles);
                 }
 
-                // Agregar Guest
+                // AQUÍ Y SOLAMENTE AQUÍ se agrega Guest.
                 await member.roles.add(GUEST_ROLE);
 
-                // Restaurar nickname original
+                // Restaurar nickname original.
                 await member.setNickname(null);
 
                 await message.react("✅");
@@ -227,24 +223,15 @@ export default {
             }
 
             // =========================================================
-            // ESCUADRÓN
+            // RED / BLUE / GOLD / BLACK / SILVER
             // =========================================================
 
             const squadron = SQUADRONS[group];
 
-            // =========================================================
-            // ELIMINAR ESCUADRÓN ANTERIOR
-            // =========================================================
+            // ---------------------------------------------------------
+            // 1. ELIMINAR TODOS LOS ROLES DE CUALQUIER ESCUADRÓN
+            // ---------------------------------------------------------
 
-            // Quitamos TODOS los roles de escuadrón.
-            //
-            // Esto significa que si tiene Red:
-            //
-            // Red roles
-            // ↓
-            // TODOS eliminados
-            //
-            // Después se agregará el nuevo paquete.
             const squadronRolesToRemove = member.roles.cache.filter(role =>
                 ALL_SQUADRON_ROLES.includes(role.id)
             );
@@ -253,29 +240,31 @@ export default {
                 await member.roles.remove(squadronRolesToRemove);
             }
 
-            // =========================================================
-            // ELIMINAR GUEST
-            // =========================================================
+            // ---------------------------------------------------------
+            // 2. ELIMINAR GUEST
+            //
+            // NUNCA se agrega Guest aquí.
+            // ---------------------------------------------------------
 
             if (member.roles.cache.has(GUEST_ROLE)) {
                 await member.roles.remove(GUEST_ROLE);
             }
 
-            // =========================================================
-            // AGREGAR NUEVO ESCUADRÓN
-            // =========================================================
+            // ---------------------------------------------------------
+            // 3. AGREGAR LOS ROLES DEL NUEVO ESCUADRÓN
+            // ---------------------------------------------------------
 
             await member.roles.add(squadron.roles);
 
-            // =========================================================
-            // CAMBIAR NICKNAME
-            // =========================================================
+            // ---------------------------------------------------------
+            // 4. CAMBIAR NICKNAME
+            // ---------------------------------------------------------
 
             await member.setNickname(squadron.nickname);
 
-            // =========================================================
-            // ÉXITO
-            // =========================================================
+            // ---------------------------------------------------------
+            // 5. ÉXITO
+            // ---------------------------------------------------------
 
             await message.react("✅");
 
