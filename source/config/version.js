@@ -1,5 +1,5 @@
 const version = {
-    number: "1.16.2",
+    number: "1.16.3",
     type: "Modificación",
     description: "Se modificaron 1 script."
 };
