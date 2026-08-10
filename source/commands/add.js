@@ -201,11 +201,21 @@ export default {
         }
 
         try {
-            const previousSquadronKey = Object.keys(SQUADRONS).find(key =>
-                member.roles.cache.some(role =>
-                    SQUADRONS[key].roles.includes(role.id)
-                )
-            );
+            // Detectar el escuadrón anterior usando únicamente
+            // el rol exclusivo de cada escuadrón.
+            const previousSquadronKey = Object.keys(SQUADRONS).find(key => {
+                const squadron = SQUADRONS[key];
+
+                const exclusiveRole = squadron.roles.find(roleId =>
+                    Object.values(SQUADRONS).filter(other =>
+                        other.roles.includes(roleId)
+                    ).length === 1
+                );
+
+                return exclusiveRole
+                    ? member.roles.cache.has(exclusiveRole)
+                    : false;
+            });
 
             if (group === "guest") {
                 const rolesToRemove = [
