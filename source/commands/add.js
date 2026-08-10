@@ -1,3 +1,5 @@
+import { EmbedBuilder } from "discord.js";
+
 const SQUADRONS = {
     red: {
         group: "Alpha",
@@ -136,6 +138,8 @@ const MAIN_CHANNELS = [
     "https://discord.com/channels/1314786301647519794/1373366013999190047"
 ];
 
+const EMBED_COLOR = "#ffaf1a";
+
 export default {
     name: "add",
     permission: 1,
@@ -200,10 +204,6 @@ export default {
                 )
             );
 
-            const previousSquadron = previousSquadronKey
-                ? SQUADRONS[previousSquadronKey]
-                : null;
-
             if (group === "guest") {
                 const rolesToRemove = [
                     ...ALL_SQUADRON_ROLES,
@@ -223,13 +223,17 @@ export default {
                 await member.setNickname(null);
                 await member.roles.add(GUEST_ROLE);
 
-                await member.send(
-                    `**Desverificación**\n\n` +
-                    `Has sido desverificado de DEVGRU.\n\n` +
-                    `- **Estado**: Inactivo <a:offline:1536302693251813447>\n` +
-                    `- **Motivo**: ${reason}\n\n` +
-                    `Como consecuencia de esta acción, el miembro deja de formar parte oficialmente de DEVGRU y pierde los permisos correspondientes a su verificación. En caso de querer volver haga su proceso de verificación nuevamente.`
-                ).catch(() => {});
+                const embed = new EmbedBuilder()
+                    .setColor(EMBED_COLOR)
+                    .setTitle("Desverificación")
+                    .setDescription(
+                        `Has sido desverificado de DEVGRU.\n\n` +
+                        `- **Estado**: Inactivo <a:offline:1536302693251813447>\n` +
+                        `- **Motivo**: ${reason}\n\n` +
+                        `Como consecuencia de esta acción, el miembro deja de formar parte oficialmente de DEVGRU y pierde los permisos correspondientes a su verificación. En caso de querer volver haga su proceso de verificación nuevamente.`
+                    );
+
+                await member.send({ embeds: [embed] }).catch(() => {});
 
                 await message.react("✅");
                 return;
@@ -292,25 +296,35 @@ export default {
             }
 
             if (previousSquadronKey) {
-                await member.send(
-                    `**Cambio de Escuadrón**\n\n` +
-                    `Se ha actualizado la asignación de tu escuadrón.\n\n` +
-                    `- **Escuadrón Anterior**: ${previousSquadron.group} ${previousSquadron.emoji}\n` +
-                    `- **Nuevo Escuadrón**: ${squadron.group} ${squadron.emoji}\n` +
-                    `- **Estado**: Activo <a:online:1536302690613862461>`
-                ).catch(() => {});
+                const previousSquadron = SQUADRONS[previousSquadronKey];
+
+                const embed = new EmbedBuilder()
+                    .setColor(EMBED_COLOR)
+                    .setTitle("Cambio de Escuadrón")
+                    .setDescription(
+                        `Se ha actualizado la asignación de tu escuadrón.\n\n` +
+                        `- **Escuadrón Anterior**: ${previousSquadron.group} ${previousSquadron.emoji}\n` +
+                        `- **Nuevo Escuadrón**: ${squadron.group} ${squadron.emoji}\n` +
+                        `- **Estado**: Activo <a:online:1536302690613862461>`
+                    );
+
+                await member.send({ embeds: [embed] }).catch(() => {});
             } else {
-                await member.send(
-                    `**¡Bienvenido a DEVGRU, ${member.user}!**\n\n` +
-                    `Tu ingreso a DEVGRU ha sido aprobado y tu verificación como miembro ha sido completada correctamente.\n\n` +
-                    `- **Escuadrón**: ${squadron.group} ${squadron.emoji}\n` +
-                    `- **Rango**: ${rankName}\n` +
-                    `- **Estado**: Activo <a:online:1536302690613862461>\n\n` +
-                    `A partir de este momento tendrás acceso a todos los canales generales y los correspondientes a tu unidad.\n\n` +
-                    `**Canales principales:**\n` +
-                    `${MAIN_CHANNELS.join("\n")}\n` +
-                    `${squadron.channel}`
-                ).catch(() => {});
+                const embed = new EmbedBuilder()
+                    .setColor(EMBED_COLOR)
+                    .setTitle(`¡Bienvenido a DEVGRU, ${member.user}!`)
+                    .setDescription(
+                        `Tu ingreso a DEVGRU ha sido aprobado y tu verificación como miembro ha sido completada correctamente.\n\n` +
+                        `- **Escuadrón**: ${squadron.group} ${squadron.emoji}\n` +
+                        `- **Rango**: ${rankName}\n` +
+                        `- **Estado**: Activo <a:online:1536302690613862461>\n\n` +
+                        `A partir de este momento tendrás acceso a todos los canales generales y los correspondientes a tu unidad.\n\n` +
+                        `**Canales principales:**\n` +
+                        `${MAIN_CHANNELS.join("\n")}\n` +
+                        `${squadron.channel}`
+                    );
+
+                await member.send({ embeds: [embed] }).catch(() => {});
             }
 
             await message.react("✅");
