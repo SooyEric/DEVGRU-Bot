@@ -238,14 +238,19 @@ client.on("messageCreate", async (message) => {
 
 /*
  * HTTP SERVER
- * Railway debe tener Target Port: 8080
+ * Railway: Target Port 8080
  */
 
 const PORT = process.env.PORT || 8080;
 
 const server = http.createServer((req, res) => {
 
-    if (req.url === "/") {
+    const url = new URL(
+        req.url,
+        `http://${req.headers.host}`
+    );
+
+    if (url.pathname === "/") {
         res.writeHead(200, {
             "Content-Type": "text/plain; charset=utf-8"
         });
@@ -254,12 +259,60 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    if (req.url === "/roblox/callback") {
+    if (url.pathname === "/roblox/callback") {
+        const code = url.searchParams.get("code");
+        const error = url.searchParams.get("error");
+
+        if (error) {
+            logger.error(
+                `Roblox OAuth error: ${error}`
+            );
+
+            res.writeHead(400, {
+                "Content-Type": "text/plain; charset=utf-8"
+            });
+
+            res.end(
+                "La autorización de Roblox fue cancelada o rechazada."
+            );
+
+            return;
+        }
+
+        if (!code) {
+            res.writeHead(400, {
+                "Content-Type": "text/plain; charset=utf-8"
+            });
+
+            res.end(
+                "No se recibió el código de autorización."
+            );
+
+            return;
+        }
+
+        logger.info(
+            "Roblox OAuth authorization code received."
+        );
+
         res.writeHead(200, {
-            "Content-Type": "text/plain; charset=utf-8"
+            "Content-Type": "text/html; charset=utf-8"
         });
 
-        res.end("DEVGRU-Bot: autorización recibida.");
+        res.end(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <title>DEVGRU</title>
+            </head>
+            <body>
+                <h2>Autorización completada</h2>
+                <p>Puedes regresar a Discord.</p>
+            </body>
+            </html>
+        `);
+
         return;
     }
 
@@ -271,7 +324,9 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-    logger.info(`HTTP server listening on port ${PORT}`);
+    logger.info(
+        `HTTP server listening on port ${PORT}`
+    );
 });
 
 client.login(config.discord.token);
