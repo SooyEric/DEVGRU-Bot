@@ -4,9 +4,14 @@ const CLIENT_ID = process.env.ROBLOX_CLIENT_ID;
 const CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET;
 const REDIRECT_URI = process.env.ROBLOX_REDIRECT_URI;
 
-const AUTH_URL = "https://apis.roblox.com/oauth/v1/authorize";
-const TOKEN_URL = "https://apis.roblox.com/oauth/v1/token";
-const USERINFO_URL = "https://apis.roblox.com/oauth/v1/userinfo";
+const AUTH_URL =
+    "https://apis.roblox.com/oauth/v1/authorize";
+
+const TOKEN_URL =
+    "https://apis.roblox.com/oauth/v1/token";
+
+const USERINFO_URL =
+    "https://apis.roblox.com/oauth/v1/userinfo";
 
 const pendingStates = new Map();
 
@@ -36,7 +41,7 @@ export function createRobloxAuthorization(
         state
     });
 
-    return `${AUTH_URL}?${params.toString()}`;
+    return `${AUTH_URL}?${params}`;
 }
 
 export function getPendingState(state) {
@@ -46,7 +51,10 @@ export function getPendingState(state) {
         return null;
     }
 
-    if (Date.now() - data.createdAt > 10 * 60 * 1000) {
+    if (
+        Date.now() - data.createdAt >
+        10 * 60 * 1000
+    ) {
         pendingStates.delete(state);
         return null;
     }
@@ -101,7 +109,8 @@ export async function getRobloxUser(accessToken) {
         USERINFO_URL,
         {
             headers: {
-                Authorization: `Bearer ${accessToken}`
+                Authorization:
+                    `Bearer ${accessToken}`
             }
         }
     );
@@ -115,4 +124,57 @@ export async function getRobloxUser(accessToken) {
     }
 
     return await response.json();
+}
+
+export async function hasGroupJoinRequest(
+    robloxUserId
+) {
+    const groupId =
+        process.env.ROBLOX_GROUP_ID;
+
+    const apiKey =
+        process.env.ROBLOX_API_KEY;
+
+    if (!groupId || !apiKey) {
+        throw new Error(
+            "Faltan ROBLOX_GROUP_ID o ROBLOX_API_KEY."
+        );
+    }
+
+    const url = new URL(
+        `https://apis.roblox.com/cloud/v2/groups/${groupId}/join-requests`
+    );
+
+    url.searchParams.set(
+        "maxPageSize",
+        "100"
+    );
+
+    url.searchParams.set(
+        "filter",
+        `user == 'users/${robloxUserId}'`
+    );
+
+    const response = await fetch(url, {
+        headers: {
+            "x-api-key": apiKey
+        }
+    });
+
+    if (!response.ok) {
+        const errorText =
+            await response.text();
+
+        throw new Error(
+            `Roblox group API error: ${response.status} ${errorText}`
+        );
+    }
+
+    const data =
+        await response.json();
+
+    return (
+        Array.isArray(data.groupJoinRequests) &&
+        data.groupJoinRequests.length > 0
+    );
 }
