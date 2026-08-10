@@ -112,6 +112,7 @@ client.once(
 client.on(
     "interactionCreate",
     async interaction => {
+
         if (!interaction.isButton()) {
             return;
         }
@@ -125,6 +126,7 @@ client.on(
                 "restore_ban:"
             )
         ) {
+
             const userId =
                 interaction.customId
                     .split(":")[1];
@@ -141,6 +143,7 @@ client.on(
                 );
 
             if (!hasPermission) {
+
                 await interaction.reply({
                     content:
                         "❌ No tienes permiso para restaurar este usuario.",
@@ -151,6 +154,7 @@ client.on(
             }
 
             try {
+
                 const bannedMember =
                     await getBannedMember(
                         userId
@@ -160,6 +164,7 @@ client.on(
                     !bannedMember ||
                     bannedMember.restored
                 ) {
+
                     await interaction.reply({
                         content:
                             "❌ Este registro ya fue restaurado.",
@@ -172,11 +177,14 @@ client.on(
                 let member;
 
                 try {
+
                     member =
                         await interaction.guild.members.fetch(
                             userId
                         );
+
                 } catch {
+
                     await interaction.reply({
                         content:
                             "❌ El usuario todavía no ha regresado al servidor.",
@@ -196,6 +204,7 @@ client.on(
                 if (
                     currentRoles.size > 0
                 ) {
+
                     await member.roles.remove(
                         currentRoles
                     );
@@ -205,6 +214,7 @@ client.on(
                     const roleId
                     of bannedMember.role_ids
                 ) {
+
                     if (
                         roleId ===
                         interaction.guild.id
@@ -267,6 +277,7 @@ client.on(
                 });
 
             } catch (error) {
+
                 logger.error(
                     "Error restoring banned member:",
                     error
@@ -276,6 +287,7 @@ client.on(
                     !interaction.replied &&
                     !interaction.deferred
                 ) {
+
                     await interaction.reply({
                         content:
                             "❌ No se pudo restaurar al usuario.",
@@ -286,19 +298,34 @@ client.on(
 
             return;
         }
+
+        /*
+         * APPLICATION BUTTONS
+         *
+         * Los botones de la aplicación
+         * se manejan dentro de aplicar.js.
+         *
+         * No procesarlos aquí para evitar
+         * duplicar interacciones.
+         */
+
     }
 );
 
 client.on(
     "messageCreate",
     async message => {
+
         if (message.author.bot) {
             return;
         }
 
         /*
-         * Los mensajes DM son procesados
+         * Los mensajes DM son utilizados
          * por el sistema de aplicaciones.
+         *
+         * Los collectors de aplicar.js
+         * reciben directamente esos mensajes.
          */
 
         if (!message.guild) {
@@ -350,10 +377,12 @@ client.on(
             requiredPermission !==
             null
         ) {
+
             const userRoles =
                 message.member?.roles.cache;
 
             if (!userRoles) {
+
                 await logCommandError(
                     message,
                     commandName,
@@ -377,6 +406,7 @@ client.on(
                 );
 
             if (!hasPermission) {
+
                 await logCommandError(
                     message,
                     commandName,
@@ -388,12 +418,14 @@ client.on(
         }
 
         try {
+
             await command.execute(
                 message,
                 args
             );
 
         } catch (error) {
+
             logger.error(
                 `Error executing command ${commandName}:`,
                 error
@@ -421,16 +453,22 @@ const PORT =
 const server =
     http.createServer(
         async (req, res) => {
+
             const url =
                 new URL(
                     req.url,
                     `http://${req.headers.host}`
                 );
 
+            /*
+             * ROOT
+             */
+
             if (
                 url.pathname ===
                 "/"
             ) {
+
                 res.writeHead(
                     200,
                     {
@@ -446,10 +484,15 @@ const server =
                 return;
             }
 
+            /*
+             * ROBLOX OAUTH CALLBACK
+             */
+
             if (
                 url.pathname ===
                 "/roblox/callback"
             ) {
+
                 const code =
                     url.searchParams.get(
                         "code"
@@ -465,7 +508,12 @@ const server =
                         "error"
                     );
 
+                /*
+                 * ROBLOX CANCELÓ / RECHAZÓ
+                 */
+
                 if (error) {
+
                     logger.error(
                         `Roblox OAuth error: ${error}`
                     );
@@ -485,10 +533,15 @@ const server =
                     return;
                 }
 
+                /*
+                 * FALTAN DATOS
+                 */
+
                 if (
                     !code ||
                     !state
                 ) {
+
                     res.writeHead(
                         400,
                         {
@@ -504,12 +557,17 @@ const server =
                     return;
                 }
 
+                /*
+                 * BUSCAR APPLICATION STATE
+                 */
+
                 const pending =
                     getPendingState(
                         state
                     );
 
                 if (!pending) {
+
                     res.writeHead(
                         400,
                         {
@@ -526,19 +584,34 @@ const server =
                 }
 
                 try {
+
                     logger.info(
                         `Roblox OAuth callback recibido para Discord ID: ${pending.userId}`
                     );
+
+                    /*
+                     * INTERCAMBIAR CODE
+                     * POR ACCESS TOKEN
+                     */
 
                     const tokenData =
                         await exchangeRobloxCode(
                             code
                         );
 
+                    /*
+                     * OBTENER USUARIO DE ROBLOX
+                     */
+
                     const robloxUser =
                         await getRobloxUser(
                             tokenData.access_token
                         );
+
+                    /*
+                     * EL STATE YA FUE
+                     * VALIDADO Y UTILIZADO
+                     */
 
                     deletePendingState(
                         state
@@ -551,6 +624,10 @@ const server =
                         } (${robloxUser.sub})`
                     );
 
+                    /*
+                     * CONTINUAR APLICACIÓN
+                     */
+
                     const applicationContinued =
                         resumeRobloxApplication(
                             pending.userId,
@@ -558,14 +635,20 @@ const server =
                             client
                         );
 
+                    /*
+                     * SI NO HAY UNA APLICACIÓN ACTIVA
+                     */
+
                     if (
                         !applicationContinued
                     ) {
+
                         logger.warn(
                             `No se encontró una aplicación activa para Discord ID: ${pending.userId}`
                         );
 
                         try {
+
                             const discordUser =
                                 await client.users.fetch(
                                     pending.userId
@@ -592,12 +675,17 @@ const server =
                             });
 
                         } catch (dmError) {
+
                             logger.error(
                                 "No se pudo enviar el DM de Roblox:",
                                 dmError
                             );
                         }
                     }
+
+                    /*
+                     * RESPUESTA DEL CALLBACK
+                     */
 
                     res.writeHead(
                         200,
@@ -612,17 +700,29 @@ const server =
                         <html lang="es">
                         <head>
                             <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <meta
+                                name="viewport"
+                                content="width=device-width, initial-scale=1.0"
+                            >
                             <title>DEVGRU</title>
                         </head>
+
                         <body>
-                            <h2>✅ Cuenta de Roblox verificada</h2>
-                            <p>Puedes regresar a Discord.</p>
+
+                            <h2>
+                                ✅ Cuenta de Roblox verificada
+                            </h2>
+
+                            <p>
+                                Puedes regresar a Discord.
+                            </p>
+
                         </body>
                         </html>
                     `);
 
                 } catch (error) {
+
                     logger.error(
                         "Error procesando Roblox OAuth:",
                         error
@@ -644,6 +744,10 @@ const server =
                 return;
             }
 
+            /*
+             * 404
+             */
+
             res.writeHead(
                 404,
                 {
@@ -662,9 +766,11 @@ server.listen(
     PORT,
     "0.0.0.0",
     () => {
+
         logger.info(
             `HTTP server listening on port ${PORT}`
         );
+
     }
 );
 
