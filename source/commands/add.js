@@ -119,8 +119,6 @@ const ALL_SQUADRON_ROLES = [
     )
 ];
 
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 export default {
     name: "add",
     permission: 1,
@@ -186,8 +184,6 @@ export default {
                     await member.roles.remove(removableRoles);
                 }
 
-                await wait(4000);
-
                 await member.setNickname(null);
                 await member.roles.add(GUEST_ROLE);
 
@@ -215,37 +211,33 @@ export default {
 
             await member.roles.remove(GUEST_ROLE);
 
-            await wait(4000);
-
             await member.setNickname(squadron.nickname);
 
-            const rolesToAdd = squadron.roles.filter(roleId => {
+            if (existingType3) {
+                await member.roles.add(existingType3);
+            }
+
+            if (existingType5) {
+                await member.roles.add(existingType5);
+            }
+
+            for (const roleId of squadron.roles) {
                 if (
                     TYPE_3_ROLES.includes(roleId) &&
                     existingType3
                 ) {
-                    return false;
+                    continue;
                 }
 
                 if (
                     TYPE_5_ROLES.includes(roleId) &&
                     existingType5
                 ) {
-                    return false;
+                    continue;
                 }
 
-                return true;
-            });
-
-            if (existingType3) {
-                rolesToAdd.push(existingType3);
+                await member.roles.add(roleId);
             }
-
-            if (existingType5) {
-                rolesToAdd.push(existingType5);
-            }
-
-            await member.roles.add([...new Set(rolesToAdd)]);
 
             await message.react("✅");
         } catch (error) {
