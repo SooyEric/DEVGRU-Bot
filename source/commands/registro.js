@@ -1,8 +1,4 @@
 import {
-    EmbedBuilder
-} from "discord.js";
-
-import {
     SQUADRONS,
     initializeSquadronRegistry,
     saveSquadronMessage,
@@ -10,16 +6,10 @@ import {
     buildTable
 } from "../utils/squadronRegistry.js";
 
-const COLOR = "#ffaf1a";
-
 async function createTable(message, key) {
     const squadron = SQUADRONS[key];
 
-    const existing = await getSquadronMessage(key);
-
-    if (existing) {
-        return false;
-    }
+    if (!squadron) return false;
 
     const channel = await message.guild.channels.fetch(
         squadron.channel
@@ -29,6 +19,22 @@ async function createTable(message, key) {
         throw new Error(
             `No se encontró el canal de ${squadron.name}.`
         );
+    }
+
+    const existing = await getSquadronMessage(key);
+
+    if (existing) {
+        try {
+            await channel.messages.fetch(
+                existing.message_id
+            );
+
+            return false;
+
+        } catch {
+            // El mensaje ya no existe.
+            // Se crea uno nuevo y se actualiza el registro.
+        }
     }
 
     await message.guild.members.fetch();
@@ -80,10 +86,17 @@ export default {
 
             if (target === "all") {
                 for (const key of Object.keys(SQUADRONS)) {
-                    await createTable(
-                        message,
-                        key
-                    );
+                    try {
+                        await createTable(
+                            message,
+                            key
+                        );
+                    } catch (error) {
+                        console.error(
+                            `Error creando registro ${key}:`,
+                            error
+                        );
+                    }
                 }
             } else {
                 await createTable(
@@ -96,7 +109,7 @@ export default {
 
         } catch (error) {
             console.error(
-                "Error creando registro:",
+                "Error ejecutando registro:",
                 error
             );
 
