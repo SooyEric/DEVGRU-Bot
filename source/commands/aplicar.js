@@ -5,6 +5,10 @@ import {
     EmbedBuilder
 } from "discord.js";
 
+import {
+    createRobloxAuthorization
+} from "../utils/robloxOAuth.js";
+
 const REQUIRED_ROLE = "1373365890623602768";
 
 const APPLICATION_TIMEOUT = 30 * 60 * 1000;
@@ -129,7 +133,7 @@ export default {
                 .setLabel("Verificar")
                 .setStyle(ButtonStyle.Link)
                 .setURL(
-                    buildRobloxOAuthUrl(
+                    createRobloxAuthorization(
                         message.author.id,
                         robloxUsername
                     )
@@ -204,35 +208,3 @@ export default {
         }
     }
 };
-
-function buildRobloxOAuthUrl(
-    discordUserId,
-    robloxUsername
-) {
-    const params = new URLSearchParams({
-        client_id:
-            process.env.ROBLOX_CLIENT_ID,
-
-        redirect_uri:
-            process.env.ROBLOX_REDIRECT_URI,
-
-        response_type:
-            "code",
-
-        scope:
-            "openid profile",
-
-        state:
-            Buffer.from(
-                JSON.stringify({
-                    discordUserId,
-                    robloxUsername
-                })
-            ).toString("base64url")
-    });
-
-    return (
-        "https://apis.roblox.com/oauth/v1/authorize?" +
-        params
-    );
-}
