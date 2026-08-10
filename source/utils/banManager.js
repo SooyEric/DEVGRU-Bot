@@ -9,14 +9,29 @@ export async function initializeBanTable() {
         CREATE TABLE IF NOT EXISTS banned_members (
             user_id TEXT PRIMARY KEY,
             role_ids TEXT[] NOT NULL,
+            nickname TEXT,
             log_message_id TEXT,
             restored BOOLEAN NOT NULL DEFAULT FALSE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         )
     `);
+
+    /*
+     * Si la tabla ya existía antes de añadir nickname,
+     * PostgreSQL agregará la columna sin borrar los datos existentes.
+     */
+    await database.query(`
+        ALTER TABLE banned_members
+        ADD COLUMN IF NOT EXISTS nickname TEXT
+    `);
 }
 
-export async function saveBannedMember(userId, roleIds, logMessageId) {
+export async function saveBannedMember(
+    userId,
+    roleIds,
+    nickname,
+    logMessageId
+) {
     const database = getDatabase();
 
     if (!database) {
@@ -26,17 +41,30 @@ export async function saveBannedMember(userId, roleIds, logMessageId) {
     await database.query(
         `
         INSERT INTO banned_members
-            (user_id, role_ids, log_message_id, restored)
+            (
+                user_id,
+                role_ids,
+                nickname,
+                log_message_id,
+                restored
+            )
         VALUES
-            ($1, $2, $3, FALSE)
+            ($1, $2, $3, $4, FALSE)
+
         ON CONFLICT (user_id)
         DO UPDATE SET
             role_ids = EXCLUDED.role_ids,
+            nickname = EXCLUDED.nickname,
             log_message_id = EXCLUDED.log_message_id,
             restored = FALSE,
             created_at = NOW()
         `,
-        [userId, roleIds, logMessageId]
+        [
+            userId,
+            roleIds,
+            nickname,
+            logMessageId
+        ]
     );
 }
 
