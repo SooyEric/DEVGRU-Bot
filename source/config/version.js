@@ -1,7 +1,7 @@
 const version = {
-    number: "1.11.9",
-    type: "Modificación",
-    description: "Se modificaron 1 script."
+    number: "1.12.0",
+    type: "Nuevo script",
+    description: "Se añadió uno o más scripts nuevos."
 };
 
 export default version;
