@@ -9,8 +9,6 @@ import {
 async function createTable(message, key) {
     const squadron = SQUADRONS[key];
 
-    if (!squadron) return false;
-
     const channel = await message.guild.channels.fetch(
         squadron.channel
     );
@@ -21,44 +19,35 @@ async function createTable(message, key) {
         );
     }
 
-    const existing = await getSquadronMessage(key);
-
-    if (existing) {
-        try {
-            await channel.messages.fetch(
-                existing.message_id
-            );
-
-            return false;
-
-        } catch {
-        }
-    }
-
     await message.guild.members.fetch();
 
     const members = [
         ...message.guild.members.cache.values()
     ];
 
-    const embed = buildTable(
+    const content = buildTable(
         members,
         key
     );
 
     const tableMessage = await channel.send({
-        embeds: [embed]
+        content
     });
 
-    await tableMessage.pin();
+    try {
+        await tableMessage.pin();
+    } catch (error) {
+        console.error(
+            `No se pudo pinear ${key}:`,
+            error
+        );
+    }
 
     await saveSquadronMessage(
         key,
         channel.id,
         tableMessage.id
     );
-
-    return true;
 }
 
 export default {
