@@ -146,14 +146,11 @@ const ALL_SQUADRON_ROLES = [
 
 const SHARED_SQUADRON_ROLES = [
     ...new Set(
-        Object.values(SQUADRONS)
-            .flatMap(squadron => squadron.roles)
-            .filter(
-                roleId =>
-                    Object.values(SQUADRONS).filter(squadron =>
-                        squadron.roles.includes(roleId)
-                    ).length > 1
-            )
+        ALL_SQUADRON_ROLES.filter(roleId => {
+            return Object.values(SQUADRONS).filter(squadron =>
+                squadron.roles.includes(roleId)
+            ).length > 1;
+        })
     )
 ];
 
@@ -165,10 +162,6 @@ export default {
         const group = args[0]?.toLowerCase();
         const targetInput = args[1];
 
-        // =========================
-        // VALIDACIÓN DEL GRUPO
-        // =========================
-
         const validGroups = [
             "red",
             "blue",
@@ -178,13 +171,17 @@ export default {
             "guest"
         ];
 
+        // =========================
+        // VALIDAR GRUPO
+        // =========================
+
         if (!group || !validGroups.includes(group)) {
             await message.react("❌");
             return;
         }
 
         // =========================
-        // VALIDACIÓN DEL USUARIO
+        // VALIDAR USUARIO
         // =========================
 
         if (!targetInput) {
@@ -213,20 +210,21 @@ export default {
                 return;
             }
 
-            // Obtener el estado más reciente de los roles
+            // Obtener información actualizada del miembro
             member = await message.guild.members.fetch({
                 user: member.id,
                 force: true
             });
+
         } catch {
             await message.react("❌");
             return;
         }
 
         try {
-            // =========================
+            // =====================================================
             // GUEST
-            // =========================
+            // =====================================================
 
             if (group === "guest") {
                 const rolesToRemove = [
@@ -240,14 +238,15 @@ export default {
                 );
 
                 if (removableRoles.size > 0) {
-                    await member.roles.remove(removableRoles);
+                    await member.roles.remove(
+                        [...removableRoles.keys()]
+                    );
                 }
 
                 if (!member.roles.cache.has(GUEST_ROLE)) {
                     await member.roles.add(GUEST_ROLE);
                 }
 
-                // Restaurar nickname original
                 await member.setNickname(null);
 
                 await message.react("✅");
@@ -256,79 +255,35 @@ export default {
 
             const squadron = SQUADRONS[group];
 
-            // =========================
+            // =====================================================
             // DETECTAR ESCUADRÓN ACTUAL
-            // =========================
+            // =====================================================
 
             let currentSquadron = null;
 
             for (const [name, data] of Object.entries(SQUADRONS)) {
-                const belongsToSquadron = data.identifiers.every(roleId =>
+                const isMember = data.identifiers.every(roleId =>
                     member.roles.cache.has(roleId)
                 );
 
-                if (belongsToSquadron) {
+                if (isMember) {
                     currentSquadron = name;
                     break;
                 }
             }
 
-            // =========================
-            // YA ESTÁ EN EL ESCUADRÓN
-            // =========================
-
-            if (currentSquadron === group) {
-                const hasType3 = TYPE_3_ROLES.some(roleId =>
-                    member.roles.cache.has(roleId)
-                );
-
-                const hasType5 = TYPE_5_ROLES.some(roleId =>
-                    member.roles.cache.has(roleId)
-                );
-
-                // Ya está completamente correcto
-                if (hasType3 && hasType5) {
-                    // Por seguridad, eliminar Guest si todavía existe
-                    if (member.roles.cache.has(GUEST_ROLE)) {
-                        await member.roles.remove(GUEST_ROLE);
-                    }
-
-                    await member.setNickname(squadron.nickname);
-                    await message.react("✅");
-                    return;
-                }
-
-                // Reparar roles faltantes del paquete
-                const missingRoles = squadron.roles.filter(roleId =>
-                    !member.roles.cache.has(roleId)
-                );
-
-                if (missingRoles.length > 0) {
-                    await member.roles.add(missingRoles);
-                }
-
-                // Guest nunca debe coexistir con un escuadrón
-                if (member.roles.cache.has(GUEST_ROLE)) {
-                    await member.roles.remove(GUEST_ROLE);
-                }
-
-                await member.setNickname(squadron.nickname);
-                await message.react("✅");
-                return;
-            }
-
-            // =========================
+            // =====================================================
             // CAMBIO DE ESCUADRÓN
-            // =========================
+            // =====================================================
 
-            if (currentSquadron) {
+            if (currentSquadron && currentSquadron !== group) {
                 const oldSquadron = SQUADRONS[currentSquadron];
 
                 /*
-                 * Eliminamos TODOS los roles exclusivos
+                 * Eliminar TODOS los roles exclusivos
                  * del escuadrón anterior.
                  *
-                 * Los roles compartidos NO se eliminan.
+                 * Los roles compartidos permanecen.
                  */
 
                 const oldExclusiveRoles = oldSquadron.roles.filter(
@@ -344,35 +299,35 @@ export default {
                 }
             }
 
-            // =========================
+            // =====================================================
             // ELIMINAR GUEST
-            // =========================
+            // =====================================================
 
             if (member.roles.cache.has(GUEST_ROLE)) {
                 await member.roles.remove(GUEST_ROLE);
             }
 
-            // =========================
-            // ASIGNAR NUEVO ESCUADRÓN
-            // =========================
+            // =====================================================
+            // ASIGNAR ROLES DEL NUEVO ESCUADRÓN
+            // =====================================================
 
-            const missingSquadronRoles = squadron.roles.filter(roleId =>
+            const missingRoles = squadron.roles.filter(roleId =>
                 !member.roles.cache.has(roleId)
             );
 
-            if (missingSquadronRoles.length > 0) {
-                await member.roles.add(missingSquadronRoles);
+            if (missingRoles.length > 0) {
+                await member.roles.add(missingRoles);
             }
 
-            // =========================
+            // =====================================================
             // NICKNAME
-            // =========================
+            // =====================================================
 
             await member.setNickname(squadron.nickname);
 
-            // =========================
+            // =====================================================
             // ÉXITO
-            // =========================
+            // =====================================================
 
             await message.react("✅");
 
