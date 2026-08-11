@@ -61,6 +61,19 @@ const client = new Client({
     ]
 });
 
+const AUTO_ROLE_ID = "1373365890623602768";
+
+client.on("guildMemberAdd", async member => {
+    try {
+        await member.roles.add(AUTO_ROLE_ID);
+    } catch (error) {
+        logger.error(
+            `Error asignando autorole a ${member.user.tag}:`,
+            error
+        );
+    }
+});
+
 client.commands = new Collection();
 
 await initializeBanTable();
