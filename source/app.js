@@ -109,7 +109,8 @@ client.on("interactionCreate", async interaction => {
         }
 
         try {
-            const bannedMember = await getBannedMember(userId);
+            const bannedMember =
+                await getBannedMember(userId);
 
             if (!bannedMember || bannedMember.restored) {
                 await interaction.reply({
@@ -123,7 +124,8 @@ client.on("interactionCreate", async interaction => {
             let member;
 
             try {
-                member = await interaction.guild.members.fetch(userId);
+                member =
+                    await interaction.guild.members.fetch(userId);
             } catch {
                 await interaction.reply({
                     content: "❌ El usuario todavía no ha regresado al servidor.",
@@ -133,52 +135,88 @@ client.on("interactionCreate", async interaction => {
                 return;
             }
 
-            const currentRoles = member.roles.cache.filter(
-                role => role.id !== interaction.guild.id
-            );
+            const currentRoles =
+                member.roles.cache.filter(
+                    role =>
+                        role.id !== interaction.guild.id
+                );
 
             if (currentRoles.size > 0) {
-                await member.roles.remove(currentRoles);
+                await member.roles.remove(
+                    currentRoles,
+                    "Restauración de usuario baneado"
+                );
             }
 
-            for (const roleId of bannedMember.role_ids) {
-                if (roleId === interaction.guild.id) continue;
+            const rolesToRestore =
+                bannedMember.role_ids.filter(
+                    roleId =>
+                        roleId !== interaction.guild.id
+                );
 
-                await member.roles.add(roleId);
+            if (rolesToRestore.length > 0) {
+                await member.roles.set(
+                    rolesToRestore,
+                    "Restauración de usuario baneado"
+                );
             }
 
             await member.setNickname(
-                bannedMember.nickname || null
+                bannedMember.nickname || null,
+                "Restauración de usuario baneado"
             );
 
             await markRestored(userId);
 
-            const restoredEmbed = new EmbedBuilder()
-                .setColor("#ffaf1a")
-                .setTitle("Roles restaurados")
-                .setDescription(
-                    `**Usuario:** ${member}\n` +
-                    `**ID:** \`${member.id}\`\n` +
-                    `**Ejecutado por:** ${interaction.user}\n\n` +
-                    `**Nickname restaurado:** ${
-                        bannedMember.nickname || "Ninguno"
-                    }\n\n` +
-                    `**Roles restaurados:**\n` +
-                    `${
-                        bannedMember.role_ids.length > 0
-                            ? bannedMember.role_ids
-                                .map(id => `<@&${id}>`)
-                                .join(" ")
-                            : "Ninguno"
-                    }`
-                );
+            const restoredEmbed =
+                new EmbedBuilder()
+                    .setColor("#77DD77")
+                    .setTitle("Roles restaurados")
+                    .setDescription(
+                        `**Usuario:** ${member}\n` +
+                        `**ID:** \`${member.id}\`\n` +
+                        `**Ejecutado por:** ${interaction.user}\n\n` +
+                        `**Nickname restaurado:** ${
+                            bannedMember.nickname || "Ninguno"
+                        }\n\n` +
+                        `**Roles restaurados:**\n` +
+                        `${
+                            rolesToRestore.length > 0
+                                ? rolesToRestore
+                                    .map(id => `<@&${id}>`)
+                                    .join(" ")
+                                : "Ninguno"
+                        }`
+                    );
+
+            const disabledButton =
+                new ButtonBuilder()
+                    .setCustomId(
+                        `restore_ban:${userId}`
+                    )
+                    .setLabel("Restaurado")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(true);
+
+            const row =
+                new ActionRowBuilder()
+                    .addComponents(
+                        disabledButton
+                    );
 
             await interaction.update({
-                components: []
+                embeds: [
+                    restoredEmbed
+                ],
+                components: [
+                    row
+                ]
             });
 
             await interaction.channel.send({
-                embeds: [restoredEmbed]
+                embeds: [
+                    restoredEmbed
+                ]
             });
 
         } catch (error) {
@@ -202,18 +240,24 @@ client.on("interactionCreate", async interaction => {
         interaction.customId.startsWith("application_accept:") ||
         interaction.customId.startsWith("application_reject:")
     ) {
-        const userId = interaction.customId.split(":")[1];
+        const userId =
+            interaction.customId.split(":")[1];
 
-        const allowedRoles = permissions[1];
+        const allowedRoles =
+            permissions[1];
 
-        const hasPermission = allowedRoles?.some(
-            roleId =>
-                interaction.member?.roles.cache.has(roleId)
-        );
+        const hasPermission =
+            allowedRoles?.some(
+                roleId =>
+                    interaction.member?.roles.cache.has(
+                        roleId
+                    )
+            );
 
         if (!hasPermission) {
             await interaction.reply({
-                content: "❌ No tienes permiso para revisar aplicaciones.",
+                content:
+                    "❌ No tienes permiso para revisar aplicaciones.",
                 ephemeral: true
             });
 
@@ -221,18 +265,23 @@ client.on("interactionCreate", async interaction => {
         }
 
         const accepted =
-            interaction.customId.startsWith("application_accept:");
+            interaction.customId.startsWith(
+                "application_accept:"
+            );
 
         try {
             const currentEmbed =
                 interaction.message.embeds[0];
 
             if (
-                currentEmbed?.title === "Aplicación aceptada" ||
-                currentEmbed?.title === "Aplicación rechazada"
+                currentEmbed?.title ===
+                    "Aplicación aceptada" ||
+                currentEmbed?.title ===
+                    "Aplicación rechazada"
             ) {
                 await interaction.reply({
-                    content: "❌ Esta aplicación ya fue revisada.",
+                    content:
+                        "❌ Esta aplicación ya fue revisada.",
                     ephemeral: true
                 });
 
@@ -240,15 +289,18 @@ client.on("interactionCreate", async interaction => {
             }
 
             if (accepted) {
-                const acceptedEmbed = new EmbedBuilder()
-                    .setColor("#77DD77")
-                    .setTitle("Aplicación aceptada")
-                    .setDescription(
-                        `**Discord:** <@${userId}>\n` +
-                        `**Discord ID:** \`${userId}\`\n\n` +
-                        `**Aceptada por:** ${interaction.user}\n\n` +
-                        "✅ **La aplicación ha sido aceptada.**"
-                    );
+                const acceptedEmbed =
+                    new EmbedBuilder()
+                        .setColor("#77DD77")
+                        .setTitle(
+                            "Aplicación aceptada"
+                        )
+                        .setDescription(
+                            `**Discord:** <@${userId}>\n` +
+                            `**Discord ID:** \`${userId}\`\n\n` +
+                            `**Aceptada por:** ${interaction.user}\n\n` +
+                            "✅ **La aplicación ha sido aceptada.**"
+                        );
 
                 if (currentEmbed?.image?.url) {
                     acceptedEmbed.setImage(
@@ -257,22 +309,27 @@ client.on("interactionCreate", async interaction => {
                 }
 
                 await interaction.update({
-                    embeds: [acceptedEmbed],
+                    embeds: [
+                        acceptedEmbed
+                    ],
                     components: []
                 });
 
                 return;
             }
 
-            const rejectedEmbed = new EmbedBuilder()
-                .setColor("#FF6B6B")
-                .setTitle("Aplicación rechazada")
-                .setDescription(
-                    `**Discord:** <@${userId}>\n` +
-                    `**Discord ID:** \`${userId}\`\n\n` +
-                    `**Rechazada por:** ${interaction.user}\n\n` +
-                    "❌ **La aplicación ha sido rechazada.**"
-                );
+            const rejectedEmbed =
+                new EmbedBuilder()
+                    .setColor("#FF6B6B")
+                    .setTitle(
+                        "Aplicación rechazada"
+                    )
+                    .setDescription(
+                        `**Discord:** <@${userId}>\n` +
+                        `**Discord ID:** \`${userId}\`\n\n` +
+                        `**Rechazada por:** ${interaction.user}\n\n` +
+                        "❌ **La aplicación ha sido rechazada.**"
+                    );
 
             if (currentEmbed?.image?.url) {
                 rejectedEmbed.setImage(
@@ -281,19 +338,25 @@ client.on("interactionCreate", async interaction => {
             }
 
             await interaction.update({
-                embeds: [rejectedEmbed],
+                embeds: [
+                    rejectedEmbed
+                ],
                 components: []
             });
 
             try {
                 const applicant =
-                    await client.users.fetch(userId);
+                    await client.users.fetch(
+                        userId
+                    );
 
                 await applicant.send({
                     embeds: [
                         new EmbedBuilder()
                             .setColor("#FF6B6B")
-                            .setTitle("Aplicación rechazada")
+                            .setTitle(
+                                "Aplicación rechazada"
+                            )
                             .setDescription(
                                 "❌ **Tu aplicación para DEVGRU ha sido rechazada.**\n\n" +
                                 "Si consideras que se trata de un error, puedes contactar con un miembro del staff."
@@ -313,9 +376,13 @@ client.on("interactionCreate", async interaction => {
                 error
             );
 
-            if (!interaction.replied && !interaction.deferred) {
+            if (
+                !interaction.replied &&
+                !interaction.deferred
+            ) {
                 await interaction.reply({
-                    content: "❌ Ocurrió un error al procesar esta aplicación.",
+                    content:
+                        "❌ Ocurrió un error al procesar esta aplicación.",
                     ephemeral: true
                 });
             }
@@ -337,10 +404,13 @@ client.on("messageCreate", async message => {
         return;
     }
 
-    const args = message.content
-        .slice(config.discord.prefix.length)
-        .trim()
-        .split(/\s+/);
+    const args =
+        message.content
+            .slice(
+                config.discord.prefix.length
+            )
+            .trim()
+            .split(/\s+/);
 
     const commandName =
         args.shift()?.toLowerCase();
@@ -348,7 +418,9 @@ client.on("messageCreate", async message => {
     if (!commandName) return;
 
     const command =
-        client.commands.get(commandName);
+        client.commands.get(
+            commandName
+        );
 
     if (!command) return;
 
@@ -374,12 +446,16 @@ client.on("messageCreate", async message => {
         }
 
         const allowedRoles =
-            permissions[requiredPermission];
+            permissions[
+                requiredPermission
+            ];
 
         const hasPermission =
             allowedRoles?.some(
                 roleId =>
-                    userRoles.has(roleId)
+                    userRoles.has(
+                        roleId
+                    )
             );
 
         if (!hasPermission) {
@@ -398,7 +474,6 @@ client.on("messageCreate", async message => {
             message,
             args
         );
-
     } catch (error) {
         logger.error(
             `Error executing command ${commandName}:`,
@@ -421,7 +496,6 @@ const PORT =
 const server =
     http.createServer(
         async (req, res) => {
-
             const url =
                 new URL(
                     req.url,
@@ -429,10 +503,13 @@ const server =
                 );
 
             if (url.pathname === "/") {
-                res.writeHead(200, {
-                    "Content-Type":
-                        "text/plain; charset=utf-8"
-                });
+                res.writeHead(
+                    200,
+                    {
+                        "Content-Type":
+                            "text/plain; charset=utf-8"
+                    }
+                );
 
                 res.end(
                     "DEVGRU-Bot online."
@@ -441,25 +518,37 @@ const server =
                 return;
             }
 
-            if (url.pathname === "/roblox/callback") {
+            if (
+                url.pathname ===
+                "/roblox/callback"
+            ) {
                 const code =
-                    url.searchParams.get("code");
+                    url.searchParams.get(
+                        "code"
+                    );
 
                 const state =
-                    url.searchParams.get("state");
+                    url.searchParams.get(
+                        "state"
+                    );
 
                 const error =
-                    url.searchParams.get("error");
+                    url.searchParams.get(
+                        "error"
+                    );
 
                 if (error) {
                     logger.error(
                         `Roblox OAuth error: ${error}`
                     );
 
-                    res.writeHead(400, {
-                        "Content-Type":
-                            "text/plain; charset=utf-8"
-                    });
+                    res.writeHead(
+                        400,
+                        {
+                            "Content-Type":
+                                "text/plain; charset=utf-8"
+                        }
+                    );
 
                     res.end(
                         "La autorización de Roblox fue cancelada o rechazada."
@@ -469,10 +558,13 @@ const server =
                 }
 
                 if (!code || !state) {
-                    res.writeHead(400, {
-                        "Content-Type":
-                            "text/plain; charset=utf-8"
-                    });
+                    res.writeHead(
+                        400,
+                        {
+                            "Content-Type":
+                                "text/plain; charset=utf-8"
+                        }
+                    );
 
                     res.end(
                         "No se recibió un código o estado válido."
@@ -482,13 +574,18 @@ const server =
                 }
 
                 const pending =
-                    getPendingState(state);
+                    getPendingState(
+                        state
+                    );
 
                 if (!pending) {
-                    res.writeHead(400, {
-                        "Content-Type":
-                            "text/plain; charset=utf-8"
-                    });
+                    res.writeHead(
+                        400,
+                        {
+                            "Content-Type":
+                                "text/plain; charset=utf-8"
+                        }
+                    );
 
                     res.end(
                         "Esta autorización expiró o ya fue utilizada."
@@ -503,14 +600,18 @@ const server =
                     );
 
                     const tokenData =
-                        await exchangeRobloxCode(code);
+                        await exchangeRobloxCode(
+                            code
+                        );
 
                     const robloxUser =
                         await getRobloxUser(
                             tokenData.access_token
                         );
 
-                    deletePendingState(state);
+                    deletePendingState(
+                        state
+                    );
 
                     logger.info(
                         `Roblox account verified: ${
@@ -540,7 +641,9 @@ const server =
                             await discordUser.send({
                                 embeds: [
                                     new EmbedBuilder()
-                                        .setColor("#ffaf1a")
+                                        .setColor(
+                                            "#ffaf1a"
+                                        )
                                         .setTitle(
                                             "Cuenta de Roblox verificada"
                                         )
@@ -554,7 +657,6 @@ const server =
                                         )
                                 ]
                             });
-
                         } catch (dmError) {
                             logger.error(
                                 "No se pudo enviar el DM de Roblox:",
@@ -563,10 +665,13 @@ const server =
                         }
                     }
 
-                    res.writeHead(200, {
-                        "Content-Type":
-                            "text/html; charset=utf-8"
-                    });
+                    res.writeHead(
+                        200,
+                        {
+                            "Content-Type":
+                                "text/html; charset=utf-8"
+                        }
+                    );
 
                     res.end(`
                         <!DOCTYPE html>
@@ -592,10 +697,13 @@ const server =
                         error
                     );
 
-                    res.writeHead(500, {
-                        "Content-Type":
-                            "text/plain; charset=utf-8"
-                    });
+                    res.writeHead(
+                        500,
+                        {
+                            "Content-Type":
+                                "text/plain; charset=utf-8"
+                        }
+                    );
 
                     res.end(
                         "No se pudo verificar la cuenta de Roblox."
@@ -605,12 +713,17 @@ const server =
                 return;
             }
 
-            res.writeHead(404, {
-                "Content-Type":
-                    "text/plain; charset=utf-8"
-            });
+            res.writeHead(
+                404,
+                {
+                    "Content-Type":
+                        "text/plain; charset=utf-8"
+                }
+            );
 
-            res.end("Not Found");
+            res.end(
+                "Not Found"
+            );
         }
     );
 
