@@ -89,162 +89,150 @@ client.once("clientReady", async () => {
 client.on("interactionCreate", async interaction => {
     if (!interaction.isButton()) return;
 
-    if (interaction.customId.startsWith("restore_ban:")) {
-        const userId = interaction.customId.split(":")[1];
+if (interaction.customId.startsWith("restore_ban:")) {
+    const userId = interaction.customId.split(":")[1];
 
-        const allowedRoles = permissions[1];
+    const allowedRoles = permissions[1];
 
-        const hasPermission = allowedRoles?.some(
-            roleId =>
-                interaction.member?.roles.cache.has(roleId)
-        );
+    const hasPermission = allowedRoles?.some(
+        roleId =>
+            interaction.member?.roles.cache.has(roleId)
+    );
 
-        if (!hasPermission) {
+    if (!hasPermission) {
+        await interaction.reply({
+            content:
+                "❌ No tienes permiso para restaurar este usuario.",
+            ephemeral: true
+        });
+
+        return;
+    }
+
+    try {
+        const bannedMember =
+            await getBannedMember(userId);
+
+        if (!bannedMember || bannedMember.restored) {
             await interaction.reply({
                 content:
-                    "❌ No tienes permiso para restaurar este usuario.",
+                    "❌ Este registro ya fue restaurado.",
                 ephemeral: true
             });
 
             return;
         }
 
+        let member;
+
         try {
-            const bannedMember =
-                await getBannedMember(userId);
-
-            if (!bannedMember || bannedMember.restored) {
-                await interaction.reply({
-                    content:
-                        "❌ Este registro ya fue restaurado.",
-                    ephemeral: true
-                });
-
-                return;
-            }
-
-            let member;
-
-            try {
-                member =
-                    await interaction.guild.members.fetch(
-                        userId
-                    );
-            } catch {
-                await interaction.reply({
-                    content:
-                        "❌ El usuario todavía no ha regresado al servidor.",
-                    ephemeral: true
-                });
-
-                return;
-            }
-
-            const currentRoles =
-                member.roles.cache.filter(
-                    role =>
-                        role.id !== interaction.guild.id
-                );
-
-            if (currentRoles.size > 0) {
-                await member.roles.remove(
-                    currentRoles,
-                    "Restauración de usuario baneado"
-                );
-            }
-
-            const rolesToRestore =
-                bannedMember.role_ids.filter(
-                    roleId =>
-                        roleId !== interaction.guild.id
-                );
-
-            if (rolesToRestore.length > 0) {
-                await member.roles.add(
-                    rolesToRestore,
-                    "Restauración de usuario baneado"
-                );
-            }
-
-            await member.setNickname(
-                bannedMember.nickname || null,
-                "Restauración de usuario baneado"
-            );
-
-            await markRestored(userId);
-
-            const restoredEmbed =
-                new EmbedBuilder()
-                    .setColor("#77DD77")
-                    .setTitle("Usuario restaurado")
-                    .setDescription(
-                        `**Usuario:** ${member}\n` +
-                        `**ID:** \`${member.id}\`\n` +
-                        `**Restaurado por:** ${interaction.user}\n\n` +
-                        `**Nickname restaurado:** ${
-                            bannedMember.nickname || "Ninguno"
-                        }\n\n` +
-                        `**Roles restaurados:**\n` +
-                        `${
-                            rolesToRestore.length > 0
-                                ? rolesToRestore
-                                    .map(id => `<@&${id}>`)
-                                    .join(" ")
-                                : "Ninguno"
-                        }`
-                    );
-
-            await interaction.update({
-                embeds: [restoredEmbed],
-                components: []
+            member =
+                await interaction.guild.members.fetch(userId);
+        } catch {
+            await interaction.reply({
+                content:
+                    "❌ El usuario todavía no ha regresado al servidor.",
+                ephemeral: true
             });
 
-            const restorationLog =
-                new EmbedBuilder()
-                    .setColor("#77DD77")
-                    .setTitle("Restauración de usuario")
-                    .setDescription(
-                        `**Usuario restaurado:** ${member}\n` +
-                        `**ID:** \`${member.id}\`\n\n` +
-                        `**Restaurado por:** ${interaction.user}\n` +
-                        `**Staff ID:** \`${interaction.user.id}\`\n\n` +
-                        `**Nickname:** ${
-                            bannedMember.nickname || "Ninguno"
-                        }\n\n` +
-                        `**Roles restaurados:**\n` +
-                        `${
-                            rolesToRestore.length > 0
-                                ? rolesToRestore
-                                    .map(id => `<@&${id}>`)
-                                    .join(" ")
-                                : "Ninguno"
-                        }`
-                    );
-
-            await interaction.channel.send({
-                embeds: [restorationLog]
-            });
-
-        } catch (error) {
-            logger.error(
-                "Error restoring banned member:",
-                error
-            );
-
-            if (
-                !interaction.replied &&
-                !interaction.deferred
-            ) {
-                await interaction.reply({
-                    content:
-                        "❌ No se pudo restaurar al usuario.",
-                    ephemeral: true
-                });
-            }
+            return;
         }
 
-        return;
+        const currentRoles =
+            member.roles.cache.filter(
+                role =>
+                    role.id !== interaction.guild.id
+            );
+
+        if (currentRoles.size > 0) {
+            await member.roles.remove(
+                currentRoles,
+                "Restauración de usuario baneado"
+            );
+        }
+
+        const rolesToRestore =
+            bannedMember.role_ids.filter(
+                roleId =>
+                    roleId !== interaction.guild.id
+            );
+
+        if (rolesToRestore.length > 0) {
+            await member.roles.add(
+                rolesToRestore,
+                "Restauración de usuario baneado"
+            );
+        }
+
+        await member.setNickname(
+            bannedMember.nickname || null,
+            "Restauración de usuario baneado"
+        );
+
+        await markRestored(userId);
+
+        /*
+         * MENSAJE ORIGINAL
+         * Solo se elimina el botón.
+         * El embed permanece exactamente igual.
+         */
+
+        await interaction.update({
+            components: []
+        });
+
+        /*
+         * NUEVO LOG DE RESTAURACIÓN
+         */
+
+        const restorationLog =
+            new EmbedBuilder()
+                .setColor("#77DD77")
+                .setTitle("Usuario restaurado")
+                .setDescription(
+                    `**Usuario:** ${member}\n` +
+                    `**ID:** \`${member.id}\`\n` +
+                    `**Restaurado por:** ${interaction.user}\n` +
+                    `**Staff ID:** \`${interaction.user.id}\`\n\n` +
+                    `**Nickname restaurado:** ${
+                        bannedMember.nickname || "Ninguno"
+                    }\n\n` +
+                    `**Roles restaurados:**\n` +
+                    `${
+                        rolesToRestore.length > 0
+                            ? rolesToRestore
+                                .map(id => `<@&${id}>`)
+                                .join(" ")
+                            : "Ninguno"
+                    }`
+                );
+
+        await interaction.channel.send({
+            embeds: [
+                restorationLog
+            ]
+        });
+
+    } catch (error) {
+        logger.error(
+            "Error restoring banned member:",
+            error
+        );
+
+        if (
+            !interaction.replied &&
+            !interaction.deferred
+        ) {
+            await interaction.reply({
+                content:
+                    "❌ No se pudo restaurar al usuario.",
+                ephemeral: true
+            });
+        }
     }
+
+    return;
+}
 
     if (
         interaction.customId.startsWith("application_accept:") ||
