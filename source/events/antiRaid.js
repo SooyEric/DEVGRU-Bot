@@ -1,5 +1,8 @@
 import {
     EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     AuditLogEvent,
     ChannelType
 } from "discord.js";
@@ -23,7 +26,6 @@ const REMOVABLE_ROLES = [
 
 const PING_LIMIT = 5;
 const TIME_WINDOW = 60 * 1000;
-
 const AUDIT_LOG_MAX_AGE = 10 * 1000;
 
 const pingTracker = new Map();
@@ -45,16 +47,18 @@ function isRecentAuditLog(entry) {
 }
 
 async function getExecutor(guild, type, targetId) {
-    const auditLogs = await guild.fetchAuditLogs({
-        type,
-        limit: 5
-    });
+    const auditLogs =
+        await guild.fetchAuditLogs({
+            type,
+            limit: 5
+        });
 
-    const entry = auditLogs.entries.find(
-        entry =>
-            entry.target?.id === targetId &&
-            isRecentAuditLog(entry)
-    );
+    const entry =
+        auditLogs.entries.find(
+            entry =>
+                entry.target?.id === targetId &&
+                isRecentAuditLog(entry)
+        );
 
     if (!entry?.executor?.id) {
         return null;
@@ -91,13 +95,17 @@ async function penalize(member, reason) {
         return null;
     }
 
-    const rolesToSave = member.roles.cache
-        .filter(role =>
-            role.id !== member.guild.id &&
-            !role.managed &&
-            !role.permissions.has("Administrator")
-        )
-        .map(role => role.id);
+    const rolesToSave =
+        member.roles.cache
+            .filter(
+                role =>
+                    role.id !== member.guild.id &&
+                    !role.managed &&
+                    !role.permissions.has(
+                        "Administrator"
+                    )
+            )
+            .map(role => role.id);
 
     if (rolesToSave.length > 0) {
         try {
@@ -114,13 +122,16 @@ async function penalize(member, reason) {
     }
 
     const removableRoles =
-        member.roles.cache.filter(role =>
-            role.id !== member.guild.id &&
-            !role.managed &&
-            (
-                REMOVABLE_ROLES.includes(role.id) ||
-                role.editable
-            )
+        member.roles.cache.filter(
+            role =>
+                role.id !== member.guild.id &&
+                !role.managed &&
+                (
+                    REMOVABLE_ROLES.includes(
+                        role.id
+                    ) ||
+                    role.editable
+                )
         );
 
     if (removableRoles.size > 0) {
@@ -143,13 +154,15 @@ async function penalize(member, reason) {
         );
 
     if (!channel) {
-        return null;
+        return rolesToSave;
     }
 
     const embed =
         new EmbedBuilder()
             .setColor("#ffaf1a")
-            .setTitle("⚠️ Acción Anti-Raid")
+            .setTitle(
+                "⚠️ Acción Anti-Raid"
+            )
             .setDescription(
                 `**Usuario:** ${member}\n` +
                 `**ID:** \`${member.id}\`\n` +
@@ -159,18 +172,48 @@ async function penalize(member, reason) {
                 `${
                     rolesToSave.length > 0
                         ? rolesToSave
-                            .map(id => `<@&${id}>`)
+                            .map(
+                                id =>
+                                    `<@&${id}>`
+                            )
                             .join(" ")
                         : "Ninguno"
                 }`
             )
             .setTimestamp();
 
+    const restoreButton =
+        new ButtonBuilder()
+            .setCustomId(
+                `restore_antiraid:${member.id}`
+            )
+            .setLabel(
+                "Restaurar roles"
+            )
+            .setStyle(
+                ButtonStyle.Secondary
+            );
+
+    const row =
+        new ActionRowBuilder()
+            .addComponents(
+                restoreButton
+            );
+
     await channel.send({
-        content: WHITELIST_ROLES
-            .map(roleId => `<@&${roleId}>`)
-            .join(" "),
-        embeds: [embed]
+        content:
+            WHITELIST_ROLES
+                .map(
+                    roleId =>
+                        `<@&${roleId}>`
+                )
+                .join(" "),
+        embeds: [
+            embed
+        ],
+        components: [
+            row
+        ]
     });
 
     return rolesToSave;
@@ -180,12 +223,15 @@ function registerPing(member) {
     const now = Date.now();
 
     const timestamps =
-        pingTracker.get(member.id) || [];
+        pingTracker.get(
+            member.id
+        ) || [];
 
     const recent =
         timestamps.filter(
             timestamp =>
-                now - timestamp < TIME_WINDOW
+                now - timestamp <
+                TIME_WINDOW
         );
 
     recent.push(now);
@@ -207,7 +253,8 @@ function registerAction(key) {
     const recent =
         timestamps.filter(
             timestamp =>
-                now - timestamp < TIME_WINDOW
+                now - timestamp <
+                TIME_WINDOW
         );
 
     recent.push(now);
@@ -221,15 +268,18 @@ function registerAction(key) {
 }
 
 async function recreateRole(role) {
-    const guild = role.guild;
+    const guild =
+        role.guild;
 
     const newRole =
         await guild.roles.create({
             name: role.name,
             color: role.color,
             hoist: role.hoist,
-            mentionable: role.mentionable,
-            permissions: role.permissions.bitfield,
+            mentionable:
+                role.mentionable,
+            permissions:
+                role.permissions.bitfield,
             reason:
                 "Anti-Raid: Restauración automática de rol eliminado"
         });
@@ -254,37 +304,60 @@ async function recreateRole(role) {
 
 function getChannelCreateOptions(channel) {
     const options = {
-        name: channel.name,
-        type: channel.type,
-        position: channel.rawPosition,
+        name:
+            channel.name,
+
+        type:
+            channel.type,
+
+        position:
+            channel.rawPosition,
+
         permissionOverwrites:
             channel.permissionOverwrites.cache.map(
                 overwrite => ({
-                    id: overwrite.id,
-                    allow: overwrite.allow.bitfield,
-                    deny: overwrite.deny.bitfield,
-                    type: overwrite.type
+                    id:
+                        overwrite.id,
+
+                    allow:
+                        overwrite.allow.bitfield,
+
+                    deny:
+                        overwrite.deny.bitfield,
+
+                    type:
+                        overwrite.type
                 })
             )
     };
 
     if (channel.parentId) {
-        options.parent = channel.parentId;
+        options.parent =
+            channel.parentId;
     }
 
     if (
-        channel.type === ChannelType.GuildText ||
-        channel.type === ChannelType.GuildAnnouncement
+        channel.type ===
+            ChannelType.GuildText ||
+        channel.type ===
+            ChannelType.GuildAnnouncement
     ) {
-        options.topic = channel.topic ?? undefined;
-        options.nsfw = channel.nsfw;
+        options.topic =
+            channel.topic ??
+            undefined;
+
+        options.nsfw =
+            channel.nsfw;
+
         options.rateLimitPerUser =
             channel.rateLimitPerUser;
     }
 
     if (
-        channel.type === ChannelType.GuildVoice ||
-        channel.type === ChannelType.GuildStageVoice
+        channel.type ===
+            ChannelType.GuildVoice ||
+        channel.type ===
+            ChannelType.GuildStageVoice
     ) {
         options.bitrate =
             channel.bitrate;
@@ -304,11 +377,14 @@ function getChannelCreateOptions(channel) {
     }
 
     if (
-        channel.type === ChannelType.GuildForum ||
-        channel.type === ChannelType.GuildMedia
+        channel.type ===
+            ChannelType.GuildForum ||
+        channel.type ===
+            ChannelType.GuildMedia
     ) {
         options.topic =
-            channel.topic ?? undefined;
+            channel.topic ??
+            undefined;
 
         options.nsfw =
             channel.nsfw;
@@ -316,18 +392,27 @@ function getChannelCreateOptions(channel) {
         options.rateLimitPerUser =
             channel.rateLimitPerUser;
 
-        options.defaultAutoArchiveDuration =
-            channel.defaultAutoArchiveDuration;
+        if (
+            channel.defaultAutoArchiveDuration
+        ) {
+            options.defaultAutoArchiveDuration =
+                channel.defaultAutoArchiveDuration;
+        }
 
-        options.defaultThreadRateLimitPerUser =
-            channel.defaultThreadRateLimitPerUser;
+        if (
+            channel.defaultThreadRateLimitPerUser
+        ) {
+            options.defaultThreadRateLimitPerUser =
+                channel.defaultThreadRateLimitPerUser;
+        }
     }
 
     return options;
 }
 
 async function recreateChannel(channel) {
-    const guild = channel.guild;
+    const guild =
+        channel.guild;
 
     const options =
         getChannelCreateOptions(
@@ -364,14 +449,18 @@ async function logRecreatedRole(
     newRole
 ) {
     const channel =
-        await getLogChannel(guild);
+        await getLogChannel(
+            guild
+        );
 
     if (!channel) return;
 
     const embed =
         new EmbedBuilder()
             .setColor("#ffaf1a")
-            .setTitle("⚠️ Acción Anti-Raid")
+            .setTitle(
+                "⚠️ Acción Anti-Raid"
+            )
             .setDescription(
                 `**Usuario:** ${executor}\n` +
                 `**ID:** \`${executor.id}\`\n\n` +
@@ -382,7 +471,9 @@ async function logRecreatedRole(
                 `**Color:** \`${oldRole.hexColor}\`\n` +
                 `**Posición:** \`${oldRole.position}\`\n` +
                 `**Administrador:** ${
-                    oldRole.permissions.has("Administrator")
+                    oldRole.permissions.has(
+                        "Administrator"
+                    )
                         ? "Sí"
                         : "No"
                 }`
@@ -390,10 +481,16 @@ async function logRecreatedRole(
             .setTimestamp();
 
     await channel.send({
-        content: WHITELIST_ROLES
-            .map(roleId => `<@&${roleId}>`)
-            .join(" "),
-        embeds: [embed]
+        content:
+            WHITELIST_ROLES
+                .map(
+                    roleId =>
+                        `<@&${roleId}>`
+                )
+                .join(" "),
+        embeds: [
+            embed
+        ]
     });
 }
 
@@ -404,14 +501,18 @@ async function logRecreatedChannel(
     newChannel
 ) {
     const channel =
-        await getLogChannel(guild);
+        await getLogChannel(
+            guild
+        );
 
     if (!channel) return;
 
     const embed =
         new EmbedBuilder()
             .setColor("#ffaf1a")
-            .setTitle("⚠️ Acción Anti-Raid")
+            .setTitle(
+                "⚠️ Acción Anti-Raid"
+            )
             .setDescription(
                 `**Usuario:** ${executor}\n` +
                 `**ID:** \`${executor.id}\`\n\n` +
@@ -430,19 +531,30 @@ async function logRecreatedChannel(
             .setTimestamp();
 
     await channel.send({
-        content: WHITELIST_ROLES
-            .map(roleId => `<@&${roleId}>`)
-            .join(" "),
-        embeds: [embed]
+        content:
+            WHITELIST_ROLES
+                .map(
+                    roleId =>
+                        `<@&${roleId}>`
+                )
+                .join(" "),
+        embeds: [
+            embed
+        ]
     });
 }
 
 export default {
     register(client) {
 
+        /*
+         * @EVERYONE
+         */
+
         client.on(
             "messageCreate",
             async message => {
+
                 if (message.author.bot) {
                     return;
                 }
@@ -464,9 +576,14 @@ export default {
                 }
 
                 const count =
-                    registerPing(member);
+                    registerPing(
+                        member
+                    );
 
-                if (count > PING_LIMIT) {
+                if (
+                    count >
+                    PING_LIMIT
+                ) {
                     pingTracker.delete(
                         member.id
                     );
@@ -479,9 +596,14 @@ export default {
             }
         );
 
+        /*
+         * BOT NUEVO
+         */
+
         client.on(
             "guildMemberAdd",
             async member => {
+
                 if (!member.user.bot) {
                     return;
                 }
@@ -493,19 +615,28 @@ export default {
             }
         );
 
+        /*
+         * CANAL ELIMINADO
+         */
+
         client.on(
             "channelDelete",
             async channel => {
+
                 const guild =
                     channel.guild;
 
-                if (!guild) return;
+                if (!guild) {
+                    return;
+                }
 
                 const lockKey =
                     `channelDelete:${channel.id}`;
 
                 if (
-                    actionLocks.has(lockKey)
+                    actionLocks.has(
+                        lockKey
+                    )
                 ) {
                     return;
                 }
@@ -515,6 +646,7 @@ export default {
                 );
 
                 try {
+
                     const result =
                         await getExecutor(
                             guild,
@@ -555,7 +687,9 @@ export default {
                             `channelRaid:${executor.id}`
                         );
 
-                    if (count >= 2) {
+                    if (
+                        count >= 2
+                    ) {
                         pingTracker.delete(
                             `channelRaid:${executor.id}`
                         );
@@ -567,12 +701,14 @@ export default {
                     }
 
                 } catch (error) {
+
                     console.error(
                         "Error Anti-Raid channelDelete:",
                         error
                     );
 
                 } finally {
+
                     actionLocks.delete(
                         lockKey
                     );
@@ -580,9 +716,14 @@ export default {
             }
         );
 
+        /*
+         * ROL ELIMINADO
+         */
+
         client.on(
             "roleDelete",
             async role => {
+
                 const guild =
                     role.guild;
 
@@ -590,7 +731,9 @@ export default {
                     `roleDelete:${role.id}`;
 
                 if (
-                    actionLocks.has(lockKey)
+                    actionLocks.has(
+                        lockKey
+                    )
                 ) {
                     return;
                 }
@@ -600,6 +743,7 @@ export default {
                 );
 
                 try {
+
                     const result =
                         await getExecutor(
                             guild,
@@ -640,7 +784,9 @@ export default {
                             `roleRaid:${executor.id}`
                         );
 
-                    if (count >= 2) {
+                    if (
+                        count >= 2
+                    ) {
                         pingTracker.delete(
                             `roleRaid:${executor.id}`
                         );
@@ -652,12 +798,14 @@ export default {
                     }
 
                 } catch (error) {
+
                     console.error(
                         "Error Anti-Raid roleDelete:",
                         error
                     );
 
                 } finally {
+
                     actionLocks.delete(
                         lockKey
                     );
@@ -665,13 +813,19 @@ export default {
             }
         );
 
+        /*
+         * ASIGNACIÓN DE ADMINISTRADOR
+         */
+
         client.on(
             "guildMemberUpdate",
             async (
                 oldMember,
                 newMember
             ) => {
+
                 try {
+
                     const addedAdminRole =
                         newMember.roles.cache.find(
                             role =>
@@ -683,7 +837,9 @@ export default {
                                 )
                         );
 
-                    if (!addedAdminRole) {
+                    if (
+                        !addedAdminRole
+                    ) {
                         return;
                     }
 
@@ -704,7 +860,9 @@ export default {
                                 )
                         );
 
-                    if (!entry?.executor?.id) {
+                    if (
+                        !entry?.executor?.id
+                    ) {
                         return;
                     }
 
@@ -727,6 +885,7 @@ export default {
                     );
 
                 } catch (error) {
+
                     console.error(
                         "Error Anti-Raid admin:",
                         error
