@@ -167,7 +167,7 @@ async function penalize(member, reason) {
                 `**Usuario:** ${member}\n` +
                 `**ID:** \`${member.id}\`\n` +
                 `**Motivo:** ${reason}\n\n` +
-                `**Acción:** Se removieron los roles del usuario.\n\n` +
+                `**Acción:** Remoción de roles\n\n` +
                 `**Roles guardados para restauración:**\n` +
                 `${
                     rolesToSave.length > 0
@@ -238,29 +238,6 @@ function registerPing(member) {
 
     pingTracker.set(
         member.id,
-        recent
-    );
-
-    return recent.length;
-}
-
-function registerAction(key) {
-    const now = Date.now();
-
-    const timestamps =
-        pingTracker.get(key) || [];
-
-    const recent =
-        timestamps.filter(
-            timestamp =>
-                now - timestamp <
-                TIME_WINDOW
-        );
-
-    recent.push(now);
-
-    pingTracker.set(
-        key,
         recent
     );
 
@@ -464,7 +441,8 @@ async function logRecreatedRole(
             .setDescription(
                 `**Usuario:** ${executor}\n` +
                 `**ID:** \`${executor.id}\`\n\n` +
-                `**Acción:** Rol eliminado + rol creado\n\n` +
+                `**Motivo:** Rol eliminado\n\n` +
+                `**Acción:** Remoción de roles + rol creado\n\n` +
                 `**Rol eliminado:** ${oldRole.name}\n` +
                 `**Rol creado:** ${newRole}\n` +
                 `**ID nuevo:** \`${newRole.id}\`\n\n` +
@@ -682,23 +660,10 @@ export default {
                         newChannel
                     );
 
-                    const count =
-                        registerAction(
-                            `channelRaid:${executor.id}`
-                        );
-
-                    if (
-                        count >= 2
-                    ) {
-                        pingTracker.delete(
-                            `channelRaid:${executor.id}`
-                        );
-
-                        await penalize(
-                            executor,
-                            "Eliminación de 2 canales en menos de un minuto."
-                        );
-                    }
+                    await penalize(
+                        executor,
+                        "Canal eliminado."
+                    );
 
                 } catch (error) {
 
@@ -767,10 +732,18 @@ export default {
                         return;
                     }
 
+                    /*
+                     * Primero reconstruimos el rol.
+                     */
+
                     const newRole =
                         await recreateRole(
                             role
                         );
+
+                    /*
+                     * Log de la reconstrucción.
+                     */
 
                     await logRecreatedRole(
                         guild,
@@ -779,23 +752,20 @@ export default {
                         newRole
                     );
 
-                    const count =
-                        registerAction(
-                            `roleRaid:${executor.id}`
-                        );
+                    /*
+                     * Después penalizamos al ejecutor.
+                     *
+                     * Esto genera un SEGUNDO log con:
+                     * - Motivo: Rol eliminado
+                     * - Acción: Remoción de roles
+                     * - Roles guardados
+                     * - Botón para restaurarlos
+                     */
 
-                    if (
-                        count >= 2
-                    ) {
-                        pingTracker.delete(
-                            `roleRaid:${executor.id}`
-                        );
-
-                        await penalize(
-                            executor,
-                            "Eliminación de 2 roles en menos de un minuto."
-                        );
-                    }
+                    await penalize(
+                        executor,
+                        "Rol eliminado."
+                    );
 
                 } catch (error) {
 
