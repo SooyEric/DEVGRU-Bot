@@ -31,7 +31,9 @@ import {
 } from "./utils/banManager.js";
 
 import {
-    initializeAntiRaidTable
+    initializeAntiRaidTable,
+    getAntiRaidMember,
+    markAntiRaidRestored
 } from "./utils/antiRaidManager.js";
 
 import {
@@ -118,6 +120,173 @@ client.on(
     async interaction => {
 
         if (!interaction.isButton()) {
+            return;
+        }
+
+        /*
+         * ============================================================
+         * RESTAURAR ROLES ANTI-RAID
+         * ============================================================
+         */
+
+        if (
+            interaction.customId.startsWith(
+                "restore_antiraid:"
+            )
+        ) {
+            const userId =
+                interaction.customId.split(":")[1];
+
+            const allowedRoles =
+                permissions[1];
+
+            const hasPermission =
+                allowedRoles?.some(
+                    roleId =>
+                        interaction.member?.roles.cache.has(
+                            roleId
+                        )
+                );
+
+            if (!hasPermission) {
+                await interaction.reply({
+                    content:
+                        "❌ No tienes permiso para restaurar estos roles.",
+                    ephemeral: true
+                });
+
+                return;
+            }
+
+            try {
+                const antiRaidMember =
+                    await getAntiRaidMember(
+                        userId
+                    );
+
+                if (
+                    !antiRaidMember ||
+                    antiRaidMember.restored
+                ) {
+                    await interaction.reply({
+                        content:
+                            "❌ Este registro ya fue restaurado o no existe.",
+                        ephemeral: true
+                    });
+
+                    return;
+                }
+
+                let member;
+
+                try {
+                    member =
+                        await interaction.guild.members.fetch(
+                            userId
+                        );
+                } catch {
+                    await interaction.reply({
+                        content:
+                            "❌ El usuario no se encuentra actualmente en el servidor.",
+                        ephemeral: true
+                    });
+
+                    return;
+                }
+
+                const rolesToRestore =
+                    antiRaidMember.role_ids.filter(
+                        roleId =>
+                            roleId !==
+                            interaction.guild.id
+                    );
+
+                /*
+                 * Solo se restauran roles que todavía existen.
+                 */
+
+                const existingRoles =
+                    rolesToRestore.filter(
+                        roleId =>
+                            interaction.guild.roles.cache.has(
+                                roleId
+                            )
+                    );
+
+                if (
+                    existingRoles.length > 0
+                ) {
+                    await member.roles.add(
+                        existingRoles,
+                        "Restauración de roles Anti-Raid"
+                    );
+                }
+
+                await markAntiRaidRestored(
+                    userId
+                );
+
+                /*
+                 * Elimina el botón del mensaje original.
+                 */
+
+                await interaction.update({
+                    components: []
+                });
+
+                /*
+                 * Log de restauración.
+                 */
+
+                const restorationLog =
+                    new EmbedBuilder()
+                        .setColor("#77DD77")
+                        .setTitle(
+                            "Roles Anti-Raid restaurados"
+                        )
+                        .setDescription(
+                            `**Usuario:** ${member}\n` +
+                            `**ID:** \`${member.id}\`\n` +
+                            `**Restaurado por:** ${interaction.user}\n` +
+                            `**Staff ID:** \`${interaction.user.id}\`\n\n` +
+                            `**Roles restaurados:**\n` +
+                            `${
+                                existingRoles.length > 0
+                                    ? existingRoles
+                                        .map(
+                                            roleId =>
+                                                `<@&${roleId}>`
+                                        )
+                                        .join(" ")
+                                    : "Ninguno"
+                            }`
+                        )
+                        .setTimestamp();
+
+                await interaction.channel.send({
+                    embeds: [
+                        restorationLog
+                    ]
+                });
+
+            } catch (error) {
+                logger.error(
+                    "Error restoring Anti-Raid member:",
+                    error
+                );
+
+                if (
+                    !interaction.replied &&
+                    !interaction.deferred
+                ) {
+                    await interaction.reply({
+                        content:
+                            "❌ No se pudieron restaurar los roles.",
+                        ephemeral: true
+                    });
+                }
+            }
+
             return;
         }
 
