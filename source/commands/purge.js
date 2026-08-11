@@ -6,10 +6,14 @@ export default {
         const mode = args[0]?.toLowerCase();
 
         let amount = 50;
-        let filterMedia = false;
+        let mediaOnly = false;
 
-        if (mode === "fotos" || mode === "media") {
-            filterMedia = true;
+        if (
+            mode === "fotos" ||
+            mode === "foto" ||
+            mode === "media"
+        ) {
+            mediaOnly = true;
             amount = Number(args[1]) || 5;
 
             if (amount < 1 || amount > 30) {
@@ -26,54 +30,95 @@ export default {
         }
 
         try {
-            const target = amount + 1;
-            let deleted = 0;
+            if (!mediaOnly) {
+                let remaining = amount + 1;
 
-            while (deleted < target) {
-                const remaining = target - deleted;
-                const fetchLimit = Math.min(100, remaining);
+                while (remaining > 0) {
+                    const messages =
+                        await message.channel.messages.fetch({
+                            limit: Math.min(100, remaining)
+                        });
 
+                    if (messages.size === 0) break;
+
+                    const batch = messages.first(
+                        Math.min(100, remaining)
+                    );
+
+                    await message.channel.bulkDelete(
+                        batch,
+                        true
+                    );
+
+                    remaining -= batch.length;
+                }
+
+                return;
+            }
+
+            let mediaMessages = [];
+            let lastId = message.id;
+
+            while (mediaMessages.length < amount) {
                 const messages =
                     await message.channel.messages.fetch({
-                        limit: fetchLimit
+                        limit: 100,
+                        before: lastId
                     });
 
                 if (messages.size === 0) break;
 
-                let toDelete;
-
-                if (filterMedia) {
-                    toDelete = messages.filter(msg =>
+                for (const msg of messages.values()) {
+                    const hasMedia =
                         msg.attachments.size > 0 ||
                         msg.embeds.some(embed =>
                             embed.type === "image" ||
                             embed.type === "video" ||
                             embed.url
                         ) ||
-                        /https?:\/\/\S+/i.test(msg.content)
-                    );
-                } else {
-                    toDelete = messages;
+                        /https?:\/\/\S+/i.test(msg.content);
+
+                    if (hasMedia) {
+                        mediaMessages.push(msg);
+                    }
+
+                    if (mediaMessages.length >= amount) {
+                        break;
+                    }
                 }
 
-                if (toDelete.size === 0) break;
+                lastId =
+                    messages.last().id;
+            }
 
-                const batch = toDelete.first(
-                    Math.min(100, remaining)
-                );
+            const messagesToDelete = [
+                message,
+                ...mediaMessages
+            ];
 
-                if (!batch.length) break;
+            for (
+                let i = 0;
+                i < messagesToDelete.length;
+                i += 100
+            ) {
+                const batch =
+                    messagesToDelete.slice(
+                        i,
+                        i + 100
+                    );
 
                 await message.channel.bulkDelete(
                     batch,
                     true
                 );
-
-                deleted += batch.length;
             }
 
         } catch (error) {
-            console.error("Error en comando purge:", error);
+            console.error(
+                "Error en comando purge:",
+                error
+            );
+
             await message.react("❌");
         }
     }
