@@ -9,14 +9,9 @@ import {
     createRobloxAuthorization
 } from "../utils/robloxOAuth.js";
 
-const REQUIRED_ROLE =
-    "1373365890623602768";
-
-const APPLICATION_TIMEOUT =
-    30 * 60 * 1000;
-
-const COLOR =
-    "#ffaf1a";
+const REQUIRED_ROLE = "1373365890623602768";
+const APPLICATION_TIMEOUT = 30 * 60 * 1000;
+const COLOR = "#ffaf1a";
 
 const GROUP_URL =
     process.env.ROBLOX_GROUP_URL ||
@@ -29,14 +24,9 @@ const GROUP_URL =
 const APPLICATION_LOG_CHANNEL_ID =
     process.env.APPLICATION_LOG_CHANNEL_ID;
 
-const applications =
-    new Map();
+const applications = new Map();
 
-function embed(
-    title,
-    description,
-    color = COLOR
-) {
+function embed(title, description, color = COLOR) {
     return new EmbedBuilder()
         .setColor(color)
         .setTitle(title)
@@ -44,9 +34,94 @@ function embed(
 }
 
 function timeoutError() {
-    return new Error(
-        "APPLICATION_TIMEOUT"
-    );
+    return new Error("APPLICATION_TIMEOUT");
+}
+
+async function createApplicationLog(application) {
+    if (
+        !application?.client ||
+        !APPLICATION_LOG_CHANNEL_ID
+    ) {
+        return;
+    }
+
+    try {
+        const channel =
+            await application.client.channels.fetch(
+                APPLICATION_LOG_CHANNEL_ID
+            );
+
+        if (!channel) return;
+
+        const logEmbed =
+            new EmbedBuilder()
+                .setColor(COLOR)
+                .setTitle("Aplicación iniciada")
+                .setDescription(
+                    `**Usuario:** <@${application.userId}>\n` +
+                    `**Discord ID:** \`${application.userId}\`\n\n` +
+                    "**Estado:** Proceso en curso."
+                );
+
+        const logMessage =
+            await channel.send({
+                embeds: [logEmbed]
+            });
+
+        application.logMessageId =
+            logMessage.id;
+
+    } catch (error) {
+        console.error(
+            "Error creando log de aplicación:",
+            error
+        );
+    }
+}
+
+async function updateApplicationLog(application) {
+    if (
+        !application?.client ||
+        !application?.logMessageId ||
+        !APPLICATION_LOG_CHANNEL_ID
+    ) {
+        return;
+    }
+
+    try {
+        const channel =
+            await application.client.channels.fetch(
+                APPLICATION_LOG_CHANNEL_ID
+            );
+
+        if (!channel) return;
+
+        const logMessage =
+            await channel.messages.fetch(
+                application.logMessageId
+            );
+
+        const finalEmbed =
+            new EmbedBuilder()
+                .setColor("#77DD77")
+                .setTitle("Proceso finalizado")
+                .setDescription(
+                    `**Usuario:** <@${application.userId}>\n` +
+                    `**Discord ID:** \`${application.userId}\`\n\n` +
+                    "**Estado:** Proceso finalizado."
+                );
+
+        await logMessage.edit({
+            embeds: [finalEmbed],
+            components: []
+        });
+
+    } catch (error) {
+        console.error(
+            "Error actualizando log de aplicación:",
+            error
+        );
+    }
 }
 
 async function waitForMessage(
@@ -80,12 +155,6 @@ async function waitForMessage(
     return collected.first();
 }
 
-/*
- * ============================================================
- * CONTINUAR DESPUÉS DE VERIFICAR ROBLOX
- * ============================================================
- */
-
 async function waitForGroupConfirmation(
     dm,
     userId,
@@ -103,12 +172,8 @@ async function waitForGroupConfirmation(
             .setCustomId(
                 `application_group_continue:${userId}`
             )
-            .setLabel(
-                "Continuar"
-            )
-            .setStyle(
-                ButtonStyle.Success
-            );
+            .setLabel("Continuar")
+            .setStyle(ButtonStyle.Success);
 
     const row =
         new ActionRowBuilder()
@@ -131,24 +196,17 @@ async function waitForGroupConfirmation(
                     "⚠️ La solicitud será verificada manualmente por el staff."
                 )
             ],
-            components: [
-                row
-            ]
+            components: [row]
         });
 
     const interaction =
-        await message
-            .awaitMessageComponent({
-                filter:
-                    interaction =>
-                        interaction.user.id ===
-                        userId,
+        await message.awaitMessageComponent({
+            filter:
+                interaction =>
+                    interaction.user.id === userId,
 
-                time: remaining
-            })
-            .catch(
-                () => null
-            );
+            time: remaining
+        }).catch(() => null);
 
     if (!interaction) {
         throw timeoutError();
@@ -166,17 +224,13 @@ async function waitForGroupConfirmation(
     });
 }
 
-/*
- * ============================================================
- * REVISIÓN FINAL
- * ============================================================
- */
+async function waitForConfirmation(application) {
+    const {
+        dm,
+        userId,
+        endTime
+    } = application;
 
-async function waitForConfirmation(
-    dm,
-    userId,
-    endTime
-) {
     const remaining =
         endTime - Date.now();
 
@@ -189,24 +243,16 @@ async function waitForConfirmation(
             .setCustomId(
                 `application_submit:${userId}`
             )
-            .setLabel(
-                "Enviar"
-            )
-            .setStyle(
-                ButtonStyle.Success
-            );
+            .setLabel("Enviar")
+            .setStyle(ButtonStyle.Success);
 
     const cancelButton =
         new ButtonBuilder()
             .setCustomId(
                 `application_cancel:${userId}`
             )
-            .setLabel(
-                "Cancelar"
-            )
-            .setStyle(
-                ButtonStyle.Danger
-            );
+            .setLabel("Cancelar")
+            .setStyle(ButtonStyle.Danger);
 
     const row =
         new ActionRowBuilder()
@@ -225,9 +271,7 @@ async function waitForConfirmation(
                     "Cuando estés listo, presiona **Enviar**."
                 )
             ],
-            components: [
-                row
-            ]
+            components: [row]
         });
 
     const interaction =
@@ -235,14 +279,11 @@ async function waitForConfirmation(
             .awaitMessageComponent({
                 filter:
                     interaction =>
-                        interaction.user.id ===
-                        userId,
+                        interaction.user.id === userId,
 
                 time: remaining
             })
-            .catch(
-                () => null
-            );
+            .catch(() => null);
 
     if (!interaction) {
         throw timeoutError();
@@ -263,6 +304,10 @@ async function waitForConfirmation(
             components: []
         });
 
+        await updateApplicationLog(
+            application
+        );
+
         return false;
     }
 
@@ -279,14 +324,12 @@ async function waitForConfirmation(
         components: []
     });
 
+    await updateApplicationLog(
+        application
+    );
+
     return true;
 }
-
-/*
- * ============================================================
- * CONTINUAR APLICACIÓN
- * ============================================================
- */
 
 async function continueApplication(
     application,
@@ -300,6 +343,10 @@ async function continueApplication(
     } = application;
 
     if (Date.now() >= endTime) {
+        await updateApplicationLog(
+            application
+        );
+
         applications.delete(userId);
 
         await dm.send({
@@ -318,28 +365,19 @@ async function continueApplication(
         robloxUser;
 
     try {
-
-        if (
-            application.verificationMessage
-        ) {
+        if (application.verificationMessage) {
             await application
                 .verificationMessage
                 .delete()
                 .catch(() => {});
         }
 
-        if (
-            application.authorizationMessage
-        ) {
+        if (application.authorizationMessage) {
             await application
                 .authorizationMessage
                 .delete()
                 .catch(() => {});
         }
-
-        /*
-         * CUENTA VERIFICADA
-         */
 
         await dm.send({
             embeds: [
@@ -356,19 +394,11 @@ async function continueApplication(
             ]
         });
 
-        /*
-         * SOLICITUD AL GRUPO
-         */
-
         await waitForGroupConfirmation(
             dm,
             userId,
             endTime
         );
-
-        /*
-         * PREGUNTA 2
-         */
 
         const sourceQuestion =
             await dm.send({
@@ -474,10 +504,6 @@ async function continueApplication(
         application.discovery =
             sourceText;
 
-        /*
-         * PREGUNTA 3
-         */
-
         const imageQuestion =
             await dm.send({
                 embeds: [
@@ -525,66 +551,48 @@ async function continueApplication(
             .delete()
             .catch(() => {});
 
-        /*
-         * INFORMACIÓN RECIBIDA
-         */
-
         await dm.send({
             embeds: [
                 embed(
                     "Información recibida",
-                    `**Roblox:** ${
-                        robloxUsername
-                    }\n` +
-                    `**Encontró DEVGRU mediante:** ${
-                        sourceText
-                    }\n\n` +
+                    `**Roblox:** ${robloxUsername}\n` +
+                    `**Encontró DEVGRU mediante:** ${sourceText}\n\n` +
                     "La fotografía de tus servidores fue recibida correctamente.\n\n" +
                     "Todos los datos necesarios fueron recopilados."
                 )
             ]
         });
 
-        /*
-         * REVISIÓN
-         */
-
         const submitted =
             await waitForConfirmation(
-                dm,
-                userId,
-                endTime
+                application
             );
 
         if (!submitted) {
-            applications.delete(
-                userId
-            );
-
+            applications.delete(userId);
             return;
         }
 
         application.status =
             "ready_for_review";
 
-        applications.delete(
-            userId
-        );
+        applications.delete(userId);
 
         await sendApplicationToLogs(
             application
         );
 
     } catch (error) {
-
-        applications.delete(
-            userId
-        );
-
         if (
             error?.message ===
             "APPLICATION_TIMEOUT"
         ) {
+            await updateApplicationLog(
+                application
+            );
+
+            applications.delete(userId);
+
             await dm.send({
                 embeds: [
                     embed(
@@ -596,6 +604,8 @@ async function continueApplication(
 
             return;
         }
+
+        applications.delete(userId);
 
         console.error(
             "Error continuando aplicación:",
@@ -613,12 +623,6 @@ async function continueApplication(
         }).catch(() => {});
     }
 }
-
-/*
- * ============================================================
- * LOGS
- * ============================================================
- */
 
 async function sendApplicationToLogs(
     application
@@ -649,9 +653,7 @@ async function sendApplicationToLogs(
 
     const logEmbed =
         new EmbedBuilder()
-            .setColor(
-                COLOR
-            )
+            .setColor(COLOR)
             .setTitle(
                 "Nueva aplicación — DEVGRU"
             )
@@ -664,7 +666,7 @@ async function sendApplicationToLogs(
                 }\n` +
                 `**Roblox ID:** \`${roblox.sub}\`\n\n` +
                 `**Encontró DEVGRU mediante:**\n${application.discovery}\n\n` +
-                `**Estado:** Solicitud recibida — pendiente de revisión`
+                "**Estado:** Solicitud recibida — pendiente de revisión"
             );
 
     if (application.discordImage) {
@@ -678,24 +680,16 @@ async function sendApplicationToLogs(
             .setCustomId(
                 `application_accept:${application.userId}`
             )
-            .setLabel(
-                "Aceptar"
-            )
-            .setStyle(
-                ButtonStyle.Success
-            );
+            .setLabel("Aceptar")
+            .setStyle(ButtonStyle.Success);
 
     const rejectButton =
         new ButtonBuilder()
             .setCustomId(
                 `application_reject:${application.userId}`
             )
-            .setLabel(
-                "Rechazar"
-            )
-            .setStyle(
-                ButtonStyle.Danger
-            );
+            .setLabel("Rechazar")
+            .setStyle(ButtonStyle.Danger);
 
     const row =
         new ActionRowBuilder()
@@ -705,20 +699,10 @@ async function sendApplicationToLogs(
             );
 
     await channel.send({
-        embeds: [
-            logEmbed
-        ],
-        components: [
-            row
-        ]
+        embeds: [logEmbed],
+        components: [row]
     });
 }
-
-/*
- * ============================================================
- * ROBLOX OAUTH CALLBACK
- * ============================================================
- */
 
 export function resumeRobloxApplication(
     userId,
@@ -726,9 +710,7 @@ export function resumeRobloxApplication(
     client
 ) {
     const application =
-        applications.get(
-            userId
-        );
+        applications.get(userId);
 
     if (!application) {
         return false;
@@ -745,27 +727,17 @@ export function resumeRobloxApplication(
     return true;
 }
 
-/*
- * ============================================================
- * COMANDO -APLICAR
- * ============================================================
- */
-
 export default {
     name: "aplicar",
     permission: null,
 
     async execute(message) {
-
         if (
             !message.member?.roles.cache.has(
                 REQUIRED_ROLE
             )
         ) {
-            await message.react(
-                "❌"
-            );
-
+            await message.react("❌");
             return;
         }
 
@@ -774,15 +746,13 @@ export default {
                 message.author.id
             )
         ) {
-            await message.react(
-                "❌"
-            );
-
+            await message.react("❌");
             return;
         }
 
-        try {
+        let application = null;
 
+        try {
             const dm =
                 await message.author.createDM();
 
@@ -790,7 +760,7 @@ export default {
                 Date.now() +
                 APPLICATION_TIMEOUT;
 
-            const application = {
+            application = {
                 userId:
                     message.author.id,
 
@@ -817,11 +787,18 @@ export default {
                     null,
 
                 authorizationMessage:
+                    null,
+
+                logMessageId:
                     null
             };
 
             applications.set(
                 message.author.id,
+                application
+            );
+
+            await createApplicationLog(
                 application
             );
 
@@ -835,10 +812,6 @@ export default {
                     )
                 ]
             });
-
-            /*
-             * PREGUNTA 1
-             */
 
             const robloxQuestion =
                 await dm.send({
@@ -872,18 +845,10 @@ export default {
                 .delete()
                 .catch(() => {});
 
-            /*
-             * VERIFICACIÓN ROBLOX
-             */
-
             const verifyButton =
                 new ButtonBuilder()
-                    .setLabel(
-                        "Verificar"
-                    )
-                    .setStyle(
-                        ButtonStyle.Link
-                    )
+                    .setLabel("Verificar")
+                    .setStyle(ButtonStyle.Link)
                     .setURL(
                         createRobloxAuthorization(
                             message.author.id,
@@ -896,12 +861,8 @@ export default {
                     .setCustomId(
                         `aplicar_back:${message.author.id}`
                     )
-                    .setLabel(
-                        "Atrás"
-                    )
-                    .setStyle(
-                        ButtonStyle.Secondary
-                    );
+                    .setLabel("Atrás")
+                    .setStyle(ButtonStyle.Secondary);
 
             const row =
                 new ActionRowBuilder()
@@ -920,9 +881,7 @@ export default {
                             "Presiona **Verificar** para autorizar tu cuenta de Roblox."
                         )
                     ],
-                    components: [
-                        row
-                    ]
+                    components: [row]
                 });
 
             const authorizationMessage =
@@ -942,20 +901,23 @@ export default {
             application.authorizationMessage =
                 authorizationMessage;
 
-            await message.react(
-                "✅"
-            );
+            await message.react("✅");
 
         } catch (error) {
-
-            applications.delete(
-                message.author.id
-            );
-
             if (
                 error?.message ===
                 "APPLICATION_TIMEOUT"
             ) {
+                if (application) {
+                    await updateApplicationLog(
+                        application
+                    );
+                }
+
+                applications.delete(
+                    message.author.id
+                );
+
                 await message.author
                     .createDM()
                     .then(
@@ -969,25 +931,23 @@ export default {
                                 ]
                             })
                     )
-                    .catch(
-                        () => {}
-                    );
+                    .catch(() => {});
 
-                await message.react(
-                    "❌"
-                );
+                await message.react("❌");
 
                 return;
             }
+
+            applications.delete(
+                message.author.id
+            );
 
             console.error(
                 "Error iniciando aplicación:",
                 error
             );
 
-            await message.react(
-                "❌"
-            );
+            await message.react("❌");
         }
     }
 };
