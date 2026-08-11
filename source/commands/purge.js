@@ -7,8 +7,21 @@ export default {
 
         let amount = 50;
         let mediaOnly = false;
+        let targetUser = null;
 
-        if (
+        if (message.mentions.users.size > 0) {
+            targetUser = message.mentions.users.first();
+
+            amount = Number(args[1]) || 50;
+
+            if (
+                amount < 1 ||
+                amount > 1000
+            ) {
+                await message.react("❌");
+                return;
+            }
+        } else if (
             mode === "fotos" ||
             mode === "foto" ||
             mode === "media"
@@ -16,41 +29,120 @@ export default {
             mediaOnly = true;
             amount = Number(args[1]) || 5;
 
-            if (amount < 1 || amount > 30) {
+            if (
+                amount < 1 ||
+                amount > 30
+            ) {
                 await message.react("❌");
                 return;
             }
         } else {
             amount = Number(args[0]) || 50;
 
-            if (amount < 1 || amount > 1000) {
+            if (
+                amount < 1 ||
+                amount > 1000
+            ) {
                 await message.react("❌");
                 return;
             }
         }
 
         try {
-            if (!mediaOnly) {
-                let remaining = amount + 1;
+            if (targetUser) {
+                let userMessages = [];
+                let lastId = message.id;
 
-                while (remaining > 0) {
+                while (
+                    userMessages.length < amount
+                ) {
                     const messages =
                         await message.channel.messages.fetch({
-                            limit: Math.min(100, remaining)
+                            limit: 100,
+                            before: lastId
                         });
 
                     if (messages.size === 0) break;
 
-                    const batch = messages.first(
-                        Math.min(100, remaining)
+                    for (const msg of messages.values()) {
+                        if (
+                            msg.author.id ===
+                            targetUser.id
+                        ) {
+                            userMessages.push(msg);
+                        }
+
+                        if (
+                            userMessages.length >=
+                            amount
+                        ) {
+                            break;
+                        }
+                    }
+
+                    lastId =
+                        messages.last().id;
+                }
+
+                const messagesToDelete = [
+                    message,
+                    ...userMessages
+                ];
+
+                for (
+                    let i = 0;
+                    i < messagesToDelete.length;
+                    i += 100
+                ) {
+                    const batch =
+                        messagesToDelete.slice(
+                            i,
+                            i + 100
+                        );
+
+                    await message.channel.bulkDelete(
+                        batch,
+                        true
                     );
+                }
+
+                return;
+            }
+
+            if (!mediaOnly) {
+                let remaining =
+                    amount + 1;
+
+                while (remaining > 0) {
+                    const messages =
+                        await message.channel.messages.fetch({
+                            limit: Math.min(
+                                100,
+                                remaining
+                            )
+                        });
+
+                    if (
+                        messages.size === 0
+                    ) {
+                        break;
+                    }
+
+                    const batch =
+                        messages.first(
+                            Math.min(
+                                100,
+                                remaining
+                            )
+                        );
 
                     await message.channel.bulkDelete(
                         batch,
                         true
                     );
 
-                    remaining -= batch.length;
+                    remaining -=
+                        batch.length;
                 }
 
                 return;
@@ -59,30 +151,43 @@ export default {
             let mediaMessages = [];
             let lastId = message.id;
 
-            while (mediaMessages.length < amount) {
+            while (
+                mediaMessages.length <
+                amount
+            ) {
                 const messages =
                     await message.channel.messages.fetch({
                         limit: 100,
                         before: lastId
                     });
 
-                if (messages.size === 0) break;
+                if (
+                    messages.size === 0
+                ) {
+                    break;
+                }
 
                 for (const msg of messages.values()) {
                     const hasMedia =
                         msg.attachments.size > 0 ||
-                        msg.embeds.some(embed =>
-                            embed.type === "image" ||
-                            embed.type === "video" ||
-                            embed.url
+                        msg.embeds.some(
+                            embed =>
+                                embed.type === "image" ||
+                                embed.type === "video" ||
+                                embed.url
                         ) ||
-                        /https?:\/\/\S+/i.test(msg.content);
+                        /https?:\/\/\S+/i.test(
+                            msg.content
+                        );
 
                     if (hasMedia) {
                         mediaMessages.push(msg);
                     }
 
-                    if (mediaMessages.length >= amount) {
+                    if (
+                        mediaMessages.length >=
+                        amount
+                    ) {
                         break;
                     }
                 }
