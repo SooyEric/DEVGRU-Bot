@@ -19,7 +19,7 @@ const AGENCIES = {
         ]
     },
 
-    "guardia-nacional": {
+    "guardia": {
         roles: [
             "1537004958950363197",
             "1537000556160356392",
@@ -29,7 +29,7 @@ const AGENCIES = {
         ]
     },
 
-    "delta-force": {
+    "delta": {
         roles: [
             "1537004958950363197",
             "1537006775989960744",
