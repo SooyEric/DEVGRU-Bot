@@ -1,12 +1,6 @@
 const SNIPE_DURATION =
     10 * 60 * 1000;
 
-const AUDIT_LOG_DELAY =
-    1000;
-
-const AUDIT_LOG_MAX_AGE =
-    10 * 1000;
-
 const snipeCache =
     new Map();
 
@@ -25,7 +19,12 @@ export function saveSnipe(message) {
     if (
         !message ||
         !message.guild ||
-        !message.author ||
+        !message.author
+    ) {
+        return;
+    }
+
+    if (
         message.author.bot
     ) {
         return;
@@ -101,93 +100,6 @@ export function saveSnipe(message) {
     }
 }
 
-async function wasDeletedByAuthor(
-    message
-) {
-    if (
-        !message ||
-        !message.guild ||
-        !message.author
-    ) {
-        return false;
-    }
-
-    try {
-        await new Promise(
-            resolve =>
-                setTimeout(
-                    resolve,
-                    AUDIT_LOG_DELAY
-                )
-        );
-
-        const auditLogs =
-            await message.guild.fetchAuditLogs({
-                type: 72,
-                limit: 10
-            });
-
-        const now =
-            Date.now();
-
-        for (
-            const entry of auditLogs.entries.values()
-        ) {
-            if (
-                !entry.createdTimestamp ||
-                now -
-                    entry.createdTimestamp >
-                    AUDIT_LOG_MAX_AGE
-            ) {
-                continue;
-            }
-
-            const targetId =
-                entry.target?.id;
-
-            const executorId =
-                entry.executor?.id;
-
-            const channelId =
-                entry.extra?.channel?.id;
-
-            if (
-                targetId !==
-                message.author.id
-            ) {
-                continue;
-            }
-
-            if (
-                executorId !==
-                message.author.id
-            ) {
-                continue;
-            }
-
-            if (
-                channelId &&
-                channelId !==
-                    message.channel.id
-            ) {
-                continue;
-            }
-
-            return true;
-        }
-
-        return false;
-
-    } catch (error) {
-        console.error(
-            "Error comprobando Audit Log para Snipe:",
-            error
-        );
-
-        return false;
-    }
-}
-
 export async function handleMessageDelete(
     message
 ) {
@@ -205,34 +117,14 @@ export async function handleMessageDelete(
         return;
     }
 
-    const hasContent =
-        Boolean(
-            message.content &&
-            message.content.trim()
-        );
-
-    const hasAttachments =
-        message.attachments &&
-        message.attachments.size > 0;
-
-    if (
-        !hasContent &&
-        !hasAttachments
-    ) {
-        return;
-    }
-
-    const deletedByAuthor =
-        await wasDeletedByAuthor(
-            message
-        );
-
-    if (
-        !deletedByAuthor
-    ) {
-        return;
-    }
-
+    /*
+     * Guardamos el mensaje eliminado
+     * directamente en memoria.
+     *
+     * Discord no proporciona una forma
+     * fiable de saber mediante Audit Log
+     * si un usuario eliminó su propio mensaje.
+     */
     saveSnipe(
         message
     );
