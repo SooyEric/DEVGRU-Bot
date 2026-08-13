@@ -40,7 +40,7 @@ function createEmbed(
                             );
 
                         return (
-                            `\`${number}\` ${role} - \`${role.id}\``
+                            `\`${number}\` ${role} - ${role.id}`
                         );
                     }
                 )
@@ -68,16 +68,23 @@ function createEmbed(
         });
 }
 
-function createButtons(
-    page,
-    totalPages
-) {
+function createButtons() {
     const leftButton =
         new ButtonBuilder()
             .setCustomId(
                 "roles_previous"
             )
             .setLabel("←")
+            .setStyle(
+                ButtonStyle.Secondary
+            );
+
+    const rightButton =
+        new ButtonBuilder()
+            .setCustomId(
+                "roles_next"
+            )
+            .setLabel("→")
             .setStyle(
                 ButtonStyle.Secondary
             );
@@ -92,21 +99,11 @@ function createButtons(
                 ButtonStyle.Danger
             );
 
-    const rightButton =
-        new ButtonBuilder()
-            .setCustomId(
-                "roles_next"
-            )
-            .setLabel("→")
-            .setStyle(
-                ButtonStyle.Secondary
-            );
-
     return new ActionRowBuilder()
         .addComponents(
             leftButton,
-            deleteButton,
-            rightButton
+            rightButton,
+            deleteButton
         );
 }
 
@@ -144,27 +141,18 @@ export default {
 
         let currentPage = 0;
 
-        const embed =
-            createEmbed(
-                message.guild,
-                roleList,
-                currentPage,
-                totalPages
-            );
-
-        const row =
-            createButtons(
-                currentPage,
-                totalPages
-            );
-
         const sentMessage =
             await message.channel.send({
                 embeds: [
-                    embed
+                    createEmbed(
+                        message.guild,
+                        roleList,
+                        currentPage,
+                        totalPages
+                    )
                 ],
                 components: [
-                    row
+                    createButtons()
                 ]
             });
 
@@ -176,12 +164,6 @@ export default {
         collector.on(
             "collect",
             async interaction => {
-
-                /*
-                 * Solo quien ejecutó
-                 * -roles puede utilizar
-                 * los botones.
-                 */
 
                 if (
                     interaction.user.id !==
@@ -196,17 +178,7 @@ export default {
                     return;
                 }
 
-                /*
-                 * Reiniciar el temporizador
-                 * cada vez que se utiliza
-                 * un botón.
-                 */
-
                 collector.resetTimer();
-
-                /*
-                 * ELIMINAR
-                 */
 
                 if (
                     interaction.customId ===
@@ -221,10 +193,6 @@ export default {
                     return;
                 }
 
-                /*
-                 * PÁGINA ANTERIOR
-                 */
-
                 if (
                     interaction.customId ===
                     "roles_previous"
@@ -234,10 +202,6 @@ export default {
                             ? totalPages - 1
                             : currentPage - 1;
                 }
-
-                /*
-                 * PÁGINA SIGUIENTE
-                 */
 
                 if (
                     interaction.customId ===
@@ -260,10 +224,7 @@ export default {
                         )
                     ],
                     components: [
-                        createButtons(
-                            currentPage,
-                            totalPages
-                        )
+                        createButtons()
                     ]
                 });
             }
