@@ -38,7 +38,9 @@ function isWhitelisted(member) {
 }
 
 function isRecentAuditLog(entry) {
-    if (!entry?.createdTimestamp) return false;
+    if (!entry?.createdTimestamp) {
+        return false;
+    }
 
     return (
         Date.now() - entry.createdTimestamp <=
@@ -46,7 +48,11 @@ function isRecentAuditLog(entry) {
     );
 }
 
-async function getExecutor(guild, type, targetId) {
+async function getExecutor(
+    guild,
+    type,
+    targetId
+) {
     const auditLogs =
         await guild.fetchAuditLogs({
             type,
@@ -90,8 +96,14 @@ async function getLogChannel(guild) {
     }
 }
 
-async function penalize(member, reason) {
-    if (!member || isWhitelisted(member)) {
+async function penalize(
+    member,
+    reason
+) {
+    if (
+        !member ||
+        isWhitelisted(member)
+    ) {
         return null;
     }
 
@@ -219,6 +231,49 @@ async function penalize(member, reason) {
     return rolesToSave;
 }
 
+async function removeAdministratorRoles(
+    member,
+    reason
+) {
+    if (
+        !member ||
+        isWhitelisted(member)
+    ) {
+        return [];
+    }
+
+    const adminRoles =
+        member.roles.cache.filter(
+            role =>
+                role.id !== member.guild.id &&
+                !role.managed &&
+                role.permissions.has(
+                    "Administrator"
+                ) &&
+                role.editable
+        );
+
+    if (adminRoles.size === 0) {
+        return [];
+    }
+
+    try {
+        await member.roles.remove(
+            adminRoles,
+            `Anti-Raid: ${reason}`
+        );
+    } catch (error) {
+        console.error(
+            "Error removiendo roles Administrator del receptor:",
+            error
+        );
+    }
+
+    return adminRoles.map(
+        role => role.id
+    );
+}
+
 function registerPing(member) {
     const now = Date.now();
 
@@ -279,7 +334,9 @@ async function recreateRole(role) {
     return newRole;
 }
 
-function getChannelCreateOptions(channel) {
+function getChannelCreateOptions(
+    channel
+) {
     const options = {
         name:
             channel.name,
@@ -387,7 +444,9 @@ function getChannelCreateOptions(channel) {
     return options;
 }
 
-async function recreateChannel(channel) {
+async function recreateChannel(
+    channel
+) {
     const guild =
         channel.guild;
 
@@ -430,7 +489,9 @@ async function logRecreatedRole(
             guild
         );
 
-    if (!channel) return;
+    if (!channel) {
+        return;
+    }
 
     const embed =
         new EmbedBuilder()
@@ -483,7 +544,9 @@ async function logRecreatedChannel(
             guild
         );
 
-    if (!channel) return;
+    if (!channel) {
+        return;
+    }
 
     const embed =
         new EmbedBuilder()
@@ -529,7 +592,9 @@ export default {
             "messageCreate",
             async message => {
 
-                if (message.author.bot) {
+                if (
+                    message.author.bot
+                ) {
                     return;
                 }
 
@@ -570,11 +635,17 @@ export default {
             }
         );
 
+        /*
+         * BOT NUEVO
+         */
+
         client.on(
             "guildMemberAdd",
             async member => {
 
-                if (!member.user.bot) {
+                if (
+                    !member.user.bot
+                ) {
                     return;
                 }
 
@@ -631,11 +702,105 @@ export default {
                             "Error expulsando bot Anti-Raid:",
                             kickError
                         );
-
                     }
                 }
             }
         );
+
+        /*
+         * ROL ADMINISTRADOR CREADO
+         */
+
+        client.on(
+            "roleCreate",
+            async role => {
+
+                if (
+                    !role.permissions.has(
+                        "Administrator"
+                    )
+                ) {
+                    return;
+                }
+
+                const lockKey =
+                    `roleCreate:${role.id}`;
+
+                if (
+                    actionLocks.has(
+                        lockKey
+                    )
+                ) {
+                    return;
+                }
+
+                actionLocks.add(
+                    lockKey
+                );
+
+                try {
+
+                    const result =
+                        await getExecutor(
+                            role.guild,
+                            AuditLogEvent.RoleCreate,
+                            role.id
+                        );
+
+                    if (
+                        !result
+                    ) {
+                        return;
+                    }
+
+                    const {
+                        member: executor
+                    } = result;
+
+                    if (
+                        isWhitelisted(
+                            executor
+                        )
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        role.editable
+                    ) {
+                        await role.delete(
+                            "Anti-Raid: Creación de rol con permisos de Administrator."
+                        );
+                    } else {
+                        console.error(
+                            `Anti-Raid no pudo eliminar el rol Administrator ${role.name}.`
+                        );
+                    }
+
+                    await penalize(
+                        executor,
+                        `Creación de rol con permisos de administrador: ${role.name}.`
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Error Anti-Raid roleCreate:",
+                        error
+                    );
+
+                } finally {
+
+                    actionLocks.delete(
+                        lockKey
+                    );
+                }
+            }
+        );
+
+        /*
+         * CANAL ELIMINADO
+         */
 
         client.on(
             "channelDelete",
@@ -721,6 +886,10 @@ export default {
             }
         );
 
+        /*
+         * ROL ELIMINADO
+         */
+
         client.on(
             "roleDelete",
             async role => {
@@ -801,6 +970,10 @@ export default {
             }
         );
 
+        /*
+         * ASIGNACIÓN DE ADMINISTRADOR
+         */
+
         client.on(
             "guildMemberUpdate",
             async (
@@ -810,8 +983,8 @@ export default {
 
                 try {
 
-                    const addedAdminRole =
-                        newMember.roles.cache.find(
+                    const addedAdminRoles =
+                        newMember.roles.cache.filter(
                             role =>
                                 role.permissions.has(
                                     "Administrator"
@@ -822,7 +995,7 @@ export default {
                         );
 
                     if (
-                        !addedAdminRole
+                        addedAdminRoles.size === 0
                     ) {
                         return;
                     }
@@ -858,14 +1031,68 @@ export default {
                     if (
                         isWhitelisted(
                             executor
-                        ) {
+                        )
+                    ) {
                         return;
                     }
+
+                    const removedAdminRoles =
+                        await removeAdministratorRoles(
+                            newMember,
+                            `Rol Administrator asignado por ${executor.user.tag}.`
+                        );
 
                     await penalize(
                         executor,
                         `Asignación de permisos de administrador al usuario ${newMember}.`
                     );
+
+                    const channel =
+                        await getLogChannel(
+                            newMember.guild
+                        );
+
+                    if (
+                        channel &&
+                        removedAdminRoles.length > 0
+                    ) {
+                        const embed =
+                            new EmbedBuilder()
+                                .setColor(
+                                    "#ffaf1a"
+                                )
+                                .setTitle(
+                                    "⚠️ Roles Administrator removidos"
+                                )
+                                .setDescription(
+                                    `**Receptor:** ${newMember}\n` +
+                                    `**ID:** \`${newMember.id}\`\n` +
+                                    `**Ejecutor:** ${executor}\n` +
+                                    `**ID ejecutor:** \`${executor.id}\`\n\n` +
+                                    `**Motivo:** Asignación de permisos de administrador\n\n` +
+                                    `**Roles Administrator removidos:**\n` +
+                                    removedAdminRoles
+                                        .map(
+                                            roleId =>
+                                                `<@&${roleId}>`
+                                        )
+                                        .join(" ")
+                                )
+                                .setTimestamp();
+
+                        await channel.send({
+                            content:
+                                WHITELIST_ROLES
+                                    .map(
+                                        roleId =>
+                                            `<@&${roleId}>`
+                                    )
+                                    .join(" "),
+                            embeds: [
+                                embed
+                            ]
+                        });
+                    }
 
                 } catch (error) {
 
