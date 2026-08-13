@@ -1,106 +1,60 @@
-const SNIPE_EXPIRATION =
-    10 * 60 * 1000;
-
-const MAX_SNIPES_PER_CHANNEL = 100;
+const SNIPE_TTL = 10 * 60 * 1000;
+const MAX_SNIPE_MESSAGES = 100;
 
 const snipeCache = new Map();
 
-/*
- * ============================================================
- * CREAR CLAVE DEL CANAL
- * ============================================================
- */
-
-function getChannelKey(
-    guildId,
-    channelId
-) {
+function getKey(guildId, channelId) {
     return `${guildId}:${channelId}`;
 }
 
-/*
- * ============================================================
- * GUARDAR MENSAJE
- * ============================================================
- */
+function cleanupExpired(key) {
+    const messages = snipeCache.get(key);
 
-export function saveSnipe(
-    message
-) {
+    if (!messages) {
+        return;
+    }
+
+    const now = Date.now();
+
+    const validMessages = messages.filter(
+        message =>
+            now - message.deletedAt <
+            SNIPE_TTL
+    );
+
+    if (validMessages.length === 0) {
+        snipeCache.delete(key);
+        return;
+    }
+
+    snipeCache.set(
+        key,
+        validMessages
+    );
+}
+
+export function saveDeletedMessage(message) {
     if (
-        !message ||
         !message.guild ||
         !message.channel
     ) {
         return;
     }
 
-    const channelKey =
-        getChannelKey(
-            message.guild.id,
-            message.channel.id
-        );
+    const key = getKey(
+        message.guild.id,
+        message.channel.id
+    );
 
-    const now =
-        Date.now();
+    cleanupExpired(key);
 
-    const attachments =
-        [...message.attachments.values()]
-            .map(
-                attachment => ({
-                    name:
-                        attachment.name,
+    const messages =
+        snipeCache.get(key) || [];
 
-                    url:
-                        attachment.url,
+    const deletedMessage = {
+        messageId: message.id,
 
-                    proxyURL:
-                        attachment.proxyURL,
-
-                    contentType:
-                        attachment.contentType,
-
-                    size:
-                        attachment.size
-                })
-            );
-
-    const embeds =
-        message.embeds.map(
-            embed =>
-                embed.toJSON()
-        );
-
-    const stickers =
-        [...message.stickers.values()]
-            .map(
-                sticker => ({
-                    id:
-                        sticker.id,
-
-                    name:
-                        sticker.name,
-
-                    url:
-                        sticker.url,
-
-                    format:
-                        sticker.format
-                })
-            );
-
-    const snipe = {
-        messageId:
-            message.id,
-
-        guildId:
-            message.guild.id,
-
-        channelId:
-            message.channel.id,
-
-        authorId:
-            message.author.id,
+        authorId: message.author.id,
 
         authorTag:
             message.author.tag,
@@ -115,186 +69,114 @@ export function saveSnipe(
             }),
 
         nickname:
-            message.member?.nickname ||
+            message.member?.displayName ||
             message.author.globalName ||
             message.author.username,
 
         content:
             message.content || "",
 
-        attachments,
+        attachments:
+            [...message.attachments.values()]
+                .map(attachment => ({
+                    name:
+                        attachment.name,
 
-        embeds,
+                    url:
+                        attachment.url,
 
-        stickers,
+                    contentType:
+                        attachment.contentType ||
+                        null,
 
-        createdTimestamp:
-            message.createdTimestamp,
+                    size:
+                        attachment.size
+                })),
 
-        deletedTimestamp:
-            now,
+        embeds:
+            message.embeds.map(
+                embed => embed.toJSON()
+            ),
+
+        stickers:
+            [...message.stickers.values()]
+                .map(sticker => ({
+                    name:
+                        sticker.name,
+
+                    id:
+                        sticker.id,
+
+                    url:
+                        sticker.url,
+
+                    format:
+                        sticker.format
+                })),
 
         deletedAt:
-            new Date(now)
+            Date.now()
     };
 
-    let snipes =
-        snipeCache.get(
-            channelKey
-        );
-
-    if (!snipes) {
-        snipes = [];
-
-        snipeCache.set(
-            channelKey,
-            snipes
-        );
-    }
-
-    /*
-     * El más reciente siempre queda primero.
-     */
-
-    snipes.unshift(
-        snipe
+    messages.unshift(
+        deletedMessage
     );
 
-    /*
-     * Máximo 100 mensajes.
-     */
-
     if (
-        snipes.length >
-        MAX_SNIPES_PER_CHANNEL
+        messages.length >
+        MAX_SNIPE_MESSAGES
     ) {
-        snipes.length =
-            MAX_SNIPES_PER_CHANNEL;
+        messages.length =
+            MAX_SNIPE_MESSAGES;
     }
 
-    /*
-     * Limpieza automática.
-     */
-
-    cleanupSnipes(
-        channelKey
+    snipeCache.set(
+        key,
+        messages
     );
 }
 
-/*
- * ============================================================
- * OBTENER SNIPES
- * ============================================================
- */
-
-export function getSnipes(
+export function getDeletedMessages(
     guildId,
     channelId
 ) {
-    const channelKey =
-        getChannelKey(
+    const key =
+        getKey(
             guildId,
             channelId
         );
 
-    cleanupSnipes(
-        channelKey
-    );
+    cleanupExpired(key);
 
     return (
-        snipeCache.get(
-            channelKey
-        ) || []
+        snipeCache.get(key) ||
+        []
     );
 }
 
-/*
- * ============================================================
- * OBTENER UN SNIPE
- * ============================================================
- */
-
-export function getSnipe(
+export function getDeletedMessage(
     guildId,
     channelId,
     index
 ) {
-    const snipes =
-        getSnipes(
+    const messages =
+        getDeletedMessages(
             guildId,
             channelId
         );
 
-    return (
-        snipes[index] ||
-        null
-    );
+    return messages[index] || null;
 }
 
-/*
- * ============================================================
- * ELIMINAR SNIPES EXPIRADOS
- * ============================================================
- */
-
-function cleanupSnipes(
-    channelKey
+export function clearDeletedMessages(
+    guildId,
+    channelId
 ) {
-    const snipes =
-        snipeCache.get(
-            channelKey
+    const key =
+        getKey(
+            guildId,
+            channelId
         );
 
-    if (!snipes) {
-        return;
-    }
-
-    const now =
-        Date.now();
-
-    const validSnipes =
-        snipes.filter(
-            snipe =>
-                now -
-                    snipe.deletedTimestamp <
-                SNIPE_EXPIRATION
-        );
-
-    if (
-        validSnipes.length === 0
-    ) {
-        snipeCache.delete(
-            channelKey
-        );
-
-        return;
-    }
-
-    snipeCache.set(
-        channelKey,
-        validSnipes
-    );
+    snipeCache.delete(key);
 }
-
-/*
- * ============================================================
- * LIMPIEZA GLOBAL
- * ============================================================
- *
- * Se ejecuta periódicamente para evitar que
- * la memoria conserve canales antiguos.
- */
-
-setInterval(
-    () => {
-        for (
-            const channelKey of
-            snipeCache.keys()
-        ) {
-            cleanupSnipes(
-                channelKey
-            );
-        }
-    },
-    60 * 1000
-).unref();
