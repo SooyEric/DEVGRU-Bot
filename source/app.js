@@ -51,6 +51,10 @@ import {
     resumeRobloxApplication
 } from "./commands/aplicar.js";
 
+import {
+    handleMessageDelete
+} from "./utils/snipeManager.js";
+
 import squadronRegistry from "./events/squadronRegistry.js";
 import antiRaid from "./events/antiRaid.js";
 
@@ -63,25 +67,29 @@ const client = new Client({
         GatewayIntentBits.DirectMessages
     ],
     partials: [
-        Partials.Channel
+        Partials.Channel,
+        Partials.Message
     ]
 });
 
 const AUTO_ROLE_ID =
     "1373365890623602768";
 
-client.on("guildMemberAdd", async member => {
-    try {
-        await member.roles.add(
-            AUTO_ROLE_ID
-        );
-    } catch (error) {
-        logger.error(
-            `Error asignando autorole a ${member.user.tag}:`,
-            error
-        );
+client.on(
+    "guildMemberAdd",
+    async member => {
+        try {
+            await member.roles.add(
+                AUTO_ROLE_ID
+            );
+        } catch (error) {
+            logger.error(
+                `Error asignando autorole a ${member.user.tag}:`,
+                error
+            );
+        }
     }
-});
+);
 
 client.commands =
     new Collection();
@@ -95,25 +103,57 @@ antiRaid.register(client);
 
 await loadCommands(client);
 
-client.once("clientReady", async () => {
-    logger.info(
-        `Logged in as ${client.user.tag}`
-    );
+/*
+ * SNIPE
+ *
+ * Detecta mensajes eliminados y los envía
+ * al Snipe Manager.
+ *
+ * El manager se encarga de determinar si
+ * realmente fue el propio autor quien eliminó
+ * el mensaje.
+ */
 
-    logger.info(
-        "DEVGRU-Bot is online."
-    );
+client.on(
+    "messageDelete",
+    async message => {
+        try {
+            await handleMessageDelete(
+                message
+            );
+        } catch (error) {
+            logger.error(
+                "Error procesando mensaje eliminado para Snipe:",
+                error
+            );
+        }
+    }
+);
 
-    logger.info(
-        `Commands loaded: ${
-            client.commands.size > 0
-                ? [...client.commands.keys()].join(", ")
-                : "NONE"
-        }`
-    );
+client.once(
+    "clientReady",
+    async () => {
+        logger.info(
+            `Logged in as ${client.user.tag}`
+        );
 
-    await logBotUpdate(client);
-});
+        logger.info(
+            "DEVGRU-Bot is online."
+        );
+
+        logger.info(
+            `Commands loaded: ${
+                client.commands.size > 0
+                    ? [...client.commands.keys()].join(", ")
+                    : "NONE"
+            }`
+        );
+
+        await logBotUpdate(
+            client
+        );
+    }
+);
 
 client.on(
     "interactionCreate",
@@ -122,6 +162,10 @@ client.on(
         if (!interaction.isButton()) {
             return;
         }
+
+        /*
+         * RESTAURAR ROLES ANTI-RAID
+         */
 
         if (
             interaction.customId.startsWith(
@@ -240,7 +284,9 @@ client.on(
 
                 const restorationLog =
                     new EmbedBuilder()
-                        .setColor("#77DD77")
+                        .setColor(
+                            "#77DD77"
+                        )
                         .setTitle(
                             "Roles Anti-Raid restaurados"
                         )
@@ -289,6 +335,10 @@ client.on(
 
             return;
         }
+
+        /*
+         * RESTAURAR BAN
+         */
 
         if (
             interaction.customId.startsWith(
@@ -402,7 +452,9 @@ client.on(
 
                 const restorationLog =
                     new EmbedBuilder()
-                        .setColor("#77DD77")
+                        .setColor(
+                            "#77DD77"
+                        )
                         .setTitle(
                             "Usuario restaurado"
                         )
@@ -454,6 +506,10 @@ client.on(
 
             return;
         }
+
+        /*
+         * APLICACIONES
+         */
 
         if (
             interaction.customId.startsWith(
@@ -514,7 +570,9 @@ client.on(
                 if (accepted) {
                     const acceptedEmbed =
                         new EmbedBuilder()
-                            .setColor("#77DD77")
+                            .setColor(
+                                "#77DD77"
+                            )
                             .setTitle(
                                 "Aplicación aceptada"
                             )
@@ -545,7 +603,9 @@ client.on(
 
                 const rejectedEmbed =
                     new EmbedBuilder()
-                        .setColor("#FF6B6B")
+                        .setColor(
+                            "#FF6B6B"
+                        )
                         .setTitle(
                             "Aplicación rechazada"
                         )
@@ -623,12 +683,25 @@ client.on(
     }
 );
 
+/*
+ * COMMAND HANDLER
+ */
+
 client.on(
     "messageCreate",
     async message => {
 
-        if (message.author.bot) return;
-        if (!message.guild) return;
+        if (
+            message.author.bot
+        ) {
+            return;
+        }
+
+        if (
+            !message.guild
+        ) {
+            return;
+        }
 
         if (
             !message.content.startsWith(
@@ -649,14 +722,18 @@ client.on(
         const commandName =
             args.shift()?.toLowerCase();
 
-        if (!commandName) return;
+        if (!commandName) {
+            return;
+        }
 
         const command =
             client.commands.get(
                 commandName
             );
 
-        if (!command) return;
+        if (!command) {
+            return;
+        }
 
         logger.info(
             `Command detected: ${commandName}`
@@ -728,12 +805,19 @@ client.on(
     }
 );
 
+/*
+ * HTTP SERVER
+ */
+
 const PORT =
     process.env.PORT || 8080;
 
 const server =
     http.createServer(
-        async (req, res) => {
+        async (
+            req,
+            res
+        ) => {
 
             const url =
                 new URL(
@@ -758,6 +842,10 @@ const server =
 
                 return;
             }
+
+            /*
+             * ROBLOX OAUTH CALLBACK
+             */
 
             if (
                 url.pathname ===
@@ -798,7 +886,10 @@ const server =
                     return;
                 }
 
-                if (!code || !state) {
+                if (
+                    !code ||
+                    !state
+                ) {
                     res.writeHead(
                         400,
                         {
