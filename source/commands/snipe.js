@@ -8,9 +8,11 @@ import {
 
 export default {
     name: "snipe",
+
     aliases: [
         "s"
     ],
+
     permission: 2,
 
     async execute(message, args) {
@@ -43,6 +45,10 @@ export default {
         const deletedMessage =
             messages[page - 1];
 
+        const elapsed =
+            Date.now() -
+            deletedMessage.deletedAt;
+
         const embed =
             new EmbedBuilder()
                 .setColor("#ffaf1a")
@@ -53,16 +59,10 @@ export default {
                     iconURL:
                         deletedMessage.authorAvatar
                 })
-                .setDescription(
-                    deletedMessage.content ||
-                    null
-                )
                 .setFooter({
                     text:
-                        `Borrado hace ${formatTime(
-                            Date.now() -
-                            deletedMessage.deletedAt
-                        )} • ${page}/${messages.length} mensajes`,
+                        `Borrado hace ${formatTime(elapsed)} • ${page}/${messages.length} mensajes`,
+
                     iconURL:
                         message.author.displayAvatarURL({
                             extension: "png",
@@ -72,42 +72,73 @@ export default {
 
         /*
          * ============================================================
-         * ATTACHMENTS
+         * MENSAJE
          * ============================================================
          */
 
         if (
-            deletedMessage.attachments.length >
-            0
+            deletedMessage.content
         ) {
-            const firstAttachment =
-                deletedMessage.attachments[0];
+            embed.setDescription(
+                deletedMessage.content
+            );
+        }
 
-            const contentType =
-                firstAttachment.contentType ||
-                "";
+        /*
+         * ============================================================
+         * ATTACHMENTS
+         * ============================================================
+         */
+
+        const attachments =
+            deletedMessage.attachments;
+
+        if (
+            attachments.length > 0
+        ) {
+
+            const image =
+                attachments.find(
+                    attachment =>
+                        attachment.contentType?.startsWith(
+                            "image/"
+                        )
+                );
+
+            if (image) {
+                embed.setImage(
+                    image.url
+                );
+            }
+
+            const otherAttachments =
+                attachments.filter(
+                    attachment =>
+                        attachment !==
+                            image
+                );
 
             if (
-                contentType.startsWith(
-                    "image/"
-                )
+                otherAttachments.length >
+                0
             ) {
-                embed.setImage(
-                    firstAttachment.url
-                );
-            } else {
                 embed.addFields({
                     name:
-                        "📎 Archivo",
+                        "📎 Archivos",
                     value:
-                        deletedMessage.attachments
+                        otherAttachments
                             .map(
                                 attachment =>
                                     `[${escapeMarkdown(
-                                        attachment.name
+                                        attachment.name ||
+                                        "Archivo"
                                     )}](${attachment.url})`
                             )
                             .join("\n")
+                            .slice(
+                                0,
+                                1024
+                            )
                 });
             }
         }
@@ -122,19 +153,20 @@ export default {
             deletedMessage.stickers.length >
             0
         ) {
-            const stickerText =
-                deletedMessage.stickers
-                    .map(
-                        sticker =>
-                            `> 🏷️ ${sticker.name}`
-                    )
-                    .join("\n");
-
             embed.addFields({
                 name:
                     "Stickers",
                 value:
-                    stickerText
+                    deletedMessage.stickers
+                        .map(
+                            sticker =>
+                                `> ${sticker.name}`
+                        )
+                        .join("\n")
+                        .slice(
+                            0,
+                            1024
+                        )
             });
         }
 
@@ -144,64 +176,79 @@ export default {
          * ============================================================
          */
 
-        if (
-            deletedMessage.embeds.length >
-            0
+        for (
+            const originalEmbed of
+            deletedMessage.embeds.slice(
+                0,
+                3
+            )
         ) {
-            const externalEmbeds =
-                deletedMessage.embeds.filter(
-                    originalEmbed =>
-                        !originalEmbed.image &&
-                        !originalEmbed.thumbnail
-                );
 
-            for (
-                const originalEmbed of
-                externalEmbeds.slice(0, 3)
+            if (
+                originalEmbed.image?.url
             ) {
-                const fieldLines = [];
+                embed.setImage(
+                    originalEmbed.image.url
+                );
+            }
 
-                if (
-                    originalEmbed.title
-                ) {
-                    fieldLines.push(
-                        `**${originalEmbed.title}**`
-                    );
-                }
+            if (
+                originalEmbed.thumbnail?.url &&
+                !originalEmbed.image?.url
+            ) {
+                embed.setThumbnail(
+                    originalEmbed.thumbnail.url
+                );
+            }
 
-                if (
+            const lines = [];
+
+            if (
+                originalEmbed.title
+            ) {
+                lines.push(
+                    `**${originalEmbed.title}**`
+                );
+            }
+
+            if (
+                originalEmbed.description
+            ) {
+                lines.push(
                     originalEmbed.description
-                ) {
-                    fieldLines.push(
-                        originalEmbed.description
-                    );
-                }
+                );
+            }
 
-                if (
-                    originalEmbed.url
-                ) {
-                    fieldLines.push(
-                        `[Abrir enlace](${originalEmbed.url})`
-                    );
-                }
+            if (
+                originalEmbed.url
+            ) {
+                lines.push(
+                    `[Abrir enlace](${originalEmbed.url})`
+                );
+            }
 
-                if (
-                    fieldLines.length > 0
-                ) {
-                    embed.addFields({
-                        name:
-                            "Contenido incrustado",
-                        value:
-                            fieldLines.join(
-                                "\n"
-                            ).slice(
+            if (
+                lines.length > 0
+            ) {
+                embed.addFields({
+                    name:
+                        "Contenido incrustado",
+                    value:
+                        lines
+                            .join("\n")
+                            .slice(
                                 0,
                                 1024
                             )
-                    });
-                }
+                });
             }
         }
+
+        /*
+         * ============================================================
+         * ENVIAR
+         * ============================================================
+         */
 
         await message.channel.send({
             embeds: [
@@ -216,7 +263,8 @@ function formatTime(
 ) {
     const seconds =
         Math.floor(
-            milliseconds / 1000
+            milliseconds /
+            1000
         );
 
     if (
