@@ -1,67 +1,54 @@
-const SNIPE_TTL = 10 * 60 * 1000;
-const MAX_SNIPE_MESSAGES = 100;
+const SNIPE_DURATION =
+    10 * 60 * 1000;
 
-const snipeCache = new Map();
+const snipeCache =
+    new Map();
 
-function getKey(guildId, channelId) {
-    return `${guildId}:${channelId}`;
-}
-
-function cleanupExpired(key) {
-    const messages = snipeCache.get(key);
-
-    if (!messages) {
-        return;
+function getGuildCache(guildId) {
+    if (!snipeCache.has(guildId)) {
+        snipeCache.set(
+            guildId,
+            []
+        );
     }
 
-    const now = Date.now();
-
-    const validMessages = messages.filter(
-        message =>
-            now - message.deletedAt <
-            SNIPE_TTL
-    );
-
-    if (validMessages.length === 0) {
-        snipeCache.delete(key);
-        return;
-    }
-
-    snipeCache.set(
-        key,
-        validMessages
-    );
+    return snipeCache.get(guildId);
 }
 
-export function saveDeletedMessage(message) {
+export function saveSnipe(message) {
     if (
+        !message ||
         !message.guild ||
-        !message.channel ||
         !message.author
     ) {
         return;
     }
 
-    const key =
-        getKey(
-            message.guild.id,
-            message.channel.id
-        );
+    const attachments =
+        [...message.attachments.values()]
+            .map(attachment => ({
+                name:
+                    attachment.name ||
+                    "archivo",
+                url:
+                    attachment.url,
+                contentType:
+                    attachment.contentType ||
+                    null
+            }));
 
-    cleanupExpired(key);
-
-    const messages =
-        snipeCache.get(key) || [];
-
-    const deletedMessage = {
+    const entry = {
         messageId:
             message.id,
 
+        guildId:
+            message.guild.id,
+
+        channelId:
+            message.channel.id,
+
         authorId:
             message.author.id,
-
-        authorTag:
-            message.author.tag,
 
         authorUsername:
             message.author.username,
@@ -69,7 +56,7 @@ export function saveDeletedMessage(message) {
         authorAvatar:
             message.author.displayAvatarURL({
                 extension: "png",
-                size: 256
+                size: 128
             }),
 
         nickname:
@@ -80,98 +67,123 @@ export function saveDeletedMessage(message) {
         content:
             message.content || "",
 
-        attachments:
-            [...message.attachments.values()]
-                .map(
-                    attachment => ({
-                        name:
-                            attachment.name,
+        attachments,
 
-                        url:
-                            attachment.url,
+        createdTimestamp:
+            message.createdTimestamp,
 
-                        contentType:
-                            attachment.contentType ||
-                            null,
-
-                        size:
-                            attachment.size
-                    })
-                ),
-
-        embeds:
-            message.embeds.map(
-                embed =>
-                    embed.toJSON()
-            ),
-
-        stickers:
-            [...message.stickers.values()]
-                .map(
-                    sticker => ({
-                        name:
-                            sticker.name,
-
-                        id:
-                            sticker.id,
-
-                        url:
-                            sticker.url,
-
-                        format:
-                            sticker.format
-                    })
-                ),
-
-        deletedAt:
+        deletedTimestamp:
             Date.now()
     };
 
-    messages.unshift(
-        deletedMessage
+    const guildCache =
+        getGuildCache(
+            message.guild.id
+        );
+
+    guildCache.unshift(
+        entry
     );
 
-    if (
-        messages.length >
-        MAX_SNIPE_MESSAGES
+    while (
+        guildCache.length > 100
     ) {
-        messages.length =
-            MAX_SNIPE_MESSAGES;
+        guildCache.pop();
+    }
+}
+
+export function getSnipes(
+    guildId
+) {
+    const guildCache =
+        snipeCache.get(guildId);
+
+    if (!guildCache) {
+        return [];
+    }
+
+    const now =
+        Date.now();
+
+    const valid =
+        guildCache.filter(
+            entry =>
+                now -
+                    entry.deletedTimestamp <
+                SNIPE_DURATION
+        );
+
+    if (valid.length === 0) {
+        snipeCache.delete(
+            guildId
+        );
+
+        return [];
     }
 
     snipeCache.set(
-        key,
-        messages
+        guildId,
+        valid
     );
+
+    return valid;
 }
 
-export function getDeletedMessages(
+export function getSnipe(
     guildId,
-    channelId
+    index
 ) {
-    const key =
-        getKey(
-            guildId,
-            channelId
-        );
-
-    cleanupExpired(key);
+    const snipes =
+        getSnipes(guildId);
 
     return (
-        snipeCache.get(key) ||
-        []
+        snipes[index] ||
+        null
     );
 }
 
-export function clearDeletedMessages(
-    guildId,
-    channelId
+export function clearGuildSnipes(
+    guildId
 ) {
-    const key =
-        getKey(
-            guildId,
-            channelId
-        );
-
-    snipeCache.delete(key);
+    snipeCache.delete(
+        guildId
+    );
 }
+
+export function cleanupSnipes() {
+    const now =
+        Date.now();
+
+    for (
+        const [
+            guildId,
+            entries
+        ] of snipeCache
+    ) {
+        const valid =
+            entries.filter(
+                entry =>
+                    now -
+                        entry.deletedTimestamp <
+                    SNIPE_DURATION
+            );
+
+        if (
+            valid.length === 0
+        ) {
+            snipeCache.delete(
+                guildId
+            );
+        } else {
+            snipeCache.set(
+                guildId,
+                valid
+            );
+        }
+    }
+}
+
+setInterval(
+    cleanupSnipes,
+    60 * 1000
+);
