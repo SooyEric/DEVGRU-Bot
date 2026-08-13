@@ -635,77 +635,85 @@ export default {
             }
         );
 
-        /*
-         * BOT NUEVO
-         */
+/*
+ * BOT NUEVO
+ */
 
-        client.on(
-            "guildMemberAdd",
-            async member => {
+client.on(
+    "guildMemberAdd",
+    async member => {
 
-                if (
-                    !member.user.bot
-                ) {
-                    return;
-                }
+        if (!member.user.bot) {
+            return;
+        }
 
-                try {
+        try {
 
-                    const result =
-                        await getExecutor(
-                            member.guild,
-                            AuditLogEvent.BotAdd,
-                            member.id
-                        );
+            const result =
+                await getExecutor(
+                    member.guild,
+                    AuditLogEvent.BotAdd,
+                    member.id
+                );
 
-                    if (
-                        result?.member
-                    ) {
-                        await penalize(
-                            result.member,
-                            `Introducción del bot ${member.user.tag} al servidor.`
-                        );
-                    }
+            /*
+             * No actuamos hasta identificar
+             * correctamente al ejecutor.
+             */
 
-                    if (
-                        member.kickable
-                    ) {
-                        await member.kick(
-                            "Anti-Raid: Bot introducido al servidor."
-                        );
-                    } else {
-                        console.error(
-                            `Anti-Raid no pudo expulsar al bot ${member.user.tag}.`
-                        );
-                    }
+            if (!result?.member) {
+                console.error(
+                    `Anti-Raid no pudo identificar quién añadió al bot ${member.user.tag}.`
+                );
 
-                } catch (error) {
-
-                    console.error(
-                        "Error Anti-Raid guildMemberAdd:",
-                        error
-                    );
-
-                    try {
-
-                        if (
-                            member.kickable
-                        ) {
-                            await member.kick(
-                                "Anti-Raid: Bot introducido al servidor."
-                            );
-                        }
-
-                    } catch (kickError) {
-
-                        console.error(
-                            "Error expulsando bot Anti-Raid:",
-                            kickError
-                        );
-                    }
-                }
+                return;
             }
-        );
+
+            const executor =
+                result.member;
+
+            /*
+             * Si el ejecutor está en whitelist,
+             * el bot puede permanecer en el servidor.
+             */
+
+            if (
+                isWhitelisted(executor)
+            ) {
+                return;
+            }
+
+            /*
+             * Ejecutor no autorizado:
+             * penalizar y expulsar bot.
+             */
+
+            await penalize(
+                executor,
+                `Introducción del bot ${member.user.tag} al servidor.`
+            );
+
+            if (
+                member.kickable
+            ) {
+                await member.kick(
+                    "Anti-Raid: Bot introducido por un usuario no autorizado."
+                );
+            } else {
+                console.error(
+                    `Anti-Raid no pudo expulsar al bot ${member.user.tag}.`
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Error Anti-Raid guildMemberAdd:",
+                error
+            );
+        }
+    }
+);
 
         /*
          * ROL ADMINISTRADOR CREADO
