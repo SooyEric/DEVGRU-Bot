@@ -29,14 +29,16 @@ export async function saveAntiRaidRoles(
 
     await database.query(
         `
-        INSERT INTO antiraid_members
-            (
-                user_id,
-                role_ids,
-                restored
-            )
-        VALUES
-            ($1, $2, FALSE)
+        INSERT INTO antiraid_members (
+            user_id,
+            role_ids,
+            restored
+        )
+        VALUES (
+            $1,
+            $2,
+            FALSE
+        )
 
         ON CONFLICT (user_id)
         DO UPDATE SET
@@ -61,7 +63,11 @@ export async function getAntiRaidMember(
     const result =
         await database.query(
             `
-            SELECT *
+            SELECT
+                user_id,
+                role_ids,
+                restored,
+                created_at
             FROM antiraid_members
             WHERE user_id = $1
             `,
@@ -77,11 +83,17 @@ export async function getAllAntiRaidMembers() {
     if (!database) return [];
 
     const result =
-        await database.query(`
-            SELECT *
+        await database.query(
+            `
+            SELECT
+                user_id,
+                role_ids,
+                restored,
+                created_at
             FROM antiraid_members
             WHERE restored = FALSE
-        `);
+            `
+        );
 
     return result.rows;
 }
