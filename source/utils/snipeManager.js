@@ -36,15 +36,17 @@ function cleanupExpired(key) {
 export function saveDeletedMessage(message) {
     if (
         !message.guild ||
-        !message.channel
+        !message.channel ||
+        !message.author
     ) {
         return;
     }
 
-    const key = getKey(
-        message.guild.id,
-        message.channel.id
-    );
+    const key =
+        getKey(
+            message.guild.id,
+            message.channel.id
+        );
 
     cleanupExpired(key);
 
@@ -52,9 +54,11 @@ export function saveDeletedMessage(message) {
         snipeCache.get(key) || [];
 
     const deletedMessage = {
-        messageId: message.id,
+        messageId:
+            message.id,
 
-        authorId: message.author.id,
+        authorId:
+            message.author.id,
 
         authorTag:
             message.author.tag,
@@ -78,41 +82,46 @@ export function saveDeletedMessage(message) {
 
         attachments:
             [...message.attachments.values()]
-                .map(attachment => ({
-                    name:
-                        attachment.name,
+                .map(
+                    attachment => ({
+                        name:
+                            attachment.name,
 
-                    url:
-                        attachment.url,
+                        url:
+                            attachment.url,
 
-                    contentType:
-                        attachment.contentType ||
-                        null,
+                        contentType:
+                            attachment.contentType ||
+                            null,
 
-                    size:
-                        attachment.size
-                })),
+                        size:
+                            attachment.size
+                    })
+                ),
 
         embeds:
             message.embeds.map(
-                embed => embed.toJSON()
+                embed =>
+                    embed.toJSON()
             ),
 
         stickers:
             [...message.stickers.values()]
-                .map(sticker => ({
-                    name:
-                        sticker.name,
+                .map(
+                    sticker => ({
+                        name:
+                            sticker.name,
 
-                    id:
-                        sticker.id,
+                        id:
+                            sticker.id,
 
-                    url:
-                        sticker.url,
+                        url:
+                            sticker.url,
 
-                    format:
-                        sticker.format
-                })),
+                        format:
+                            sticker.format
+                    })
+                ),
 
         deletedAt:
             Date.now()
@@ -152,20 +161,6 @@ export function getDeletedMessages(
         snipeCache.get(key) ||
         []
     );
-}
-
-export function getDeletedMessage(
-    guildId,
-    channelId,
-    index
-) {
-    const messages =
-        getDeletedMessages(
-            guildId,
-            channelId
-        );
-
-    return messages[index] || null;
 }
 
 export function clearDeletedMessages(
