@@ -123,12 +123,6 @@ client.on(
             return;
         }
 
-        /*
-         * ============================================================
-         * RESTAURAR ROLES ANTI-RAID
-         * ============================================================
-         */
-
         if (
             interaction.customId.startsWith(
                 "restore_antiraid:"
@@ -201,10 +195,6 @@ client.on(
                             interaction.guild.id
                     );
 
-                /*
-                 * Solo se restauran roles que todavía existen.
-                 */
-
                 const existingRoles =
                     rolesToRestore.filter(
                         roleId =>
@@ -213,11 +203,29 @@ client.on(
                             )
                     );
 
+                const safeRoles =
+                    existingRoles.filter(
+                        roleId => {
+                            const role =
+                                interaction.guild.roles.cache.get(
+                                    roleId
+                                );
+
+                            return (
+                                role &&
+                                !role.managed &&
+                                !role.permissions.has(
+                                    "Administrator"
+                                )
+                            );
+                        }
+                    );
+
                 if (
-                    existingRoles.length > 0
+                    safeRoles.length > 0
                 ) {
                     await member.roles.add(
-                        existingRoles,
+                        safeRoles,
                         "Restauración de roles Anti-Raid"
                     );
                 }
@@ -226,17 +234,9 @@ client.on(
                     userId
                 );
 
-                /*
-                 * Elimina el botón del mensaje original.
-                 */
-
                 await interaction.update({
                     components: []
                 });
-
-                /*
-                 * Log de restauración.
-                 */
 
                 const restorationLog =
                     new EmbedBuilder()
@@ -251,8 +251,8 @@ client.on(
                             `**Staff ID:** \`${interaction.user.id}\`\n\n` +
                             `**Roles restaurados:**\n` +
                             `${
-                                existingRoles.length > 0
-                                    ? existingRoles
+                                safeRoles.length > 0
+                                    ? safeRoles
                                         .map(
                                             roleId =>
                                                 `<@&${roleId}>`
@@ -289,12 +289,6 @@ client.on(
 
             return;
         }
-
-        /*
-         * ============================================================
-         * RESTAURAR USUARIO BANEADO
-         * ============================================================
-         */
 
         if (
             interaction.customId.startsWith(
@@ -460,12 +454,6 @@ client.on(
 
             return;
         }
-
-        /*
-         * ============================================================
-         * APLICACIONES
-         * ============================================================
-         */
 
         if (
             interaction.customId.startsWith(
