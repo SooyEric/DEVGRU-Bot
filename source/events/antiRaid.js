@@ -406,7 +406,7 @@ async function recreateChannel(channel) {
             channel.rawPosition,
             {
                 reason:
-                    "Anti-Raid: Restauración automática de canal"
+                    "Anti-Raid: Restauración automática de posición de canal"
             }
         );
     } catch (error) {
@@ -525,10 +525,6 @@ async function logRecreatedChannel(
 export default {
     register(client) {
 
-        /*
-         * @EVERYONE
-         */
-
         client.on(
             "messageCreate",
             async message => {
@@ -574,10 +570,6 @@ export default {
             }
         );
 
-        /*
-         * BOT NUEVO
-         */
-
         client.on(
             "guildMemberAdd",
             async member => {
@@ -586,16 +578,64 @@ export default {
                     return;
                 }
 
-                await penalize(
-                    member,
-                    "Introducción de un bot al servidor."
-                );
+                try {
+
+                    const result =
+                        await getExecutor(
+                            member.guild,
+                            AuditLogEvent.BotAdd,
+                            member.id
+                        );
+
+                    if (
+                        result?.member
+                    ) {
+                        await penalize(
+                            result.member,
+                            `Introducción del bot ${member.user.tag} al servidor.`
+                        );
+                    }
+
+                    if (
+                        member.kickable
+                    ) {
+                        await member.kick(
+                            "Anti-Raid: Bot introducido al servidor."
+                        );
+                    } else {
+                        console.error(
+                            `Anti-Raid no pudo expulsar al bot ${member.user.tag}.`
+                        );
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Error Anti-Raid guildMemberAdd:",
+                        error
+                    );
+
+                    try {
+
+                        if (
+                            member.kickable
+                        ) {
+                            await member.kick(
+                                "Anti-Raid: Bot introducido al servidor."
+                            );
+                        }
+
+                    } catch (kickError) {
+
+                        console.error(
+                            "Error expulsando bot Anti-Raid:",
+                            kickError
+                        );
+
+                    }
+                }
             }
         );
-
-        /*
-         * CANAL ELIMINADO
-         */
 
         client.on(
             "channelDelete",
@@ -681,10 +721,6 @@ export default {
             }
         );
 
-        /*
-         * ROL ELIMINADO
-         */
-
         client.on(
             "roleDelete",
             async role => {
@@ -732,18 +768,10 @@ export default {
                         return;
                     }
 
-                    /*
-                     * Primero reconstruimos el rol.
-                     */
-
                     const newRole =
                         await recreateRole(
                             role
                         );
-
-                    /*
-                     * Log de la reconstrucción.
-                     */
 
                     await logRecreatedRole(
                         guild,
@@ -751,16 +779,6 @@ export default {
                         role,
                         newRole
                     );
-
-                    /*
-                     * Después penalizamos al ejecutor.
-                     *
-                     * Esto genera un SEGUNDO log con:
-                     * - Motivo: Rol eliminado
-                     * - Acción: Remoción de roles
-                     * - Roles guardados
-                     * - Botón para restaurarlos
-                     */
 
                     await penalize(
                         executor,
@@ -782,10 +800,6 @@ export default {
                 }
             }
         );
-
-        /*
-         * ASIGNACIÓN DE ADMINISTRADOR
-         */
 
         client.on(
             "guildMemberUpdate",
@@ -844,8 +858,7 @@ export default {
                     if (
                         isWhitelisted(
                             executor
-                        )
-                    ) {
+                        ) {
                         return;
                     }
 
