@@ -128,11 +128,14 @@ export default {
                             )
                     );
 
+            let selectedAvatar =
+                "global";
+
             const sentMessage =
                 await message.reply({
                     embeds: [
                         createEmbed(
-                            "global"
+                            selectedAvatar
                         )
                     ],
                     components: [
@@ -165,13 +168,13 @@ export default {
                         return;
                     }
 
-                    const selected =
+                    selectedAvatar =
                         interaction.values[0];
 
                     await interaction.update({
                         embeds: [
                             createEmbed(
-                                selected
+                                selectedAvatar
                             )
                         ],
                         components: [
@@ -188,7 +191,7 @@ export default {
                         await sentMessage.edit({
                             embeds: [
                                 createEmbed(
-                                    "global"
+                                    selectedAvatar
                                 )
                             ],
                             components: []
