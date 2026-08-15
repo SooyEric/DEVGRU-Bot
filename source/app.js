@@ -703,21 +703,31 @@ client.on(
             return;
         }
 
-        if (
-            !message.content.startsWith(
-                config.discord.prefix
-            )
-        ) {
-            return;
-        }
+const PREFIXES = [
+    "-",
+    ".",
+    ",",
+    "!",
+    "?"
+];
 
-        const args =
-            message.content
-                .slice(
-                    config.discord.prefix.length
-                )
-                .trim()
-                .split(/\s+/);
+const usedPrefix =
+    PREFIXES.find(
+        prefix =>
+            message.content.startsWith(prefix)
+    );
+
+if (!usedPrefix) {
+    return;
+}
+
+const args =
+    message.content
+        .slice(
+            usedPrefix.length
+        )
+        .trim()
+        .split(/\s+/);
 
         const commandName =
             args.shift()?.toLowerCase();
