@@ -5,76 +5,6 @@ import {
 const EMBED_COLOR =
     "#ffaf1a";
 
-function getNextBadgeTimestamp(
-    premiumSinceTimestamp
-) {
-    if (!premiumSinceTimestamp) {
-        return null;
-    }
-
-    const start =
-        new Date(
-            premiumSinceTimestamp
-        );
-
-    const now =
-        new Date();
-
-    const months =
-        [
-            3,
-            6,
-            9,
-            12,
-            15,
-            18,
-            24
-        ];
-
-    for (
-        const month of months
-    ) {
-        const next =
-            new Date(
-                start
-            );
-
-        next.setMonth(
-            next.getMonth() +
-                month
-        );
-
-        if (
-            next.getTime() >
-            now.getTime()
-        ) {
-            return next;
-        }
-    }
-
-    const next =
-        new Date(
-            start
-        );
-
-    next.setMonth(
-        next.getMonth() +
-            24
-    );
-
-    while (
-        next.getTime() <=
-        now.getTime()
-    ) {
-        next.setMonth(
-            next.getMonth() +
-                12
-        );
-    }
-
-    return next;
-}
-
 function formatDuration(
     timestamp
 ) {
@@ -179,11 +109,6 @@ export default {
                 member?.premiumSinceTimestamp ||
                 null;
 
-            const nextBadgeTimestamp =
-                getNextBadgeTimestamp(
-                    premiumSinceTimestamp
-                );
-
             const embed =
                 new EmbedBuilder()
                     .setColor(
@@ -201,20 +126,12 @@ export default {
                     .setDescription(
                         `<:persona:1538099937391288380> **Usuario**: \`${user.username}\`\n` +
                         `<:config:1538099479759294484> **ID del Usuario**: \`${user.id}\`\n\n` +
-                        `<:boost:1538100006249046027> **Nitro**: ${
+                        `<:boost:1538100006249046027> **Boost**: ${
                             premiumSinceTimestamp
                                 ? formatDuration(
                                     premiumSinceTimestamp
                                 )
-                                : "No disponible"
-                        }\n` +
-                        `<:lvl:1538099654149935176> **Next Badge**: ${
-                            nextBadgeTimestamp
-                                ? `<t:${Math.floor(
-                                    nextBadgeTimestamp.getTime() /
-                                    1000
-                                )}:R>`
-                                : "No disponible"
+                                : "No está boosteando"
                         }\n` +
                         `<:time:1538102015241224192> **Creado**: ${formatDuration(
                             createdTimestamp
@@ -228,9 +145,6 @@ export default {
                         }`
                     )
                     .setThumbnail(
-                        avatar
-                    )
-                    .setImage(
                         avatar
                     )
                     .setFooter({
