@@ -50,18 +50,25 @@ export default {
 
             const globalAvatar =
                 user.displayAvatarURL({
-                    extension: "png",
+                    extension:
+                        user.avatar?.startsWith("a_")
+                            ? "gif"
+                            : "png",
                     size: 4096
                 });
 
             const serverAvatar =
-                member?.avatarURL({
-                    extension: "png",
-                    size: 4096
-                });
-
-            const hasServerAvatar =
-                Boolean(serverAvatar);
+                member?.avatar
+                    ? member.avatar.startsWith("a_")
+                        ? member.avatarURL({
+                            extension: "gif",
+                            size: 4096
+                        })
+                        : member.avatarURL({
+                            extension: "png",
+                            size: 4096
+                        })
+                    : null;
 
             const createEmbed =
                 type => {
@@ -83,10 +90,12 @@ export default {
                         );
                 };
 
-            if (!hasServerAvatar) {
+            if (!serverAvatar) {
                 await message.reply({
                     embeds: [
-                        createEmbed("global")
+                        createEmbed(
+                            "global"
+                        )
                     ]
                 });
 
@@ -122,7 +131,9 @@ export default {
             const sentMessage =
                 await message.reply({
                     embeds: [
-                        createEmbed("global")
+                        createEmbed(
+                            "global"
+                        )
                     ],
                     components: [
                         menu
