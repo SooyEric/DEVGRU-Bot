@@ -229,24 +229,15 @@ function createMenu() {
                 .addOptions(
                     {
                         label: "Servidor",
-                        description:
-                            "Información del servidor",
                         value: "server",
-                        emoji: "🏠"
                     },
                     {
                         label: "Icono",
-                        description:
-                            "Ver el icono del servidor",
                         value: "icon",
-                        emoji: "🖼️"
                     },
                     {
                         label: "Banner",
-                        description:
-                            "Ver el banner del servidor",
                         value: "banner",
-                        emoji: "🎨"
                     }
                 )
         );
