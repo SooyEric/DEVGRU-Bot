@@ -11,7 +11,8 @@ import {
     saveAntiRaidRoles
 } from "../utils/antiRaidManager.js";
 
-const LOG_CHANNEL_ID = "1525379838095921172";
+const LOG_CHANNEL_ID =
+    "1525379838095921172";
 
 const WHITELIST_ROLES = [
     "1397135262823485550",
@@ -25,15 +26,25 @@ const REMOVABLE_ROLES = [
 ];
 
 const PING_LIMIT = 5;
-const TIME_WINDOW = 60 * 1000;
-const AUDIT_LOG_MAX_AGE = 10 * 1000;
 
-const pingTracker = new Map();
-const actionLocks = new Set();
+const TIME_WINDOW =
+    60 * 1000;
+
+const AUDIT_LOG_MAX_AGE =
+    10 * 1000;
+
+const pingTracker =
+    new Map();
+
+const actionLocks =
+    new Set();
 
 function isWhitelisted(member) {
-    return WHITELIST_ROLES.some(roleId =>
-        member.roles.cache.has(roleId)
+    return WHITELIST_ROLES.some(
+        roleId =>
+            member.roles.cache.has(
+                roleId
+            )
     );
 }
 
@@ -43,7 +54,8 @@ function isRecentAuditLog(entry) {
     }
 
     return (
-        Date.now() - entry.createdTimestamp <=
+        Date.now() -
+            entry.createdTimestamp <=
         AUDIT_LOG_MAX_AGE
     );
 }
@@ -62,8 +74,11 @@ async function getExecutor(
     const entry =
         auditLogs.entries.find(
             entry =>
-                entry.target?.id === targetId &&
-                isRecentAuditLog(entry)
+                entry.target?.id ===
+                    targetId &&
+                isRecentAuditLog(
+                    entry
+                )
         );
 
     if (!entry?.executor?.id) {
@@ -111,15 +126,21 @@ async function penalize(
         member.roles.cache
             .filter(
                 role =>
-                    role.id !== member.guild.id &&
+                    role.id !==
+                        member.guild.id &&
                     !role.managed &&
                     !role.permissions.has(
                         "Administrator"
                     )
             )
-            .map(role => role.id);
+            .map(
+                role =>
+                    role.id
+            );
 
-    if (rolesToSave.length > 0) {
+    if (
+        rolesToSave.length > 0
+    ) {
         try {
             await saveAntiRaidRoles(
                 member.id,
@@ -136,7 +157,8 @@ async function penalize(
     const removableRoles =
         member.roles.cache.filter(
             role =>
-                role.id !== member.guild.id &&
+                role.id !==
+                    member.guild.id &&
                 !role.managed &&
                 (
                     REMOVABLE_ROLES.includes(
@@ -146,7 +168,9 @@ async function penalize(
                 )
         );
 
-    if (removableRoles.size > 0) {
+    if (
+        removableRoles.size > 0
+    ) {
         try {
             await member.roles.remove(
                 removableRoles,
@@ -245,7 +269,8 @@ async function removeAdministratorRoles(
     const adminRoles =
         member.roles.cache.filter(
             role =>
-                role.id !== member.guild.id &&
+                role.id !==
+                    member.guild.id &&
                 !role.managed &&
                 role.permissions.has(
                     "Administrator"
@@ -253,7 +278,9 @@ async function removeAdministratorRoles(
                 role.editable
         );
 
-    if (adminRoles.size === 0) {
+    if (
+        adminRoles.size === 0
+    ) {
         return [];
     }
 
@@ -270,12 +297,14 @@ async function removeAdministratorRoles(
     }
 
     return adminRoles.map(
-        role => role.id
+        role =>
+            role.id
     );
 }
 
 function registerPing(member) {
-    const now = Date.now();
+    const now =
+        Date.now();
 
     const timestamps =
         pingTracker.get(
@@ -299,19 +328,29 @@ function registerPing(member) {
     return recent.length;
 }
 
-async function recreateRole(role) {
+async function recreateRole(
+    role
+) {
     const guild =
         role.guild;
 
     const newRole =
         await guild.roles.create({
-            name: role.name,
-            color: role.color,
-            hoist: role.hoist,
+            name:
+                role.name,
+
+            color:
+                role.color,
+
+            hoist:
+                role.hoist,
+
             mentionable:
                 role.mentionable,
+
             permissions:
                 role.permissions.bitfield,
+
             reason:
                 "Anti-Raid: Restauración automática de rol eliminado"
         });
@@ -365,7 +404,9 @@ function getChannelCreateOptions(
             )
     };
 
-    if (channel.parentId) {
+    if (
+        channel.parentId
+    ) {
         options.parent =
             channel.parentId;
     }
@@ -399,12 +440,16 @@ function getChannelCreateOptions(
         options.userLimit =
             channel.userLimit;
 
-        if (channel.rtcRegion) {
+        if (
+            channel.rtcRegion
+        ) {
             options.rtcRegion =
                 channel.rtcRegion;
         }
 
-        if (channel.videoQualityMode) {
+        if (
+            channel.videoQualityMode
+        ) {
             options.videoQualityMode =
                 channel.videoQualityMode;
         }
@@ -431,6 +476,13 @@ function getChannelCreateOptions(
         ) {
             options.defaultAutoArchiveDuration =
                 channel.defaultAutoArchiveDuration;
+        }
+
+        if (
+            channel.defaultThreadRateLimitPerUser
+        ) {
+            options.defaultThreadRateLimitPerUser =
+                channel.defaultThreadRateLimitPerUser;
         }
 
         if (
@@ -585,6 +637,60 @@ async function logRecreatedChannel(
     });
 }
 
+async function penalizeExecutor(
+    guild,
+    type,
+    targetId,
+    reason,
+    client
+) {
+    try {
+        const result =
+            await getExecutor(
+                guild,
+                type,
+                targetId
+            );
+
+        if (!result?.member) {
+            return;
+        }
+
+        const executor =
+            result.member;
+
+        if (
+            executor.id ===
+            client.user.id
+        ) {
+            return;
+        }
+
+        if (
+            executor.user.bot
+        ) {
+            return;
+        }
+
+        if (
+            isWhitelisted(executor)
+        ) {
+            return;
+        }
+
+        await penalize(
+            executor,
+            reason
+        );
+
+    } catch (error) {
+        console.error(
+            "Error penalizando ejecutor Anti-Raid:",
+            error
+        );
+    }
+}
+
 export default {
     register(client) {
 
@@ -603,7 +709,9 @@ export default {
 
                 if (
                     !member ||
-                    isWhitelisted(member)
+                    isWhitelisted(
+                        member
+                    )
                 ) {
                     return;
                 }
@@ -635,85 +743,192 @@ export default {
             }
         );
 
-/*
- * BOT NUEVO
- */
+        /*
+         * BOT NUEVO
+         */
 
-client.on(
-    "guildMemberAdd",
-    async member => {
+        client.on(
+            "guildMemberAdd",
+            async member => {
 
-        if (!member.user.bot) {
-            return;
-        }
+                if (
+                    !member.user.bot
+                ) {
+                    return;
+                }
 
-        try {
+                try {
 
-            const result =
-                await getExecutor(
-                    member.guild,
-                    AuditLogEvent.BotAdd,
-                    member.id
-                );
+                    const result =
+                        await getExecutor(
+                            member.guild,
+                            AuditLogEvent.BotAdd,
+                            member.id
+                        );
 
-            /*
-             * No actuamos hasta identificar
-             * correctamente al ejecutor.
-             */
+                    if (
+                        !result?.member
+                    ) {
+                        return;
+                    }
 
-            if (!result?.member) {
-                console.error(
-                    `Anti-Raid no pudo identificar quién añadió al bot ${member.user.tag}.`
-                );
+                    const executor =
+                        result.member;
 
-                return;
+                    if (
+                        isWhitelisted(
+                            executor
+                        )
+                    ) {
+                        return;
+                    }
+
+                    await penalize(
+                        executor,
+                        `Introducción del bot ${member.user.tag} al servidor.`
+                    );
+
+                    if (
+                        member.kickable
+                    ) {
+                        await member.kick(
+                            "Anti-Raid: Bot introducido por un usuario no autorizado."
+                        );
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Error Anti-Raid guildMemberAdd:",
+                        error
+                    );
+                }
             }
+        );
 
-            const executor =
-                result.member;
+        /*
+         * KICK MANUAL
+         */
 
-            /*
-             * Si el ejecutor está en whitelist,
-             * el bot puede permanecer en el servidor.
-             */
+        client.on(
+            "guildMemberRemove",
+            async member => {
 
-            if (
-                isWhitelisted(executor)
-            ) {
-                return;
+                try {
+
+                    const result =
+                        await getExecutor(
+                            member.guild,
+                            AuditLogEvent.MemberKick,
+                            member.id
+                        );
+
+                    if (
+                        !result?.member
+                    ) {
+                        return;
+                    }
+
+                    const executor =
+                        result.member;
+
+                    if (
+                        executor.id ===
+                        client.user.id
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        executor.user.bot
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        isWhitelisted(
+                            executor
+                        )
+                    ) {
+                        return;
+                    }
+
+                    await penalize(
+                        executor,
+                        `Expulsión manual del usuario ${member.user.tag}.`
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Error Anti-Raid kick:",
+                        error
+                    );
+                }
             }
+        );
 
-            /*
-             * Ejecutor no autorizado:
-             * penalizar y expulsar bot.
-             */
+        /*
+         * BAN MANUAL
+         */
 
-            await penalize(
-                executor,
-                `Introducción del bot ${member.user.tag} al servidor.`
-            );
+        client.on(
+            "guildBanAdd",
+            async ban => {
 
-            if (
-                member.kickable
-            ) {
-                await member.kick(
-                    "Anti-Raid: Bot introducido por un usuario no autorizado."
-                );
-            } else {
-                console.error(
-                    `Anti-Raid no pudo expulsar al bot ${member.user.tag}.`
-                );
+                try {
+
+                    const result =
+                        await getExecutor(
+                            ban.guild,
+                            AuditLogEvent.MemberBanAdd,
+                            ban.user.id
+                        );
+
+                    if (
+                        !result?.member
+                    ) {
+                        return;
+                    }
+
+                    const executor =
+                        result.member;
+
+                    if (
+                        executor.id ===
+                        client.user.id
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        executor.user.bot
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        isWhitelisted(
+                            executor
+                        )
+                    ) {
+                        return;
+                    }
+
+                    await penalize(
+                        executor,
+                        `Baneo manual del usuario ${ban.user.tag}.`
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Error Anti-Raid ban:",
+                        error
+                    );
+                }
             }
-
-        } catch (error) {
-
-            console.error(
-                "Error Anti-Raid guildMemberAdd:",
-                error
-            );
-        }
-    }
-);
+        );
 
         /*
          * ROL ADMINISTRADOR CREADO
@@ -755,9 +970,7 @@ client.on(
                             role.id
                         );
 
-                    if (
-                        !result
-                    ) {
+                    if (!result) {
                         return;
                     }
 
@@ -778,10 +991,6 @@ client.on(
                     ) {
                         await role.delete(
                             "Anti-Raid: Creación de rol con permisos de Administrator."
-                        );
-                    } else {
-                        console.error(
-                            `Anti-Raid no pudo eliminar el rol Administrator ${role.name}.`
                         );
                     }
 
@@ -1003,7 +1212,8 @@ client.on(
                         );
 
                     if (
-                        addedAdminRoles.size === 0
+                        addedAdminRoles.size ===
+                        0
                     ) {
                         return;
                     }
@@ -1062,7 +1272,8 @@ client.on(
 
                     if (
                         channel &&
-                        removedAdminRoles.length > 0
+                        removedAdminRoles.length >
+                            0
                     ) {
                         const embed =
                             new EmbedBuilder()
