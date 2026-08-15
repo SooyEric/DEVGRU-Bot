@@ -1,5 +1,8 @@
 export default {
     name: "purge",
+    aliases: [
+        "c"
+    ],
     permission: 1,
 
     async execute(message, args) {
