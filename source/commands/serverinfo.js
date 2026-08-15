@@ -23,7 +23,11 @@ function getBoostLevel(tier) {
     }[tier] || "Nivel 0";
 }
 
-function createServerEmbed(guild, user, type = "server") {
+function createServerEmbed(
+    guild,
+    user,
+    type = "server"
+) {
     const iconURL =
         guild.iconURL({
             extension: "png",
@@ -37,20 +41,30 @@ function createServerEmbed(guild, user, type = "server") {
         });
 
     const joinedAt =
-        guild.members.cache.get(user.id)?.joinedAt;
+        guild.members.cache.get(
+            user.id
+        )?.joinedAt;
 
     if (type === "icon") {
         const embed =
             new EmbedBuilder()
-                .setColor(EMBED_COLOR)
+                .setColor(
+                    EMBED_COLOR
+                )
+                .setTitle(
+                    "Icono del servidor"
+                )
                 .setAuthor({
                     name: guild.name,
-                    iconURL: iconURL || undefined
-                })
-                .setTitle("Icono del servidor");
+                    iconURL:
+                        iconURL ||
+                        undefined
+                });
 
         if (iconURL) {
-            embed.setImage(iconURL);
+            embed.setImage(
+                iconURL
+            );
         } else {
             embed.setDescription(
                 "Este servidor no tiene un icono."
@@ -61,7 +75,9 @@ function createServerEmbed(guild, user, type = "server") {
             text:
                 `Unido el ${
                     joinedAt
-                        ? formatDate(joinedAt)
+                        ? formatDate(
+                            joinedAt
+                        )
                         : "desconocido"
                 }`,
             iconURL:
@@ -77,15 +93,23 @@ function createServerEmbed(guild, user, type = "server") {
     if (type === "banner") {
         const embed =
             new EmbedBuilder()
-                .setColor(EMBED_COLOR)
+                .setColor(
+                    EMBED_COLOR
+                )
+                .setTitle(
+                    "Banner del servidor"
+                )
                 .setAuthor({
                     name: guild.name,
-                    iconURL: iconURL || undefined
-                })
-                .setTitle("Banner del servidor");
+                    iconURL:
+                        iconURL ||
+                        undefined
+                });
 
         if (bannerURL) {
-            embed.setImage(bannerURL);
+            embed.setImage(
+                bannerURL
+            );
         } else {
             embed.setDescription(
                 "Este servidor no tiene un banner."
@@ -96,7 +120,9 @@ function createServerEmbed(guild, user, type = "server") {
             text:
                 `Unido el ${
                     joinedAt
-                        ? formatDate(joinedAt)
+                        ? formatDate(
+                            joinedAt
+                        )
                         : "desconocido"
                 }`,
             iconURL:
@@ -109,23 +135,33 @@ function createServerEmbed(guild, user, type = "server") {
         return embed;
     }
 
-    const members =
-        guild.members.cache;
-
-    const bots =
-        members.filter(
-            member => member.user.bot
+    const humans =
+        guild.memberCount -
+        guild.members.cache.filter(
+            member =>
+                member.user.bot
         ).size;
 
-    const humans =
-        members.filter(
-            member => !member.user.bot
+    const bots =
+        guild.members.cache.filter(
+            member =>
+                member.user.bot
         ).size;
 
     const roles =
         guild.roles.cache.filter(
-            role => role.id !== guild.id
+            role =>
+                role.id !== guild.id
         ).size;
+
+    const boosts =
+        guild.premiumSubscriptionCount ||
+        0;
+
+    const level =
+        getBoostLevel(
+            guild.premiumTier
+        );
 
     const emojis =
         guild.emojis.cache.size;
@@ -133,69 +169,41 @@ function createServerEmbed(guild, user, type = "server") {
     const stickers =
         guild.stickers.cache.size;
 
-    const boosts =
-        guild.premiumSubscriptionCount || 0;
-
-    const boostLevel =
-        getBoostLevel(
-            guild.premiumTier
-        );
-
     const embed =
         new EmbedBuilder()
-            .setColor(EMBED_COLOR)
+            .setColor(
+                EMBED_COLOR
+            )
+            .setTitle(
+                "Información del Servidor"
+            )
             .setAuthor({
                 name: guild.name,
-                iconURL: iconURL || undefined
+                iconURL:
+                    iconURL ||
+                    undefined
             })
             .setDescription(
-                `**ID del servidor:** \`${guild.id}\`\n` +
-                `**Propietario:** <@${guild.ownerId}>\n` +
-                `**Creación:** ${formatDate(guild.createdAt)}\n` +
-                `**Link:** [discord.gg/devgru](https://discord.gg/devgru)`
-            )
-            .addFields(
-                {
-                    name: "Miembros",
-                    value: `\`${humans}\``,
-                    inline: true
-                },
-                {
-                    name: "Bots",
-                    value: `\`${bots}\``,
-                    inline: true
-                },
-                {
-                    name: "Roles",
-                    value: `\`${roles}\``,
-                    inline: true
-                },
-                {
-                    name: "Mejoras",
-                    value: `\`${boosts}\``,
-                    inline: true
-                },
-                {
-                    name: "Nivel",
-                    value: `\`${boostLevel}\``,
-                    inline: true
-                },
-                {
-                    name: "Emojis",
-                    value: `\`${emojis}\``,
-                    inline: true
-                },
-                {
-                    name: "Stickers",
-                    value: `\`${stickers}\``,
-                    inline: true
-                }
+                `<:boss:1538099028372365333> **Propietario**: <@${guild.ownerId}>\n` +
+                `<:config:1538099479759294484> **ID del Servidor**: \`${guild.id}\`\n` +
+                `<:time:1538102015241224192> **Creación**: <t:${Math.floor(guild.createdTimestamp / 1000)}:F>\n` +
+                `<:link:1538100394532806736> **Link**: \`discord.gg/devgru\`\n\n` +
+
+                `<:persona:1538099937391288380> **Miembros**: \`${humans}\`\n` +
+                `<:bots:1538102735558279268> **Bots**: \`${bots}\`\n` +
+                `<:ping:1538103877306548234> **Roles**: \`${roles}\`\n` +
+                `<:boost:1538100006249046027> **Mejoras**: \`${boosts}\`\n` +
+                `<:lvl:1538099654149935176> **Nivel**: \`${level}\`\n` +
+                `<:emojii:1538102791409504306> **Emojis**: \`${emojis}\`\n` +
+                `<:star:1538104433248960532> **Stickers**: \`${stickers}\``
             )
             .setFooter({
                 text:
                     `Unido el ${
                         joinedAt
-                            ? formatDate(joinedAt)
+                            ? formatDate(
+                                joinedAt
+                            )
                             : "desconocido"
                     }`,
                 iconURL:
@@ -212,7 +220,9 @@ function createMenu() {
     return new ActionRowBuilder()
         .addComponents(
             new StringSelectMenuBuilder()
-                .setCustomId("serverinfo_menu")
+                .setCustomId(
+                    "serverinfo_menu"
+                )
                 .setPlaceholder(
                     "Selecciona una categoría"
                 )
@@ -244,9 +254,12 @@ function createMenu() {
 
 export default {
     name: "serverinfo",
+
     permission: 2,
 
-    async execute(message) {
+    async execute(
+        message
+    ) {
         try {
             await message.guild.members.fetch();
 
@@ -272,9 +285,10 @@ export default {
 
             const collector =
                 sentMessage.createMessageComponentCollector({
-                    filter: interaction =>
-                        interaction.customId ===
-                        "serverinfo_menu",
+                    filter:
+                        interaction =>
+                            interaction.customId ===
+                            "serverinfo_menu",
                     idle: 30000
                 });
 
@@ -297,7 +311,7 @@ export default {
                     const selected =
                         interaction.values[0];
 
-                    const updatedEmbed =
+                    const embed =
                         createServerEmbed(
                             message.guild,
                             message.author,
@@ -306,7 +320,7 @@ export default {
 
                     await interaction.update({
                         embeds: [
-                            updatedEmbed
+                            embed
                         ],
                         components: [
                             menu
@@ -319,9 +333,7 @@ export default {
                 "end",
                 async () => {
                     try {
-                        await message.guild.members.fetch();
-
-                        const updatedEmbed =
+                        const embed =
                             createServerEmbed(
                                 message.guild,
                                 message.author,
@@ -330,7 +342,7 @@ export default {
 
                         await sentMessage.edit({
                             embeds: [
-                                updatedEmbed
+                                embed
                             ],
                             components: []
                         });
@@ -344,7 +356,9 @@ export default {
                 error
             );
 
-            await message.react("❌");
+            await message.react(
+                "❌"
+            );
         }
     }
 };
