@@ -30,6 +30,9 @@ const EMBED_COLOR = "#ffaf1a";
 
 export default {
     name: "ban",
+    aliases: [
+        "b"
+    ],
     permission: 1,
 
     async execute(message, args) {
