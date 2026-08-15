@@ -228,10 +228,9 @@ function getGiveawayEmbed(
                         : `<:time:1538102015241224192> **Finaliza**: <t:${endTimestamp}:R>`
                 )
             )
-            .setFooter({
-                text:
-                    "Giveaway"
-            });
+.setFooter({
+    text: `Creado el ${new Date(giveaway.createdAt).toLocaleDateString("es-MX")}`
+});
 
     if (
         ended
@@ -1261,6 +1260,9 @@ export default {
 
                         ownerId:
                             message.author.id,
+                            
+                            createdAt:
+    Date.now(),
 
                         prize:
                             config.prize,
