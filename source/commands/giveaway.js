@@ -211,7 +211,7 @@ function getGiveawayEmbed(
                 "<:gwa:1538324626621337692> Giveaway"
             )
             .setDescription(
-                `# ${giveaway.prize} <:gift:1538322136371044422>\n\n` +
+                `# ${giveaway.prize} <:premio:1538328342913097808>\n\n` +
 
                 `<:win:1538323077912334356> **Ganadores**: \`${giveaway.winnersCount}\`\n` +
 
@@ -238,7 +238,7 @@ function getGiveawayEmbed(
     ) {
         embed.addFields({
             name:
-                "<:win:1538323077912334356> Ganador(es)",
+                "<:wina:1538328677836791808> Ganador(es)",
             value:
                 giveaway.winners.length > 0
                     ? giveaway.winners
