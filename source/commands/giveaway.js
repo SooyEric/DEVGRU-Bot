@@ -17,6 +17,9 @@ const GIVEAWAY_CHANNEL_ID =
 const giveaways =
     new Map();
 
+const initializedClients =
+    new WeakSet();
+
 function parseDuration(
     input
 ) {
@@ -65,7 +68,8 @@ function formatDuration(
         );
 
     if (
-        seconds < 60
+        seconds <
+        60
     ) {
         return `${seconds}s`;
     }
@@ -76,7 +80,8 @@ function formatDuration(
         );
 
     if (
-        minutes < 60
+        minutes <
+        60
     ) {
         return `${minutes}m`;
     }
@@ -87,7 +92,8 @@ function formatDuration(
         );
 
     if (
-        hours < 24
+        hours <
+        24
     ) {
         return `${hours}h`;
     }
@@ -98,7 +104,8 @@ function formatDuration(
         );
 
     if (
-        days < 7
+        days <
+        7
     ) {
         return `${days}d`;
     }
@@ -144,9 +151,7 @@ function getConfigEmbed(
         );
 }
 
-function getConfigButtons(
-    config
-) {
+function getConfigButtons() {
     return new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
@@ -204,11 +209,8 @@ function getGiveawayEmbed(
             .setDescription(
                 `## ${giveaway.prize}\n\n` +
                 `**Ganadores:** \`${giveaway.winnersCount}\`\n` +
-                `**Participantes:** \`${giveaway.participants.size}\`\n\n` +
-                `**Requisitos:** ${
-                    giveaway.requirements ||
-                    "Sin requisitos"
-                }\n\n` +
+                `**Participantes:** \`${giveaway.participants.size}\`\n` +
+                `**Requisitos:** ${giveaway.requirements || "Sin requisitos"}\n\n` +
                 (
                     ended
                         ? "**Giveaway finalizado**"
@@ -220,15 +222,12 @@ function getGiveawayEmbed(
             );
 
     if (ended) {
-        const winners =
-            giveaway.winners;
-
         embed.addFields({
             name:
                 "🏆 Ganador(es)",
             value:
-                winners.length > 0
-                    ? winners
+                giveaway.winners.length > 0
+                    ? giveaway.winners
                         .map(
                             id =>
                                 `<@${id}>`
@@ -289,14 +288,20 @@ function getGiveawayButtons(
 
 function pickWinners(
     giveaway,
-    excluded = new Set()
+    excluded = []
 ) {
+    const excludedSet =
+        new Set(
+            excluded
+        );
+
     const participants =
-        [...giveaway.participants]
-            .filter(
-                id =>
-                    !excluded.has(id)
-            );
+        [
+            ...giveaway.participants
+        ].filter(
+            id =>
+                !excludedSet.has(id)
+        );
 
     const winners = [];
 
@@ -324,6 +329,55 @@ function pickWinners(
     return winners;
 }
 
+function pickSingleWinner(
+    giveaway,
+    excluded = []
+) {
+    const excludedSet =
+        new Set(
+            excluded
+        );
+
+    const available =
+        [
+            ...giveaway.participants
+        ].filter(
+            id =>
+                !excludedSet.has(id)
+        );
+
+    if (
+        available.length === 0
+    ) {
+        return null;
+    }
+
+    return available[
+        Math.floor(
+            Math.random() *
+            available.length
+        )
+    ];
+}
+
+async function getGiveawayMessage(
+    giveaway,
+    client
+) {
+    const channel =
+        await client.channels.fetch(
+            giveaway.channelId
+        );
+
+    if (!channel) {
+        return null;
+    }
+
+    return channel.messages.fetch(
+        giveaway.messageId
+    );
+}
+
 async function finishGiveaway(
     giveaway,
     client
@@ -343,21 +397,17 @@ async function finishGiveaway(
         );
 
     try {
-        const channel =
-            await client.channels.fetch(
-                GIVEAWAY_CHANNEL_ID
+        const message =
+            await getGiveawayMessage(
+                giveaway,
+                client
             );
 
-        if (!channel) {
+        if (!message) {
             return;
         }
 
-        const giveawayMessage =
-            await channel.messages.fetch(
-                giveaway.messageId
-            );
-
-        await giveawayMessage.edit({
+        await message.edit({
             embeds: [
                 getGiveawayEmbed(
                     giveaway,
@@ -372,6 +422,9 @@ async function finishGiveaway(
             ]
         });
 
+        const channel =
+            message.channel;
+
         if (
             giveaway.winners.length > 0
         ) {
@@ -382,13 +435,7 @@ async function finishGiveaway(
                             id =>
                                 `<@${id}>`
                         )
-                        .join(
-                            ", "
-                        )} ha${
-                        giveaway.winners.length === 1
-                            ? ""
-                            : "n"
-                    } ganado **${giveaway.prize}**.`
+                        .join(", ")} ha${giveaway.winners.length === 1 ? "" : "n"} ganado **${giveaway.prize}**.`
             });
         } else {
             await channel.send({
@@ -405,37 +452,391 @@ async function finishGiveaway(
     }
 }
 
-function getRerollModal(
-    giveaway
+function initializeGiveawayInteractions(
+    client
 ) {
-    return new ModalBuilder()
-        .setCustomId(
-            `giveaway_reroll_modal:${giveaway.id}`
-        )
-        .setTitle(
-            "Reroll"
-        )
-        .addComponents(
-            new ActionRowBuilder()
-                .addComponents(
+    if (
+        initializedClients.has(client)
+    ) {
+        return;
+    }
+
+    initializedClients.add(
+        client
+    );
+
+    client.on(
+        "interactionCreate",
+        async interaction => {
+            if (
+                !interaction.isButton()
+            ) {
+                return;
+            }
+
+            const parts =
+                interaction.customId.split(
+                    ":"
+                );
+
+            const action =
+                parts[0];
+
+            if (
+                ![
+                    "giveaway_join",
+                    "giveaway_reroll",
+                    "giveaway_participants"
+                ].includes(
+                    action
+                )
+            ) {
+                return;
+            }
+
+            const giveawayId =
+                parts[1];
+
+            const giveaway =
+                giveaways.get(
+                    giveawayId
+                );
+
+            if (!giveaway) {
+                await interaction.reply({
+                    content:
+                        "Este giveaway ya no está disponible.",
+                    ephemeral:
+                        true
+                });
+
+                return;
+            }
+
+            if (
+                action ===
+                "giveaway_join"
+            ) {
+                if (
+                    giveaway.ended
+                ) {
+                    await interaction.reply({
+                        content:
+                            "Este giveaway ya terminó.",
+                        ephemeral:
+                            true
+                    });
+
+                    return;
+                }
+
+                if (
+                    giveaway.participants.has(
+                        interaction.user.id
+                    )
+                ) {
+                    giveaway.participants.delete(
+                        interaction.user.id
+                    );
+
+                    await interaction.reply({
+                        content:
+                            "Has salido del giveaway.",
+                        ephemeral:
+                            true
+                    });
+                } else {
+                    giveaway.participants.add(
+                        interaction.user.id
+                    );
+
+                    await interaction.reply({
+                        content:
+                            "Has entrado al giveaway.",
+                        ephemeral:
+                            true
+                    });
+                }
+
+                try {
+                    await interaction.message.edit({
+                        embeds: [
+                            getGiveawayEmbed(
+                                giveaway
+                            )
+                        ],
+                        components: [
+                            getGiveawayButtons(
+                                giveaway
+                            )
+                        ]
+                    });
+                } catch {}
+
+                return;
+            }
+
+            if (
+                action ===
+                "giveaway_participants"
+            ) {
+                if (
+                    !giveaway.ended
+                ) {
+                    await interaction.reply({
+                        content:
+                            "El giveaway todavía está activo.",
+                        ephemeral:
+                            true
+                    });
+
+                    return;
+                }
+
+                const participants =
+                    [
+                        ...giveaway.participants
+                    ];
+
+                if (
+                    participants.length ===
+                    0
+                ) {
+                    await interaction.reply({
+                        content:
+                            "No hubo participantes.",
+                        ephemeral:
+                            true
+                    });
+
+                    return;
+                }
+
+                const list =
+                    participants
+                        .map(
+                            (id, index) =>
+                                `${index + 1}. <@${id}>`
+                        )
+                        .join("\n");
+
+                const chunks = [];
+
+                for (
+                    let i = 0;
+                    i < list.length;
+                    i += 1900
+                ) {
+                    chunks.push(
+                        list.slice(
+                            i,
+                            i + 1900
+                        )
+                    );
+                }
+
+                await interaction.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(
+                                EMBED_COLOR
+                            )
+                            .setTitle(
+                                "Participantes"
+                            )
+                            .setDescription(
+                                chunks[0]
+                            )
+                    ],
+                    ephemeral:
+                        true
+                });
+
+                return;
+            }
+
+            if (
+                action ===
+                "giveaway_reroll"
+            ) {
+                if (
+                    !giveaway.ended
+                ) {
+                    await interaction.reply({
+                        content:
+                            "El giveaway todavía está activo.",
+                        ephemeral:
+                            true
+                    });
+
+                    return;
+                }
+
+                if (
+                    interaction.user.id !==
+                    giveaway.ownerId
+                ) {
+                    await interaction.reply({
+                        content:
+                            "Solo quien creó el giveaway puede hacer reroll.",
+                        ephemeral:
+                            true
+                    });
+
+                    return;
+                }
+
+                const modal =
+                    new ModalBuilder()
+                        .setCustomId(
+                            `giveaway_reroll_modal:${giveaway.id}`
+                        )
+                        .setTitle(
+                            "Reroll de ganador"
+                        );
+
+                const winnerInput =
                     new TextInputBuilder()
                         .setCustomId(
-                            "giveaway_reroll_user"
+                            "giveaway_winner_id"
                         )
                         .setLabel(
-                            "Ganador a reemplazar"
+                            "ID del ganador a reemplazar"
                         )
                         .setPlaceholder(
-                            "ID o mención del ganador"
+                            "ID de Discord"
                         )
                         .setStyle(
                             TextInputStyle.Short
                         )
                         .setRequired(
                             true
+                        );
+
+                modal.addComponents(
+                    new ActionRowBuilder()
+                        .addComponents(
+                            winnerInput
                         )
-                )
-        );
+                );
+
+                await interaction.showModal(
+                    modal
+                );
+
+                try {
+                    const submitted =
+                        await interaction.awaitModalSubmit({
+                            time:
+                                120000,
+
+                            filter:
+                                modalInteraction =>
+                                    modalInteraction.user.id ===
+                                    giveaway.ownerId
+                        });
+
+                    const winnerId =
+                        submitted.fields
+                            .getTextInputValue(
+                                "giveaway_winner_id"
+                            )
+                            .replace(
+                                /[<@!>]/g,
+                                ""
+                            )
+                            .trim();
+
+                    if (
+                        !/^\d{17,20}$/.test(
+                            winnerId
+                        )
+                    ) {
+                        await submitted.reply({
+                            content:
+                                "ID de usuario inválido.",
+                            ephemeral:
+                                true
+                        });
+
+                        return;
+                    }
+
+                    if (
+                        !giveaway.winners.includes(
+                            winnerId
+                        )
+                    ) {
+                        await submitted.reply({
+                            content:
+                                "Ese usuario no es uno de los ganadores actuales.",
+                            ephemeral:
+                                true
+                        });
+
+                        return;
+                    }
+
+                    const newWinner =
+                        pickSingleWinner(
+                            giveaway,
+                            [
+                                ...giveaway.winners,
+                                winnerId
+                            ]
+                        );
+
+                    if (!newWinner) {
+                        await submitted.reply({
+                            content:
+                                "No hay participantes disponibles para reemplazar a este ganador.",
+                            ephemeral:
+                                true
+                        });
+
+                        return;
+                    }
+
+                    giveaway.participants.delete(
+                        winnerId
+                    );
+
+                    const winnerIndex =
+                        giveaway.winners.indexOf(
+                            winnerId
+                        );
+
+                    giveaway.winners[
+                        winnerIndex
+                    ] =
+                        newWinner;
+
+                    await submitted.update({
+                        embeds: [
+                            getGiveawayEmbed(
+                                giveaway,
+                                true
+                            )
+                        ],
+                        components: [
+                            getGiveawayButtons(
+                                giveaway,
+                                true
+                            )
+                        ]
+                    });
+
+                    await interaction.message.channel.send({
+                        content:
+                            `🔄 <@${newWinner}> ha ganado el reroll de **${giveaway.prize}**.`
+                    });
+
+                } catch {}
+
+                return;
+            }
+        }
+    );
 }
 
 export default {
@@ -448,6 +849,10 @@ export default {
     async execute(
         message
     ) {
+        initializeGiveawayInteractions(
+            message.client
+        );
+
         const config = {
             ownerId:
                 message.author.id,
@@ -469,15 +874,15 @@ export default {
             await message.reply({
                 ephemeral:
                     true,
+
                 embeds: [
                     getConfigEmbed(
                         config
                     )
                 ],
+
                 components: [
-                    getConfigButtons(
-                        config
-                    )
+                    getConfigButtons()
                 ]
             });
 
@@ -490,7 +895,6 @@ export default {
         collector.on(
             "collect",
             async interaction => {
-
                 if (
                     interaction.user.id !==
                     message.author.id
@@ -614,7 +1018,7 @@ export default {
                                 "Requisitos (opcional)"
                             )
                             .setPlaceholder(
-                                "Ejemplo: Ser miembro del servidor"
+                                "Ejemplo: Ser miembro de DEVGRU"
                             )
                             .setStyle(
                                 TextInputStyle.Paragraph
@@ -623,7 +1027,7 @@ export default {
                                 false
                             )
                             .setMaxLength(
-                                500
+                                1000
                             )
                             .setValue(
                                 config.requirements ||
@@ -661,6 +1065,7 @@ export default {
                             await interaction.awaitModalSubmit({
                                 time:
                                     120000,
+
                                 filter:
                                     modalInteraction =>
                                         modalInteraction.user.id ===
@@ -668,26 +1073,22 @@ export default {
                             });
 
                         const prize =
-                            submitted.fields
-                                .getTextInputValue(
-                                    "giveaway_prize"
-                                )
-                                .trim();
+                            submitted.fields.getTextInputValue(
+                                "giveaway_prize"
+                            ).trim();
 
                         const duration =
                             parseDuration(
-                                submitted.fields
-                                    .getTextInputValue(
-                                        "giveaway_duration"
-                                    )
+                                submitted.fields.getTextInputValue(
+                                    "giveaway_duration"
+                                )
                             );
 
                         const winners =
                             Number(
-                                submitted.fields
-                                    .getTextInputValue(
-                                        "giveaway_winners"
-                                    )
+                                submitted.fields.getTextInputValue(
+                                    "giveaway_winners"
+                                )
                             );
 
                         const requirements =
@@ -739,10 +1140,9 @@ export default {
                                     config
                                 )
                             ],
+
                             components: [
-                                getConfigButtons(
-                                    config
-                                )
+                                getConfigButtons()
                             ]
                         });
 
@@ -816,11 +1216,11 @@ export default {
                         prize:
                             config.prize,
 
-                        requirements:
-                            config.requirements,
-
                         winnersCount:
                             config.winners,
+
+                        requirements:
+                            config.requirements,
 
                         participants:
                             new Set(),
@@ -841,6 +1241,7 @@ export default {
                                     giveaway
                                 )
                             ],
+
                             components: [
                                 getGiveawayButtons(
                                     giveaway
