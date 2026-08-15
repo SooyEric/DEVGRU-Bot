@@ -211,7 +211,7 @@ function getGiveawayEmbed(
                 "<:gwa:1538324626621337692> Giveaway"
             )
             .setDescription(
-                `# ${giveaway.prize} <:premio:1538328342913097808>\n\n` +
+                `# ${giveaway.prize} <:premio:1538332507685257246>\n\n` +
 
                 `<:win:1538323077912334356> **Ganadores**: \`${giveaway.winnersCount}\`\n` +
 
@@ -229,7 +229,15 @@ function getGiveawayEmbed(
                 )
             )
 .setFooter({
-    text: `Creado el ${new Date(giveaway.createdAt).toLocaleDateString("es-MX")}`
+    text: `Created ${new Date(giveaway.createdAt).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit"
+    })} at ${new Date(giveaway.createdAt).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+    }).toLowerCase()}`
 });
 
     if (
