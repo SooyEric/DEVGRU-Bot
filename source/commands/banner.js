@@ -91,7 +91,9 @@ export default {
             if (!hasServerBanner) {
                 await message.reply({
                     embeds: [
-                        createEmbed("global")
+                        createEmbed(
+                            "global"
+                        )
                     ]
                 });
 
@@ -124,10 +126,15 @@ export default {
                             )
                     );
 
+            let selectedBanner =
+                "global";
+
             const sentMessage =
                 await message.reply({
                     embeds: [
-                        createEmbed("global")
+                        createEmbed(
+                            selectedBanner
+                        )
                     ],
                     components: [
                         menu
@@ -159,13 +166,13 @@ export default {
                         return;
                     }
 
-                    const selected =
+                    selectedBanner =
                         interaction.values[0];
 
                     await interaction.update({
                         embeds: [
                             createEmbed(
-                                selected
+                                selectedBanner
                             )
                         ],
                         components: [
@@ -182,7 +189,7 @@ export default {
                         await sentMessage.edit({
                             embeds: [
                                 createEmbed(
-                                    "global"
+                                    selectedBanner
                                 )
                             ],
                             components: []
