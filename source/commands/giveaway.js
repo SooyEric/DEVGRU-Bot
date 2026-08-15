@@ -129,25 +129,28 @@ function getConfigEmbed(
             "Configuración del Giveaway"
         )
         .setDescription(
-            `**Premio:** ${
+            `<:gift:1538322136371044422> **Premio**: \`${
                 config.prize ||
                 "No configurado"
-            }\n` +
-            `**Duración:** ${
+            }\`\n` +
+
+            `<:time:1538102015241224192> **Duración**: \`${
                 config.duration
                     ? formatDuration(
                         config.duration
                     )
                     : "No configurada"
-            }\n` +
-            `**Ganadores:** ${
+            }\`\n` +
+
+            `<:win:1538323077912334356> **Ganadores**: \`${
                 config.winners ||
                 "No configurado"
-            }\n` +
-            `**Requisitos:** ${
+            }\`\n` +
+
+            `<:info:1538323825542963270> **Requisitos**: \`${
                 config.requirements ||
                 "Sin requisitos"
-            }`
+            }\``
         );
 }
 
@@ -195,7 +198,8 @@ function getGiveawayEmbed(
 ) {
     const endTimestamp =
         Math.floor(
-            giveaway.endAt / 1000
+            giveaway.endAt /
+                1000
         );
 
     const embed =
@@ -204,27 +208,37 @@ function getGiveawayEmbed(
                 EMBED_COLOR
             )
             .setTitle(
-                "🎉 Giveaway"
+                "<:gwa:1538324626621337692> Giveaway"
             )
             .setDescription(
-                `## ${giveaway.prize}\n\n` +
-                `**Ganadores:** \`${giveaway.winnersCount}\`\n` +
-                `**Participantes:** \`${giveaway.participants.size}\`\n` +
-                `**Requisitos:** ${giveaway.requirements || "Sin requisitos"}\n\n` +
+                `# ${giveaway.prize} <:gift:1538322136371044422>\n\n` +
+
+                `<:win:1538323077912334356> **Ganadores**: \`${giveaway.winnersCount}\`\n` +
+
+                `<:grupo:1538323345831895090> **Participantes**: \`${giveaway.participants.size}\`\n` +
+
+                `<:info:1538323825542963270> **Requisitos**: \`${
+                    giveaway.requirements ||
+                    "Sin requisitos"
+                }\`\n\n` +
+
                 (
                     ended
-                        ? "**Giveaway finalizado**"
-                        : `**Finaliza:** <t:${endTimestamp}:R>`
+                        ? "**Giveaway Finalizado**"
+                        : `<:time:1538102015241224192> **Finaliza**: <t:${endTimestamp}:R>`
                 )
             )
-            .setTimestamp(
-                giveaway.endAt
-            );
+            .setFooter({
+                text:
+                    "Giveaway"
+            });
 
-    if (ended) {
+    if (
+        ended
+    ) {
         embed.addFields({
             name:
-                "🏆 Ganador(es)",
+                "<:win:1538323077912334356> Ganador(es)",
             value:
                 giveaway.winners.length > 0
                     ? giveaway.winners
@@ -244,7 +258,9 @@ function getGiveawayButtons(
     giveaway,
     ended = false
 ) {
-    if (ended) {
+    if (
+        ended
+    ) {
         return new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -278,10 +294,10 @@ function getGiveawayButtons(
                     `giveaway_join:${giveaway.id}`
                 )
                 .setLabel(
-                    "🎉 Participar"
+                    "Participar"
                 )
                 .setStyle(
-                    ButtonStyle.Primary
+                    ButtonStyle.Secondary
                 )
         );
 }
@@ -300,7 +316,9 @@ function pickWinners(
             ...giveaway.participants
         ].filter(
             id =>
-                !excludedSet.has(id)
+                !excludedSet.has(
+                    id
+                )
         );
 
     const winners = [];
@@ -343,11 +361,14 @@ function pickSingleWinner(
             ...giveaway.participants
         ].filter(
             id =>
-                !excludedSet.has(id)
+                !excludedSet.has(
+                    id
+                )
         );
 
     if (
-        available.length === 0
+        available.length ===
+        0
     ) {
         return null;
     }
@@ -426,25 +447,37 @@ async function finishGiveaway(
             message.channel;
 
         if (
-            giveaway.winners.length > 0
+            giveaway.winners.length >
+            0
         ) {
             await channel.send({
                 content:
-                    `🎉 ${giveaway.winners
+                    `<:gwa:1538324626621337692> ${giveaway.winners
                         .map(
                             id =>
                                 `<@${id}>`
                         )
-                        .join(", ")} ha${giveaway.winners.length === 1 ? "" : "n"} ganado **${giveaway.prize}**.`
+                        .join(
+                            ", "
+                        )} ha${
+                        giveaway.winners.length ===
+                        1
+                            ? ""
+                            : "n"
+                    } ganado **${
+                        giveaway.prize
+                    }**.`
             });
         } else {
             await channel.send({
                 content:
-                    `🎉 El giveaway de **${giveaway.prize}** terminó sin participantes.`
+                    `<:gwa:1538324626621337692> El giveaway de **${giveaway.prize}** terminó sin participantes.`
             });
         }
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
         console.error(
             "Error finalizando giveaway:",
             error
@@ -456,7 +489,9 @@ function initializeGiveawayInteractions(
     client
 ) {
     if (
-        initializedClients.has(client)
+        initializedClients.has(
+            client
+        )
     ) {
         return;
     }
@@ -615,10 +650,18 @@ function initializeGiveawayInteractions(
                 const list =
                     participants
                         .map(
-                            (id, index) =>
-                                `${index + 1}. <@${id}>`
+                            (
+                                id,
+                                index
+                            ) =>
+                                `${
+                                    index +
+                                    1
+                                }. <@${id}>`
                         )
-                        .join("\n");
+                        .join(
+                            "\n"
+                        );
 
                 const chunks = [];
 
@@ -786,7 +829,9 @@ function initializeGiveawayInteractions(
                             ]
                         );
 
-                    if (!newWinner) {
+                    if (
+                        !newWinner
+                    ) {
                         await submitted.reply({
                             content:
                                 "No hay participantes disponibles para reemplazar a este ganador.",
@@ -828,7 +873,7 @@ function initializeGiveawayInteractions(
 
                     await interaction.message.channel.send({
                         content:
-                            `🔄 <@${newWinner}> ha ganado el reroll de **${giveaway.prize}**.`
+                            `<:gwa:1538324626621337692> <@${newWinner}> ha ganado el reroll de **${giveaway.prize}**.`
                     });
 
                 } catch {}
@@ -1073,22 +1118,26 @@ export default {
                             });
 
                         const prize =
-                            submitted.fields.getTextInputValue(
-                                "giveaway_prize"
-                            ).trim();
+                            submitted.fields
+                                .getTextInputValue(
+                                    "giveaway_prize"
+                                )
+                                .trim();
 
                         const duration =
                             parseDuration(
-                                submitted.fields.getTextInputValue(
-                                    "giveaway_duration"
-                                )
+                                submitted.fields
+                                    .getTextInputValue(
+                                        "giveaway_duration"
+                                    )
                             );
 
                         const winners =
                             Number(
-                                submitted.fields.getTextInputValue(
-                                    "giveaway_winners"
-                                )
+                                submitted.fields
+                                    .getTextInputValue(
+                                        "giveaway_winners"
+                                    )
                             );
 
                         const requirements =
