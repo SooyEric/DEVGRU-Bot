@@ -211,8 +211,8 @@ function createResultEmbed(
             .setTitle(
                 "Sticker agregado"
             )
-            .setDescription(
-                `${result}`
+            .setImage(
+                result.url
             );
     }
 
