@@ -266,15 +266,16 @@ function getCategoryContent(
                 "<:lock:1538413056290197514> **Elegible**: `No`"
             );
 
-        default:
-            return (
-                "## General\n\n" +
-                `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
-                "<:roblox:1538379754414145536> **Usuario de Roblox**: `No Registrado`\n\n" +
-                `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
-                `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
-                `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\``
-            );
+    default:
+        return (
+            "## General\n\n" +
+            `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
+            "<:roblox:1538379754414145536> **Usuario de Roblox**: `No Registrado`\n\n" +
+            `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
+            `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
+            `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\`\n` +
+            "<:info:1538323825542963270> **Estado**: `Activo`"
+        );
     }
 }
 
