@@ -319,13 +319,15 @@ function getCategoryContent(
             const paymentRestriction =
                 getPaymentRestriction(member);
         
+            if (paymentRestriction) {
+                return (
+                    "## Pagas\n\n" +
+                    paymentRestriction
+                );
+            }
+        
             return (
                 "## Pagas\n\n" +
-                (
-                    paymentRestriction
-                        ? paymentRestriction + "\n\n"
-                        : ""
-                ) +
                 "<:lvl:1538099654149935176> **Pago de Rango**: `R$ 0/h`\n" +
                 "<:gift:1538322136371044422> **Bonificaciones**: `R$ 0`\n" +
                 "<:robux:1538413836405837855> **Total Semanal**: `R$ 0`\n\n" +
