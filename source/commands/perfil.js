@@ -231,16 +231,13 @@ function getCategoryContent(
                 "<:fecha:1538412361965375528> **Fecha de Ingreso**: `00/00/00`\n" +
                 "<:tiempo:1538308636265160714> **Tiempo de Servicio**: `0 meses`\n" +
                 "<:rango:1538381219631464448> **Ultimo Ascenso**: `00/00/00`\n" +
-                "<:espada:1538399737206669312> **Próximo Ascenso**: `Elegible el 00/00/00`\n" +
-                "<:time:1538102015241224192> **Horas Semanales**: `0.0h`\n" +
-                "<:tiempo:1538308636265160714> **Horas Totales**: `00.0h`"
+                "<:espada:1538399737206669312> **Próximo Ascenso**: `Elegible el 00/00/00`\n"
             );
 
         case "Actividad":
             return (
                 "## Actividad\n\n" +
                 "<:time:1538102015241224192> **Horas Semanales**: `0.0h`\n" +
-                "<:time:1538102015241224192> **Horas Mensuales**: `00.0h`\n" +
                 "<:tiempo:1538308636265160714> **Horas Totales**: `00.0h`\n" +
                 "<:web:1538416206376206408> **Misiones**: `0`\n" +
                 "<:web2:1538416317844160583> **Entrenamientos**: `0`\n" +
@@ -250,9 +247,7 @@ function getCategoryContent(
         case "Ascensos":
             return (
                 "## Ascensos\n\n" +
-                `<:rango:1538381219631464448> **Rango Actual**: \`${getRank(member)}\`\n` +
                 "<:espada:1538399737206669312> **Siguiente Rango**: ` `\n\n" +
-                "<:fecha:1538412361965375528> **Días Mínimos**: `0/7`\n" +
                 "<:time:1538102015241224192> **Horas Semanales**: `0/5`\n" +
                 "<:web:1538416206376206408> **Misiones Semanales**: `0/4`\n" +
                 "<:web2:1538416317844160583> **Entrenamientos Semanales**: `0/1`\n" +
@@ -262,17 +257,12 @@ function getCategoryContent(
         case "Pagas":
             return (
                 "## Pagas\n\n" +
-                "<:robux:1538413836405837855> **Sueldo por Hora**: `R$ 0`\n" +
-                "<:fecha:1538412361965375528> **Última Paga**: `00/00/00`\n" +
-                "<:fecha:1538412361965375528> **Próxima Paga**: `00/00/00`\n" +
-                "<:info:1538323825542963270> **Estado**: `Pendiente`\n" +
+                "<:robux:1538413836405837855> **Pago de Rango**: `R$ 0/h`\n" +
                 "<:gift:1538322136371044422> **Bonificaciones**: `R$ 0`\n" +
-                "<:robux:1538413836405837855> **Total Recibido**: `R$ 0`\n" +
                 "<:robux:1538413836405837855> **Total Semanal**: `R$ 0`\n\n" +
                 "<:time:1538102015241224192> **Horas Semanales**: `0/5`\n" +
                 "<:web:1538416206376206408> **Misiones Semanales**: `0/4`\n" +
                 "<:web2:1538416317844160583> **Entrenamientos Semanales**: `0/1`\n" +
-                "<:tiempo:1538308636265160714> **Semanas de Servicio**: `0/2`\n" +
                 "<:lock:1538413056290197514> **Elegible**: `No`"
             );
 
