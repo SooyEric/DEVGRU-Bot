@@ -230,8 +230,8 @@ function getCategoryContent(
                 "## Servicio\n\n" +
                 "<:fecha:1538412361965375528> **Fecha de Ingreso**: `00/00/00`\n" +
                 "<:tiempo:1538308636265160714> **Tiempo de Servicio**: `0 meses`\n" +
-                "<:rango:1538381219631464448> **Ultimo Ascenso**: `00/00/00`\n" +
-                "<:espada:1538399737206669312> **Próximo Ascenso**: `Elegible el 00/00/00`\n"
+                "<:espada:1538399737206669312> **Ultimo Ascenso**: `00/00/00`\n" +
+                "<:rango:1538381219631464448> **Próximo Ascenso**: `Elegible el 00/00/00`\n"
             );
 
         case "Actividad":
@@ -257,7 +257,7 @@ function getCategoryContent(
         case "Pagas":
             return (
                 "## Pagas\n\n" +
-                "<:robux:1538413836405837855> **Pago de Rango**: `R$ 0/h`\n" +
+                "<:lvl:1538099654149935176> **Pago de Rango**: `R$ 0/h`\n" +
                 "<:gift:1538322136371044422> **Bonificaciones**: `R$ 0`\n" +
                 "<:robux:1538413836405837855> **Total Semanal**: `R$ 0`\n\n" +
                 "<:time:1538102015241224192> **Horas Semanales**: `0/5`\n" +
