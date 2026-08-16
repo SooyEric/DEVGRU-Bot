@@ -156,102 +156,124 @@ export default {
                 ]
             });
 
-        const collector =
-            sentMessage.createMessageComponentCollector({
-                time: TIMEOUT
+const collector =
+    sentMessage.createMessageComponentCollector();
+
+let inactivityTimeout;
+
+const resetInactivityTimer =
+    () => {
+        clearTimeout(
+            inactivityTimeout
+        );
+
+        inactivityTimeout =
+            setTimeout(
+                () => {
+                    collector.stop(
+                        "timeout"
+                    );
+                },
+                TIMEOUT
+            );
+    };
+
+resetInactivityTimer();
+
+collector.on(
+    "collect",
+    async interaction => {
+
+        if (
+            interaction.user.id !==
+            message.author.id
+        ) {
+            await interaction.reply({
+                content:
+                    "❌ Estos botones no te pertenecen.",
+                ephemeral: true
             });
 
-        collector.on(
-            "collect",
-            async interaction => {
+            return;
+        }
 
-                if (
-                    interaction.user.id !==
-                    message.author.id
-                ) {
-                    await interaction.reply({
-                        content:
-                            "❌ Estos botones no te pertenecen.",
-                        ephemeral: true
-                    });
+        if (
+            interaction.customId ===
+            "roles_delete"
+        ) {
+            await interaction.message.delete();
 
-                    return;
-                }
+            collector.stop(
+                "deleted"
+            );
 
-                collector.resetTimer();
+            return;
+        }
 
-                if (
-                    interaction.customId ===
-                    "roles_delete"
-                ) {
-                    await interaction.message.delete();
+        if (
+            interaction.customId ===
+            "roles_previous"
+        ) {
+            currentPage =
+                currentPage === 0
+                    ? totalPages - 1
+                    : currentPage - 1;
+        }
 
-                    collector.stop(
-                        "deleted"
-                    );
+        if (
+            interaction.customId ===
+            "roles_next"
+        ) {
+            currentPage =
+                currentPage ===
+                totalPages - 1
+                    ? 0
+                    : currentPage + 1;
+        }
 
-                    return;
-                }
+        await interaction.update({
+            embeds: [
+                createEmbed(
+                    message.guild,
+                    roleList,
+                    currentPage,
+                    totalPages
+                )
+            ],
+            components: [
+                createButtons()
+            ]
+        });
 
-                if (
-                    interaction.customId ===
-                    "roles_previous"
-                ) {
-                    currentPage =
-                        currentPage === 0
-                            ? totalPages - 1
-                            : currentPage - 1;
-                }
+        resetInactivityTimer();
+    }
+);
 
-                if (
-                    interaction.customId ===
-                    "roles_next"
-                ) {
-                    currentPage =
-                        currentPage ===
-                        totalPages - 1
-                            ? 0
-                            : currentPage + 1;
-                }
+collector.on(
+    "end",
+    async (
+        collected,
+        reason
+    ) => {
 
-                await interaction.update({
-                    embeds: [
-                        createEmbed(
-                            message.guild,
-                            roleList,
-                            currentPage,
-                            totalPages
-                        )
-                    ],
-                    components: [
-                        createButtons()
-                    ]
-                });
-            }
+        clearTimeout(
+            inactivityTimeout
         );
 
-        collector.on(
-            "end",
-            async (
-                collected,
-                reason
-            ) => {
+        if (
+            reason ===
+            "deleted"
+        ) {
+            return;
+        }
 
-                if (
-                    reason ===
-                    "deleted"
-                ) {
-                    return;
-                }
-
-                try {
-                    await sentMessage.edit({
-                        components: []
-                    });
-                } catch {
-                    // El mensaje ya no existe.
-                }
-            }
-        );
+        try {
+            await sentMessage.edit({
+                components: []
+            });
+        } catch {
+        }
+    }
+);
     }
 };
