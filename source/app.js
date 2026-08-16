@@ -48,8 +48,17 @@ import {
 } from "./utils/robloxOAuth.js";
 
 import {
+    getPendingProfileState,
+    deletePendingProfileState,
+    exchangeProfileRobloxCode,
+    getProfileRobloxUser
+} from "./utils/robloxProfileOAuth.js";
+
+import {
     resumeRobloxApplication
 } from "./commands/aplicar.js";
+
+import perfil from "./commands/perfil.js";
 
 import {
     handleMessageDelete
@@ -155,6 +164,26 @@ client.once(
 client.on(
     "interactionCreate",
     async interaction => {
+
+        if (
+            interaction.isButton() ||
+            interaction.isModalSubmit()
+        ) {
+            if (
+                interaction.customId ===
+                    "perfil_link" ||
+                interaction.customId ===
+                    "perfil_link_cancel" ||
+                interaction.customId ===
+                    "perfil_roblox_modal"
+            ) {
+                await perfil.handleInteraction(
+                    interaction
+                );
+
+                return;
+            }
+        }
 
         if (!interaction.isButton()) {
             return;
@@ -300,6 +329,7 @@ client.on(
                                     : "Ninguno"
                             }`
                         )
+                        .setColor("#77DD77")
                         .setTimestamp();
 
                 await interaction.channel.send({
@@ -830,10 +860,6 @@ const server =
                 return;
             }
 
-            /*
-             * ROBLOX OAUTH CALLBACK
-             */
-
             if (
                 url.pathname ===
                 "/roblox/callback"
@@ -888,6 +914,154 @@ const server =
                     res.end(
                         "No se recibió un código o estado válido."
                     );
+
+                    return;
+                }
+
+                const profilePending =
+                    getPendingProfileState(
+                        state
+                    );
+
+                if (profilePending) {
+                    try {
+                        const tokenData =
+                            await exchangeProfileRobloxCode(
+                                code
+                            );
+
+                        const robloxUser =
+                            await getProfileRobloxUser(
+                                tokenData.access_token
+                            );
+
+                        const verifiedUsername =
+                            robloxUser.preferred_username ||
+                            robloxUser.name;
+
+                        if (
+                            verifiedUsername.toLowerCase() !==
+                            profilePending.robloxUsername.toLowerCase()
+                        ) {
+                            deletePendingProfileState(
+                                state
+                            );
+
+                            res.writeHead(
+                                400,
+                                {
+                                    "Content-Type":
+                                        "text/html; charset=utf-8"
+                                }
+                            );
+
+                            res.end(`
+                                <!DOCTYPE html>
+                                <html lang="es">
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <title>DEVGRU</title>
+                                </head>
+                                <body>
+                                    <h2>❌ Cuenta incorrecta</h2>
+                                    <p>La cuenta de Roblox verificada no coincide con la cuenta seleccionada.</p>
+                                </body>
+                                </html>
+                            `);
+
+                            return;
+                        }
+
+                        await perfil.saveLinkedAccount(
+                            profilePending.userId,
+                            robloxUser.sub,
+                            verifiedUsername
+                        );
+
+                        deletePendingProfileState(
+                            state
+                        );
+
+                        try {
+                            const channel =
+                                await client.channels.fetch(
+                                    profilePending.channelId
+                                );
+
+                            const profileMessage =
+                                await channel.messages.fetch(
+                                    profilePending.messageId
+                                );
+
+                            await profileMessage.edit({
+                                embeds: [
+                                    new EmbedBuilder()
+                                        .setColor(
+                                            "#ffaf1a"
+                                        )
+                                        .setTitle(
+                                            "Cuenta de Roblox vinculada"
+                                        )
+                                        .setDescription(
+                                            `<:roblox:1538379754414145536> **Cuenta vinculada correctamente.**\n\n` +
+                                            `**Usuario:** \`${verifiedUsername}\`\n` +
+                                            `**ID:** \`${robloxUser.sub}\``
+                                        )
+                                ],
+                                components: []
+                            });
+
+                        } catch (error) {
+                            logger.error(
+                                "No se pudo actualizar el mensaje de vinculación:",
+                                error
+                            );
+                        }
+
+                        res.writeHead(
+                            200,
+                            {
+                                "Content-Type":
+                                    "text/html; charset=utf-8"
+                            }
+                        );
+
+                        res.end(`
+                            <!DOCTYPE html>
+                            <html lang="es">
+                            <head>
+                                <meta charset="UTF-8">
+                                <meta
+                                    name="viewport"
+                                    content="width=device-width, initial-scale=1.0"
+                                >
+                                <title>DEVGRU</title>
+                            </head>
+                            <body>
+                                <h2>✅ Cuenta de Roblox vinculada</h2>
+                                <p>Puedes regresar a Discord.</p>
+                            </body>
+                            </html>
+                        `);
+
+                    } catch (error) {
+                        logger.error(
+                            "Error procesando OAuth de perfil:",
+                            error
+                        );
+
+                        res.writeHead(
+                            500,
+                            {
+                                "Content-Type":
+                                    "text/plain; charset=utf-8"
+                            }
+                        );
+
+                        res.end(
+                            "No se pudo verificar la cuenta de Roblox."
+                        );
+                    }
 
                     return;
                 }
