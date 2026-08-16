@@ -8,17 +8,39 @@ import {
     TextInputStyle
 } from "discord.js";
 
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
 const EMBED_COLOR =
     "#ffaf1a";
 
 const GIVEAWAY_CHANNEL_ID =
     "1525029698843709595";
 
+const __filename =
+    fileURLToPath(import.meta.url);
+
+const __dirname =
+    path.dirname(__filename);
+
+const DATABASE_PATH =
+    path.join(
+        __dirname,
+        "../database/giveaways.json"
+    );
+
 const giveaways =
     new Map();
 
 const initializedClients =
     new WeakSet();
+
+let databaseLoaded =
+    false;
+
+let databaseLoading =
+    null;
 
 function parseDuration(
     input
@@ -116,6 +138,291 @@ function formatDuration(
         );
 
     return `${weeks}w`;
+}
+
+function serializeGiveaway(
+    giveaway
+) {
+    return {
+        id:
+            giveaway.id,
+
+        guildId:
+            giveaway.guildId,
+
+        channelId:
+            giveaway.channelId,
+
+        messageId:
+            giveaway.messageId,
+
+        ownerId:
+            giveaway.ownerId,
+
+        createdAt:
+            giveaway.createdAt,
+
+        prize:
+            giveaway.prize,
+
+        winnersCount:
+            giveaway.winnersCount,
+
+        requirements:
+            giveaway.requirements,
+
+        participants:
+            [
+                ...giveaway.participants
+            ],
+
+        winners:
+            [
+                ...giveaway.winners
+            ],
+
+        endAt:
+            giveaway.endAt,
+
+        ended:
+            giveaway.ended
+    };
+}
+
+async function saveGiveaways() {
+    try {
+        const data =
+            [
+                ...giveaways.values()
+            ].map(
+                serializeGiveaway
+            );
+
+        await fs.mkdir(
+            path.dirname(
+                DATABASE_PATH
+            ),
+            {
+                recursive:
+                    true
+            }
+        );
+
+        await fs.writeFile(
+            DATABASE_PATH,
+            JSON.stringify(
+                data,
+                null,
+                4
+            ),
+            "utf8"
+        );
+
+    } catch (error) {
+        console.error(
+            "Error guardando giveaways:",
+            error
+        );
+    }
+}
+
+async function loadGiveaways(
+    client
+) {
+    if (
+        databaseLoaded
+    ) {
+        return;
+    }
+
+    if (
+        databaseLoading
+    ) {
+        await databaseLoading;
+        return;
+    }
+
+    databaseLoading =
+        (async () => {
+            try {
+                await fs.mkdir(
+                    path.dirname(
+                        DATABASE_PATH
+                    ),
+                    {
+                        recursive:
+                            true
+                    }
+                );
+
+                let raw;
+
+                try {
+                    raw =
+                        await fs.readFile(
+                            DATABASE_PATH,
+                            "utf8"
+                        );
+                } catch (
+                    error
+                ) {
+                    if (
+                        error.code ===
+                        "ENOENT"
+                    ) {
+                        await fs.writeFile(
+                            DATABASE_PATH,
+                            "[]",
+                            "utf8"
+                        );
+
+                        raw =
+                            "[]";
+                    } else {
+                        throw error;
+                    }
+                }
+
+                const savedGiveaways =
+                    JSON.parse(
+                        raw
+                    );
+
+                if (
+                    !Array.isArray(
+                        savedGiveaways
+                    )
+                ) {
+                    throw new Error(
+                        "giveaways.json no contiene un array válido."
+                    );
+                }
+
+                for (
+                    const saved of
+                    savedGiveaways
+                ) {
+                    if (
+                        !saved?.id ||
+                        !saved?.channelId ||
+                        !saved?.messageId ||
+                        !saved?.endAt
+                    ) {
+                        continue;
+                    }
+
+                    const giveaway = {
+                        id:
+                            saved.id,
+
+                        guildId:
+                            saved.guildId,
+
+                        channelId:
+                            saved.channelId,
+
+                        messageId:
+                            saved.messageId,
+
+                        ownerId:
+                            saved.ownerId,
+
+                        createdAt:
+                            saved.createdAt,
+
+                        prize:
+                            saved.prize,
+
+                        winnersCount:
+                            saved.winnersCount,
+
+                        requirements:
+                            saved.requirements,
+
+                        participants:
+                            new Set(
+                                saved.participants ||
+                                []
+                            ),
+
+                        winners:
+                            saved.winners ||
+                            [],
+
+                        endAt:
+                            saved.endAt,
+
+                        ended:
+                            Boolean(
+                                saved.ended
+                            )
+                    };
+
+                    giveaways.set(
+                        giveaway.id,
+                        giveaway
+                    );
+                }
+
+                databaseLoaded =
+                    true;
+
+                for (
+                    const giveaway of
+                    giveaways.values()
+                ) {
+                    if (
+                        giveaway.ended
+                    ) {
+                        continue;
+                    }
+
+                    const remaining =
+                        giveaway.endAt -
+                        Date.now();
+
+                    if (
+                        remaining <=
+                        0
+                    ) {
+                        await finishGiveaway(
+                            giveaway,
+                            client
+                        );
+
+                        continue;
+                    }
+
+                    setTimeout(
+                        () =>
+                            finishGiveaway(
+                                giveaway,
+                                client
+                            ),
+                        remaining
+                    );
+                }
+
+                console.log(
+                    `Giveaways cargados: ${giveaways.size}`
+                );
+
+            } catch (
+                error
+            ) {
+                console.error(
+                    "Error cargando giveaways:",
+                    error
+                );
+            }
+        })();
+
+    try {
+        await databaseLoading;
+    } finally {
+        databaseLoading =
+            null;
+    }
 }
 
 function getConfigEmbed(
@@ -227,7 +534,7 @@ function getGiveawayEmbed(
                         ? "**Giveaway Finalizado**"
                         : `<:time:1538102015241224192> **Finaliza**: <t:${endTimestamp}:R>`
                 )
-            )
+            );
 
     if (
         ended
@@ -413,6 +720,8 @@ async function finishGiveaway(
             giveaway
         );
 
+    await saveGiveaways();
+
     try {
         const message =
             await getGiveawayMessage(
@@ -588,6 +897,8 @@ function initializeGiveawayInteractions(
                             true
                     });
                 }
+
+                await saveGiveaways();
 
                 try {
                     await interaction.message.edit({
@@ -852,6 +1163,8 @@ function initializeGiveawayInteractions(
                     ] =
                         newWinner;
 
+                    await saveGiveaways();
+
                     await submitted.update({
                         embeds: [
                             getGiveawayEmbed(
@@ -883,9 +1196,11 @@ function initializeGiveawayInteractions(
 export default {
     name:
         "giveaway",
+
     aliases: [
         "gw"
     ],
+
     permission:
         1,
 
@@ -893,6 +1208,10 @@ export default {
         message
     ) {
         initializeGiveawayInteractions(
+            message.client
+        );
+
+        await loadGiveaways(
             message.client
         );
 
@@ -1259,9 +1578,9 @@ export default {
 
                         ownerId:
                             message.author.id,
-                            
-                            createdAt:
-    Date.now(),
+
+                        createdAt:
+                            Date.now(),
 
                         prize:
                             config.prize,
@@ -1306,6 +1625,8 @@ export default {
                         giveaway.id,
                         giveaway
                     );
+
+                    await saveGiveaways();
 
                     setTimeout(
                         () =>
