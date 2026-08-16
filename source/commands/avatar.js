@@ -168,6 +168,8 @@ export default {
                         return;
                     }
 
+                    collector.resetTimer();
+
                     selectedAvatar =
                         interaction.values[0];
 
