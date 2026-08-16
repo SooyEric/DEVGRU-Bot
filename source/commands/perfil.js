@@ -209,7 +209,7 @@ function getPaymentRestriction(
         )
     ) {
         return (
-            "<:lock:1538413056290197514> **No recibes pagos.**"
+            "<:lock:1538413056290197514> No recibes pagos."
         );
     }
 
@@ -222,7 +222,7 @@ function getPaymentRestriction(
         )
     ) {
         return (
-            "<:lock:1538413056290197514> **No puedes recibir pagos por el momento. Sube de rango y vuelve a consultar este apartado.**"
+            "<:lock:1538413056290197514> No puedes recibir pagos por el momento. Sube de rango y vuelve a consultar este apartado."
         );
     }
 
