@@ -58,6 +58,10 @@ import {
 import squadronRegistry from "./events/squadronRegistry.js";
 import antiRaid from "./events/antiRaid.js";
 
+import {
+    initializeGiveaways
+} from "./commands/giveaways.js";
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -103,16 +107,9 @@ antiRaid.register(client);
 
 await loadCommands(client);
 
-/*
- * SNIPE
- *
- * Detecta mensajes eliminados y los envía
- * al Snipe Manager.
- *
- * El manager se encarga de determinar si
- * realmente fue el propio autor quien eliminó
- * el mensaje.
- */
+await initializeGiveaways(
+    client
+);
 
 client.on(
     "messageDelete",
@@ -162,10 +159,6 @@ client.on(
         if (!interaction.isButton()) {
             return;
         }
-
-        /*
-         * RESTAURAR ROLES ANTI-RAID
-         */
 
         if (
             interaction.customId.startsWith(
@@ -336,10 +329,6 @@ client.on(
             return;
         }
 
-        /*
-         * RESTAURAR BAN
-         */
-
         if (
             interaction.customId.startsWith(
                 "restore_ban:"
@@ -506,10 +495,6 @@ client.on(
 
             return;
         }
-
-        /*
-         * APLICACIONES
-         */
 
         if (
             interaction.customId.startsWith(
@@ -683,10 +668,6 @@ client.on(
     }
 );
 
-/*
- * COMMAND HANDLER
- */
-
 client.on(
     "messageCreate",
     async message => {
@@ -703,31 +684,31 @@ client.on(
             return;
         }
 
-const PREFIXES = [
-    "-",
-    ".",
-    ",",
-    "!",
-    "?"
-];
+        const PREFIXES = [
+            "-",
+            ".",
+            ",",
+            "!",
+            "?"
+        ];
 
-const usedPrefix =
-    PREFIXES.find(
-        prefix =>
-            message.content.startsWith(prefix)
-    );
+        const usedPrefix =
+            PREFIXES.find(
+                prefix =>
+                    message.content.startsWith(prefix)
+            );
 
-if (!usedPrefix) {
-    return;
-}
+        if (!usedPrefix) {
+            return;
+        }
 
-const args =
-    message.content
-        .slice(
-            usedPrefix.length
-        )
-        .trim()
-        .split(/\s+/);
+        const args =
+            message.content
+                .slice(
+                    usedPrefix.length
+                )
+                .trim()
+                .split(/\s+/);
 
         const commandName =
             args.shift()?.toLowerCase();
@@ -814,10 +795,6 @@ const args =
         }
     }
 );
-
-/*
- * HTTP SERVER
- */
 
 const PORT =
     process.env.PORT || 8080;
