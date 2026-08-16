@@ -169,12 +169,6 @@ function getProfileEmbed(
         .setTitle(
             `Perfil de ${nickname}`
         )
-        .setThumbnail(
-            member.user.displayAvatarURL({
-                size: 256,
-                extension: "png"
-            })
-        )
         .setDescription(
             `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
             `<:roblox:1538379754414145536> **Usuario de Roblox**: \`No Registrado\`\n\n` +
@@ -186,6 +180,7 @@ function getProfileEmbed(
                 `Información solicitada el ${new Date().toLocaleString(
                     "es-MX",
                     {
+                        timeZone: "America/Mexico_City",
                         day: "2-digit",
                         month: "2-digit",
                         year: "numeric",
