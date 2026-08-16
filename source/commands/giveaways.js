@@ -1193,7 +1193,7 @@ function initializeGiveawayInteractions(
     );
 }
 
-async function initializeGiveaways(client) {
+export async function initializeGiveaways(client) {
     initializeGiveawayInteractions(client);
     await loadGiveaways(client);
 }
