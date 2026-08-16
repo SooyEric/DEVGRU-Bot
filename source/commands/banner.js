@@ -166,6 +166,8 @@ export default {
                         return;
                     }
 
+                    collector.resetTimer();
+
                     selectedBanner =
                         interaction.values[0];
 
