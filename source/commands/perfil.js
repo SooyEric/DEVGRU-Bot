@@ -249,7 +249,7 @@ function getCategoryContent(
                 "## Ascensos\n\n" +
                 "<:rango:1538381219631464448> **Siguiente Rango**: `Seaman Recruit (SOE2)`\n\n" +
                 "<:time:1538102015241224192> **Horas Semanales**: `0/5h`\n" +
-                "<:web:1538416206376206408> **Misiones Semanales**: `0/4`\n" +
+                "<:web:1538416206376206408> **Misiones Semanales**: `0/5`\n" +
                 "<:web2:1538416317844160583> **Entrenamientos Semanales**: `0/1`\n" +
                 "<:lock:1538413056290197514> **Elegible**: `No`"
             );
@@ -261,7 +261,7 @@ function getCategoryContent(
                 "<:gift:1538322136371044422> **Bonificaciones**: `R$ 0`\n" +
                 "<:robux:1538413836405837855> **Total Semanal**: `R$ 0`\n\n" +
                 "<:time:1538102015241224192> **Horas Semanales**: `0/5h`\n" +
-                "<:web:1538416206376206408> **Misiones Semanales**: `0/4`\n" +
+                "<:web:1538416206376206408> **Misiones Semanales**: `0/5`\n" +
                 "<:web2:1538416317844160583> **Entrenamientos Semanales**: `0/1`\n" +
                 "<:lock:1538413056290197514> **Elegible**: `No`"
             );
