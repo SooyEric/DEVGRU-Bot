@@ -1,8 +1,7 @@
 import {
     EmbedBuilder,
     ActionRowBuilder,
-    StringSelectMenuBuilder,
-    AuditLogEvent
+    StringSelectMenuBuilder
 } from "discord.js";
 
 const EMBED_COLOR =
@@ -13,9 +12,6 @@ const PROFILE_ROLE_ID =
 
 const INACTIVE_ROLE_ID =
     "1538434883045818378";
-
-const RANK_LOG_CHANNEL_ID =
-    "1525393053656027136";
 
 const SQUADRONS = [
     {
@@ -44,116 +40,97 @@ const RANKS = [
     {
         id: "1373365811858768005",
         name: "Admiral",
-        short: "SO10",
-        pay: 0
+        short: "SO10"
     },
     {
         id: "1373365812383187047",
         name: "Vice Admiral",
-        short: "SO9",
-        pay: 0
+        short: "SO9"
     },
     {
         id: "1373365813490483313",
         name: "Rear Admiral Upper Half",
-        short: "SO8",
-        pay: 0
+        short: "SO8"
     },
     {
         id: "1373365814341799958",
         name: "Rear Admiral Lower Half",
-        short: "SO7",
-        pay: 0
+        short: "SO7"
     },
     {
         id: "1373365815524724966",
         name: "Captain",
-        short: "SO6",
-        pay: 70
+        short: "SO6"
     },
     {
         id: "1373365816539480267",
         name: "Commander",
-        short: "SO5",
-        pay: 65
+        short: "SO5"
     },
     {
         id: "1373365817386860729",
         name: "Lieutenant Commander",
-        short: "SO4",
-        pay: 65
+        short: "SO4"
     },
     {
         id: "1373365818112348235",
         name: "Lieutenant",
-        short: "SO3",
-        pay: 60
+        short: "SO3"
     },
     {
         id: "1373365819383480370",
         name: "Lieutenant Junior Grade",
-        short: "SO2",
-        pay: 60
+        short: "SO2"
     },
     {
         id: "1373365820217884815",
         name: "Ensign",
-        short: "SO1",
-        pay: 55
+        short: "SO1"
     },
     {
         id: "1373365821543284796",
         name: "Master Chief Petty Officer",
-        short: "SOE9",
-        pay: 55
+        short: "SOE9"
     },
     {
         id: "1373365822281748637",
         name: "Senior Chief Petty Officer",
-        short: "SOE8",
-        pay: 50
+        short: "SOE8"
     },
     {
         id: "1373365823841894531",
         name: "Chief Petty Officer",
-        short: "SOE7",
-        pay: 50
+        short: "SOE7"
     },
     {
         id: "1373365824932548679",
         name: "Petty Officer First Class",
-        short: "SOE6",
-        pay: 45
+        short: "SOE6"
     },
     {
         id: "1373365827239280751",
         name: "Petty Officer Second Class",
-        short: "SOE5",
-        pay: 45
+        short: "SOE5"
     },
     {
         id: "1373365828388655196",
         name: "Petty Officer Third Class",
-        short: "SOE4",
-        pay: 40
+        short: "SOE4"
     },
     {
         id: "1373365829860593735",
         name: "Seaman",
-        short: "SOE3",
-        pay: 40
+        short: "SOE3"
     },
     {
         id: "1373365830359847036",
         name: "Seaman Apprentice",
-        short: "SOE2",
-        pay: 0
+        short: "SOE2"
     },
     {
         id: "1373365831454556312",
         name: "Seaman Recruit",
-        short: "SOE1",
-        pay: 0
+        short: "SOE1"
     }
 ];
 
@@ -199,33 +176,44 @@ const CATEGORIES = [
     "Pagas"
 ];
 
-function getRankData(member) {
-    for (const rank of RANKS) {
+const PAYMENTS = {
+    "1373365815524724966": 70,
+    "1373365816539480267": 65,
+    "1373365817386860729": 65,
+    "1373365818112348235": 60,
+    "1373365819383480370": 60,
+    "1373365820217884815": 55,
+    "1373365821543284796": 55,
+    "1373365822281748637": 50,
+    "1373365823841894531": 50,
+    "1373365824932548679": 45,
+    "1373365827239280751": 45,
+    "1373365828388655196": 40,
+    "1373365829860593735": 40
+};
+
+function getRank(
+    member
+) {
+    for (
+        const rank of RANKS
+    ) {
         if (
             member.roles.cache.has(
                 rank.id
             )
         ) {
-            return rank;
+            return `${rank.name} (${rank.short})`;
         }
     }
 
-    return null;
+    return "Sin rango";
 }
 
-function getRank(member) {
-    const rank =
-        getRankData(member);
-
-    if (!rank) {
-        return "Sin rango";
-    }
-
-    return `${rank.name} (${rank.short})`;
-}
-
-function getNextRank(member) {
-    const currentIndex =
+function getNextRank(
+    member
+) {
+    const currentRankIndex =
         RANKS.findIndex(
             rank =>
                 member.roles.cache.has(
@@ -234,19 +222,26 @@ function getNextRank(member) {
         );
 
     if (
-        currentIndex === -1 ||
-        currentIndex === 0
+        currentRankIndex === -1
     ) {
-        return "Ninguno";
+        return "Sin rango";
     }
 
     const nextRank =
-        RANKS[currentIndex - 1];
+        RANKS[
+            currentRankIndex - 1
+        ];
+
+    if (!nextRank) {
+        return "Rango máximo";
+    }
 
     return `${nextRank.name} (${nextRank.short})`;
 }
 
-function getPaymentRestriction(member) {
+function getPaymentRestriction(
+    member
+) {
     if (
         member.roles.cache.has(
             "1373365811858768005"
@@ -282,7 +277,29 @@ function getPaymentRestriction(member) {
     return null;
 }
 
-function getOccupation(member) {
+function getPayment(
+    member
+) {
+    for (
+        const rank of RANKS
+    ) {
+        if (
+            member.roles.cache.has(
+                rank.id
+            )
+        ) {
+            return PAYMENTS[
+                rank.id
+            ] ?? 0;
+        }
+    }
+
+    return 0;
+}
+
+function getOccupation(
+    member
+) {
     for (
         const occupation of OCCUPATIONS
     ) {
@@ -298,7 +315,9 @@ function getOccupation(member) {
     return "Sin ocupación";
 }
 
-function requiresActivityStart(member) {
+function requiresActivityStart(
+    member
+) {
     return ACTIVITY_START_ROLES.some(
         roleId =>
             member.roles.cache.has(
@@ -307,7 +326,9 @@ function requiresActivityStart(member) {
     );
 }
 
-function getSquadron(member) {
+function getSquadron(
+    member
+) {
     for (
         const squadron of SQUADRONS
     ) {
@@ -323,7 +344,9 @@ function getSquadron(member) {
     return "Sin escuadrón";
 }
 
-function getStatus(member) {
+function getStatus(
+    member
+) {
     if (
         member.roles.cache.has(
             INACTIVE_ROLE_ID
@@ -335,323 +358,18 @@ function getStatus(member) {
     return "Activo";
 }
 
-function formatDate(date) {
-    if (!date) {
-        return "00/00/00";
-    }
-
-    return new Intl.DateTimeFormat(
-        "es-MX",
-        {
-            timeZone:
-                "America/Mexico_City",
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit"
-        }
-    ).format(date);
-}
-
-function formatServiceTime(date) {
-    if (!date) {
-        return "0 días";
-    }
-
-    const now =
-        new Date();
-
-    let years =
-        now.getFullYear() -
-        date.getFullYear();
-
-    let months =
-        now.getMonth() -
-        date.getMonth();
-
-    let days =
-        now.getDate() -
-        date.getDate();
-
-    if (days < 0) {
-        months--;
-
-        const previousMonth =
-            new Date(
-                now.getFullYear(),
-                now.getMonth(),
-                0
-            );
-
-        days +=
-            previousMonth.getDate();
-    }
-
-    if (months < 0) {
-        years--;
-        months += 12;
-    }
-
-    const parts = [];
-
-    if (years > 0) {
-        parts.push(
-            `${years} ${years === 1 ? "año" : "años"}`
-        );
-    }
-
-    if (months > 0) {
-        parts.push(
-            `${months} ${months === 1 ? "mes" : "meses"}`
-        );
-    }
-
-    if (days > 0) {
-        parts.push(
-            `${days} ${days === 1 ? "día" : "días"}`
-        );
-    }
-
-    if (parts.length === 0) {
-        return "0 días";
-    }
-
-    return parts.join(", ");
-}
-
-async function getProfileJoinDate(
-    guild,
-    member
-) {
-    try {
-        const logs =
-            await guild.fetchAuditLogs({
-                type:
-                    AuditLogEvent.MemberRoleUpdate,
-                limit: 100
-            });
-
-        const entries =
-            logs.entries
-                .filter(
-                    entry =>
-                        entry.target?.id ===
-                            member.id &&
-                        entry.changes?.some(
-                            change =>
-                                change.key ===
-                                    "$add" &&
-                                Array.isArray(
-                                    change.new
-                                ) &&
-                                change.new.some(
-                                    role =>
-                                        role.id ===
-                                        PROFILE_ROLE_ID
-                                )
-                        )
-                )
-                .sort(
-                    (a, b) =>
-                        b.createdTimestamp -
-                        a.createdTimestamp
-                );
-
-        if (
-            entries.size === 0
-        ) {
-            return null;
-        }
-
-        return entries.first()
-            .createdAt;
-
-    } catch (error) {
-        console.error(
-            "Error obteniendo fecha de ingreso:",
-            error
-        );
-
-        return null;
-    }
-}
-
-async function getLastPromotionDate(
-    guild,
-    member
-) {
-    try {
-        const channel =
-            await guild.channels.fetch(
-                RANK_LOG_CHANNEL_ID
-            );
-
-        if (
-            !channel ||
-            !channel.isTextBased()
-        ) {
-            return null;
-        }
-
-        let before;
-        let checked = 0;
-
-        while (
-            checked < 1000
-        ) {
-            const options = {
-                limit: 100
-            };
-
-            if (before) {
-                options.before =
-                    before;
-            }
-
-            const messages =
-                await channel.messages.fetch(
-                    options
-                );
-
-            if (
-                messages.size === 0
-            ) {
-                break;
-            }
-
-            const ordered =
-                [...messages.values()]
-                    .sort(
-                        (a, b) =>
-                            b.createdTimestamp -
-                            a.createdTimestamp
-                    );
-
-            for (
-                const message of ordered
-            ) {
-                const mentions =
-                    message.mentions.users;
-
-                const firstMention =
-                    mentions.first();
-
-                if (
-                    firstMention &&
-                    firstMention.id ===
-                        member.id
-                ) {
-                    return message.createdAt;
-                }
-            }
-
-            checked +=
-                messages.size;
-
-            before =
-                messages.last().id;
-
-            if (
-                messages.size < 100
-            ) {
-                break;
-            }
-        }
-
-        return null;
-
-    } catch (error) {
-        console.error(
-            "Error obteniendo último ascenso:",
-            error
-        );
-
-        return null;
-    }
-}
-
-function addDays(
-    date,
-    days
-) {
-    if (!date) {
-        return null;
-    }
-
-    const result =
-        new Date(date);
-
-    result.setDate(
-        result.getDate() + days
-    );
-
-    return result;
-}
-
-function getPayment(
-    member
-) {
-    const rank =
-        getRankData(member);
-
-    if (!rank) {
-        return 0;
-    }
-
-    return rank.pay;
-}
-
-async function getProfileData(
-    member
-) {
-    const [
-        joinDate,
-        lastPromotionDate
-    ] = await Promise.all([
-        getProfileJoinDate(
-            member.guild,
-            member
-        ),
-        getLastPromotionDate(
-            member.guild,
-            member
-        )
-    ]);
-
-    return {
-        joinDate,
-        serviceTime:
-            formatServiceTime(
-                joinDate
-            ),
-        lastPromotionDate,
-        nextPromotionDate:
-            addDays(
-                lastPromotionDate,
-                7
-            ),
-        payment:
-            getPayment(member),
-        nextRank:
-            getNextRank(member),
-        status:
-            getStatus(member)
-    };
-}
-
 function getCategoryContent(
     category,
-    member,
-    data
+    member
 ) {
     switch (category) {
-
         case "Servicio":
             return (
                 "## Servicio\n\n" +
-                `<:fecha:1538412361965375528> **Fecha de Ingreso**: \`${formatDate(data.joinDate)}\`\n` +
-                `<:tiempo:1538308636265160714> **Tiempo de Servicio**: \`${data.serviceTime}\`\n` +
-                `<:espada:1538399737206669312> **Ultimo Ascenso**: \`${formatDate(data.lastPromotionDate)}\`\n` +
-                `<:rango:1538381219631464448> **Próximo Ascenso**: \`${data.nextPromotionDate ? `Elegible el ${formatDate(data.nextPromotionDate)}` : "Pendiente"}\`\n`
+                "<:fecha:1538412361965375528> **Fecha de Ingreso**: `00/00/00`\n" +
+                "<:tiempo:1538308636265160714> **Tiempo de Servicio**: `0 meses`\n" +
+                "<:espada:1538399737206669312> **Ultimo Ascenso**: `00/00/00`\n" +
+                "<:rango:1538381219631464448> **Próximo Ascenso**: `Elegible el 00/00/00`"
             );
 
         case "Actividad":
@@ -667,7 +385,7 @@ function getCategoryContent(
         case "Ascensos":
             return (
                 "## Ascensos\n\n" +
-                `<:rango:1538381219631464448> **Siguiente Rango**: \`${data.nextRank}\`\n\n` +
+                `<:rango:1538381219631464448> **Siguiente Rango**: \`${getNextRank(member)}\`\n\n` +
                 (
                     requiresActivityStart(member)
                         ? "<:boss:1538099028372365333> **Iniciar Actividad**: `0/1`\n"
@@ -696,7 +414,7 @@ function getCategoryContent(
 
             return (
                 "## Pagas\n\n" +
-                `<:lvl:1538099654149935176> **Pago de Rango**: \`R$ ${data.payment}/h\`\n` +
+                `<:lvl:1538099654149935176> **Pago de Rango**: \`R$ ${getPayment(member)}/h\`\n` +
                 "<:gift:1538322136371044422> **Bonificaciones**: `R$ 0`\n" +
                 "<:robux:1538413836405837855> **Total Semanal**: `R$ 0`\n\n" +
                 (
@@ -719,7 +437,7 @@ function getCategoryContent(
                 `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
                 `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
                 `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\`\n` +
-                `<:info:1538323825542963270> **Estado**: \`${data.status}\``
+                `<:info:1538323825542963270> **Estado**: \`${getStatus(member)}\``
             );
     }
 }
@@ -727,8 +445,7 @@ function getCategoryContent(
 function getProfileEmbed(
     member,
     requester,
-    category,
-    data
+    category
 ) {
     const nickname =
         member.nickname ||
@@ -753,8 +470,7 @@ function getProfileEmbed(
         .setDescription(
             getCategoryContent(
                 category,
-                member,
-                data
+                member
             )
         )
         .setFooter({
@@ -770,7 +486,7 @@ function getProfileEmbed(
                         hour: "2-digit",
                         minute: "2-digit"
                     }
-                )}`
+                )`
         });
 }
 
@@ -846,8 +562,7 @@ async function getTargetMember(
 function createProfileCollector(
     profileMessage,
     target,
-    requester,
-    data
+    requester
 ) {
     let currentCategory =
         "General";
@@ -908,8 +623,7 @@ function createProfileCollector(
                     getProfileEmbed(
                         target,
                         requester,
-                        currentCategory,
-                        data
+                        currentCategory
                     )
                 ],
                 components: [
@@ -936,14 +650,12 @@ function createProfileCollector(
                         getProfileEmbed(
                             target,
                             requester,
-                            currentCategory,
-                            data
+                            currentCategory
                         )
                     ],
                     components: []
                 });
             } catch {
-                // El mensaje ya no existe.
             }
         }
     );
@@ -960,74 +672,57 @@ export default {
         message,
         args
     ) {
-        try {
-            const target =
-                await getTargetMember(
-                    message,
-                    args
-                );
-
-            if (!target) {
-                return;
-            }
-
-            const isSelf =
-                target.id ===
-                message.author.id;
-
-            if (
-                !isSelf &&
-                !target.roles.cache.has(
-                    PROFILE_ROLE_ID
-                )
-            ) {
-                await message.reply({
-                    embeds: [
-                        getNoProfileEmbed()
-                    ]
-                });
-
-                return;
-            }
-
-            const data =
-                await getProfileData(
-                    target
-                );
-
-            const profileMessage =
-                await message.reply({
-                    embeds: [
-                        getProfileEmbed(
-                            target,
-                            message.member,
-                            "General",
-                            data
-                        )
-                    ],
-                    components: [
-                        getCategoryMenu(
-                            "General"
-                        )
-                    ]
-                });
-
-            createProfileCollector(
-                profileMessage,
-                target,
-                message.member,
-                data
+        const target =
+            await getTargetMember(
+                message,
+                args
             );
 
-        } catch (error) {
-            console.error(
-                "Error en comando perfil:",
-                error
-            );
-
-            await message.react(
-                "❌"
-            );
+        if (
+            !target
+        ) {
+            return;
         }
+
+        const isSelf =
+            target.id ===
+            message.author.id;
+
+        if (
+            !isSelf &&
+            !target.roles.cache.has(
+                PROFILE_ROLE_ID
+            )
+        ) {
+            await message.reply({
+                embeds: [
+                    getNoProfileEmbed()
+                ]
+            });
+
+            return;
+        }
+
+        const profileMessage =
+            await message.reply({
+                embeds: [
+                    getProfileEmbed(
+                        target,
+                        message.member,
+                        "General"
+                    )
+                ],
+                components: [
+                    getCategoryMenu(
+                        "General"
+                    )
+                ]
+            });
+
+        createProfileCollector(
+            profileMessage,
+            target,
+            message.member
+        );
     }
 };
