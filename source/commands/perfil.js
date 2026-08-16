@@ -5,6 +5,9 @@ import {
 const EMBED_COLOR =
     "#ffaf1a";
 
+const PROFILE_ROLE_ID =
+    "1373365866657222819";
+
 const SQUADRONS = [
     {
         id: "1373365857928876243",
@@ -143,14 +146,28 @@ function getSquadron(
 }
 
 function getProfileEmbed(
-    member
+    member,
+    requester
 ) {
+    const nickname =
+        member.nickname ||
+        member.user.username;
+
     return new EmbedBuilder()
         .setColor(
             EMBED_COLOR
         )
+        .setAuthor({
+            name:
+                `Solicitado por ${requester.user.username}`,
+            iconURL:
+                requester.user.displayAvatarURL({
+                    size: 128,
+                    extension: "png"
+                })
+        })
         .setTitle(
-            `Perfil de @${member.user.username}`
+            `Perfil de ${nickname}`
         )
         .setThumbnail(
             member.user.displayAvatarURL({
@@ -159,20 +176,34 @@ function getProfileEmbed(
             })
         )
         .setDescription(
-            `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n\n` +
+            `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
+            `<:roblox:1538379754414145536> **Usuario de Roblox**: \`No Registrado\`\n\n` +
             `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
             `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\``
         )
         .setFooter({
             text:
-                `Información solicitada • ${new Date().toLocaleString(
+                `Información solicitada el ${new Date().toLocaleString(
                     "es-MX",
                     {
-                        dateStyle: "short",
-                        timeStyle: "short"
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
                     }
                 )}`
         });
+}
+
+function getNoProfileEmbed() {
+    return new EmbedBuilder()
+        .setColor(
+            EMBED_COLOR
+        )
+        .setDescription(
+            "Esta persona no tiene un perfil."
+        );
 }
 
 async function getTargetMember(
@@ -225,10 +256,30 @@ export default {
             return;
         }
 
+        const isSelf =
+            target.id ===
+            message.author.id;
+
+        if (
+            !isSelf &&
+            !target.roles.cache.has(
+                PROFILE_ROLE_ID
+            )
+        ) {
+            await message.reply({
+                embeds: [
+                    getNoProfileEmbed()
+                ]
+            });
+
+            return;
+        }
+
         await message.reply({
             embeds: [
                 getProfileEmbed(
-                    target
+                    target,
+                    message.member
                 )
             ]
         });
