@@ -274,72 +274,101 @@ export default {
                     ]
                 });
 
-            const collector =
-                sentMessage.createMessageComponentCollector({
-                    filter:
-                        interaction =>
-                            interaction.customId ===
-                            "serverinfo_menu",
-                    idle: 30000
-                });
+const collector =
+    sentMessage.createMessageComponentCollector({
+        filter:
+            interaction =>
+                interaction.customId ===
+                "serverinfo_menu"
+    });
 
-            collector.on(
-                "collect",
-                async interaction => {
-                    if (
-                        interaction.user.id !==
-                        message.author.id
-                    ) {
-                        await interaction.reply({
-                            content:
-                                "Esta interacción no te pertenece.",
-                            ephemeral: true
-                        });
+let currentType =
+    "server";
 
-                        return;
-                    }
+let inactivityTimeout;
 
-                    const selected =
-                        interaction.values[0];
+const resetInactivityTimer =
+    () => {
+        clearTimeout(
+            inactivityTimeout
+        );
 
-                    const embed =
-                        createServerEmbed(
-                            message.guild,
-                            message.author,
-                            selected
-                        );
+        inactivityTimeout =
+            setTimeout(
+                () => {
+                    collector.stop(
+                        "timeout"
+                    );
+                },
+                30_000
+            );
+    };
 
-                    await interaction.update({
-                        embeds: [
-                            embed
-                        ],
-                        components: [
-                            menu
-                        ]
-                    });
-                }
+resetInactivityTimer();
+
+collector.on(
+    "collect",
+    async interaction => {
+        if (
+            interaction.user.id !==
+            message.author.id
+        ) {
+            await interaction.reply({
+                content:
+                    "Esta interacción no te pertenece.",
+                ephemeral: true
+            });
+
+            return;
+        }
+
+        currentType =
+            interaction.values[0];
+
+        const embed =
+            createServerEmbed(
+                message.guild,
+                message.author,
+                currentType
             );
 
-            collector.on(
-                "end",
-                async () => {
-                    try {
-                        const embed =
-                            createServerEmbed(
-                                message.guild,
-                                message.author,
-                                "server"
-                            );
+        await interaction.update({
+            embeds: [
+                embed
+            ],
+            components: [
+                menu
+            ]
+        });
 
-                        await sentMessage.edit({
-                            embeds: [
-                                embed
-                            ],
-                            components: []
-                        });
-                    } catch {}
-                }
-            );
+        resetInactivityTimer();
+    }
+);
+
+collector.on(
+    "end",
+    async () => {
+        clearTimeout(
+            inactivityTimeout
+        );
+
+        try {
+            const embed =
+                createServerEmbed(
+                    message.guild,
+                    message.author,
+                    currentType
+                );
+
+            await sentMessage.edit({
+                embeds: [
+                    embed
+                ],
+                components: []
+            });
+        } catch {}
+    }
+);
 
         } catch (error) {
             console.error(
