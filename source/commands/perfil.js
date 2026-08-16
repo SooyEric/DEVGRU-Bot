@@ -1,5 +1,7 @@
 import {
-    EmbedBuilder
+    EmbedBuilder,
+    ActionRowBuilder,
+    StringSelectMenuBuilder
 } from "discord.js";
 
 const EMBED_COLOR =
@@ -156,6 +158,14 @@ const OCCUPATIONS = [
     }
 ];
 
+const CATEGORIES = [
+    "General",
+    "Servicio",
+    "Actividad",
+    "Ascensos",
+    "Pagas"
+];
+
 function getRank(
     member
 ) {
@@ -210,13 +220,78 @@ function getSquadron(
     return "Sin escuadrón";
 }
 
-function getRobloxDisplay() {
-    return "No Registrado";
+function getCategoryContent(
+    category,
+    member
+) {
+    switch (category) {
+        case "Servicio":
+            return (
+                "## Servicio\n\n" +
+                "<:fecha:1538412361965375528> **Fecha de Ingreso**: 00/00/00\n" +
+                "<:tiempo:1538308636265160714> **Tiempo de Servicio**: 0 meses\n" +
+                "<:rango:1538381219631464448> **Ultimo Ascenso**: 00/00/00\n" +
+                "<:espada:1538399737206669312> **Próximo Ascenso**: Elegible el 00/00/00\n" +
+                "<:time:1538102015241224192> **Horas Semanales**: 0.0h\n" +
+                "<:tiempo:1538308636265160714> **Horas Totales**: 00.0h"
+            );
+
+        case "Actividad":
+            return (
+                "## Actividad\n\n" +
+                "<:time:1538102015241224192> **Horas Semanales**: 0.0h\n" +
+                "<:time:1538102015241224192> **Horas Mensuales**: 00.0h\n" +
+                "<:tiempo:1538308636265160714> **Horas Totales**: 00.0h\n" +
+                "<:web:1538416206376206408> **Misiones**: 0\n" +
+                "<:web2:1538416317844160583> **Entrenamientos**: 0\n" +
+                "<:fecha:1538412361965375528> **Ultima Actividad**: 00/00/00"
+            );
+
+        case "Ascensos":
+            return (
+                "## Ascensos\n\n" +
+                `<:rango:1538381219631464448> **Rango Actual**: ${getRank(member)}\n` +
+                "<:espada:1538399737206669312> **Siguiente Rango**: \n\n" +
+                "<:fecha:1538412361965375528> **Días Mínimos**: 0/7\n" +
+                "<:time:1538102015241224192> **Horas Semanales**: 0/5\n" +
+                "<:web:1538416206376206408> **Misiones Semanales**: 0/4\n" +
+                "<:web2:1538416317844160583> **Entrenamientos Semanales**: 0/1\n" +
+                "<:lock:1538413056290197514> **Elegible**: No"
+            );
+
+        case "Pagas":
+            return (
+                "## Pagas\n\n" +
+                "<:robux:1538413836405837855> **Sueldo por Hora**: R$ 0\n" +
+                "<:fecha:1538412361965375528> **Última Paga**: 00/00/00\n" +
+                "<:fecha:1538412361965375528> **Próxima Paga**: 00/00/00\n" +
+                "<:info:1538323825542963270> **Estado**: Pendiente\n" +
+                "<:gift:1538322136371044422> **Bonificaciones**: R$ 0\n" +
+                "<:robux:1538413836405837855> **Total Recibido**: R$ 0\n" +
+                "<:robux:1538413836405837855> **Total Semanal**: R$ 0\n\n" +
+                "<:time:1538102015241224192> **Horas Semanales**: 0/5\n" +
+                "<:web:1538416206376206408> **Misiones Semanales**: 0/4\n" +
+                "<:web2:1538416317844160583> **Entrenamientos Semanales**: 0/1\n" +
+                "<:tiempo:1538308636265160714> **Semanas de Servicio**: 0/2\n" +
+                "<:lock:1538413056290197514> **Elegible**: No"
+            );
+
+        default:
+            return (
+                "## General\n\n" +
+                `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
+                "<:roblox:1538379754414145536> **Usuario de Roblox**: No Registrado\n\n" +
+                `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
+                `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
+                `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\``
+            );
+    }
 }
 
 function getProfileEmbed(
     member,
-    requester
+    requester,
+    category
 ) {
     const nickname =
         member.nickname ||
@@ -239,11 +314,10 @@ function getProfileEmbed(
             `Perfil de ${nickname}`
         )
         .setDescription(
-            `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
-            `<:roblox:1538379754414145536> **Usuario de Roblox**: ${getRobloxDisplay()}\n\n` +
-            `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
-            `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
-            `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\``
+            getCategoryContent(
+                category,
+                member
+            )
         )
         .setFooter({
             text:
@@ -260,6 +334,34 @@ function getProfileEmbed(
                     }
                 )}`
         });
+}
+
+function getCategoryMenu(
+    selectedCategory
+) {
+    return new ActionRowBuilder()
+        .addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId(
+                    "perfil_category"
+                )
+                .setPlaceholder(
+                    selectedCategory
+                )
+                .addOptions(
+                    CATEGORIES.map(
+                        category => ({
+                            label:
+                                category,
+                            value:
+                                category,
+                            default:
+                                category ===
+                                selectedCategory
+                        })
+                    )
+                )
+        );
 }
 
 function getNoProfileEmbed() {
@@ -299,6 +401,83 @@ async function getTargetMember(
     }
 
     return message.member;
+}
+
+function createProfileCollector(
+    profileMessage,
+    target,
+    requester
+) {
+    let currentCategory =
+        "General";
+
+    const collector =
+        profileMessage.createMessageComponentCollector({
+            time: 60_000
+        });
+
+    collector.on(
+        "collect",
+        async interaction => {
+            if (
+                interaction.customId !==
+                "perfil_category"
+            ) {
+                return;
+            }
+
+            if (
+                interaction.user.id !==
+                requester.user.id
+            ) {
+                await interaction.reply({
+                    content:
+                        "No es tu interacción.",
+                    ephemeral:
+                        true
+                });
+
+                return;
+            }
+
+            currentCategory =
+                interaction.values[0];
+
+            await interaction.update({
+                embeds: [
+                    getProfileEmbed(
+                        target,
+                        requester,
+                        currentCategory
+                    )
+                ],
+                components: [
+                    getCategoryMenu(
+                        currentCategory
+                    )
+                ]
+            });
+        }
+    );
+
+    collector.on(
+        "end",
+        async () => {
+            try {
+                await profileMessage.edit({
+                    embeds: [
+                        getProfileEmbed(
+                            target,
+                            requester,
+                            currentCategory
+                        )
+                    ],
+                    components: []
+                });
+            } catch {
+            }
+        }
+    );
 }
 
 export default {
@@ -341,13 +520,26 @@ export default {
             return;
         }
 
-        await message.reply({
-            embeds: [
-                getProfileEmbed(
-                    target,
-                    message.member
-                )
-            ]
-        });
+        const profileMessage =
+            await message.reply({
+                embeds: [
+                    getProfileEmbed(
+                        target,
+                        message.member,
+                        "General"
+                    )
+                ],
+                components: [
+                    getCategoryMenu(
+                        "General"
+                    )
+                ]
+            });
+
+        createProfileCollector(
+            profileMessage,
+            target,
+            message.member
+        );
     }
 };
