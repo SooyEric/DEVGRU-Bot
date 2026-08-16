@@ -191,6 +191,44 @@ function getRank(
     return "Sin rango";
 }
 
+function getPaymentRestriction(
+    member
+) {
+    if (
+        member.roles.cache.has(
+            "1373365811858768005"
+        ) ||
+        member.roles.cache.has(
+            "1373365812383187047"
+        ) ||
+        member.roles.cache.has(
+            "1373365813490483313"
+        ) ||
+        member.roles.cache.has(
+            "1373365814341799958"
+        )
+    ) {
+        return (
+            "<:lock:1538413056290197514> **No recibes pagos.**"
+        );
+    }
+
+    if (
+        member.roles.cache.has(
+            "1373365830359847036"
+        ) ||
+        member.roles.cache.has(
+            "1373365831454556312"
+        )
+    ) {
+        return (
+            "<:lock:1538413056290197514> **No puedes recibir pagos por el momento. Sube de rango y vuelve a consultar este apartado.**"
+        );
+    }
+
+    return null;
+}
+
 function getOccupation(
     member
 ) {
@@ -277,9 +315,17 @@ function getCategoryContent(
                 "<:lock:1538413056290197514> **Elegible**: `No`"
             );
 
-        case "Pagas":
+        case "Pagas": {
+            const paymentRestriction =
+                getPaymentRestriction(member);
+        
             return (
                 "## Pagas\n\n" +
+                (
+                    paymentRestriction
+                        ? paymentRestriction + "\n\n"
+                        : ""
+                ) +
                 "<:lvl:1538099654149935176> **Pago de Rango**: `R$ 0/h`\n" +
                 "<:gift:1538322136371044422> **Bonificaciones**: `R$ 0`\n" +
                 "<:robux:1538413836405837855> **Total Semanal**: `R$ 0`\n\n" +
@@ -293,6 +339,7 @@ function getCategoryContent(
                 "<:web2:1538416317844160583> **Entrenamientos Semanales**: `0/1`\n" +
                 "<:lock:1538413056290197514> **Elegible**: `No`"
             );
+        }
 
     default:
         return (
