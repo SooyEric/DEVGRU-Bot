@@ -411,10 +411,29 @@ function createProfileCollector(
     let currentCategory =
         "General";
 
+    let inactivityTimeout;
+
+    const resetInactivityTimer =
+        () => {
+            clearTimeout(
+                inactivityTimeout
+            );
+
+            inactivityTimeout =
+                setTimeout(
+                    () => {
+                        collector.stop(
+                            "timeout"
+                        );
+                    },
+                    60_000
+                );
+        };
+
     const collector =
-        profileMessage.createMessageComponentCollector({
-            time: 60_000
-        });
+        profileMessage.createMessageComponentCollector();
+
+    resetInactivityTimer();
 
     collector.on(
         "collect",
@@ -457,12 +476,18 @@ function createProfileCollector(
                     )
                 ]
             });
+
+            resetInactivityTimer();
         }
     );
 
     collector.on(
         "end",
         async () => {
+            clearTimeout(
+                inactivityTimeout
+            );
+
             try {
                 await profileMessage.edit({
                     embeds: [
