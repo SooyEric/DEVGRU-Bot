@@ -1193,6 +1193,11 @@ function initializeGiveawayInteractions(
     );
 }
 
+async function initializeGiveaways(client) {
+    initializeGiveawayInteractions(client);
+    await loadGiveaways(client);
+}
+
 export default {
     name:
         "giveaway",
