@@ -228,19 +228,6 @@ function getGiveawayEmbed(
                         : `<:time:1538102015241224192> **Finaliza**: <t:${endTimestamp}:R>`
                 )
             )
-.setFooter({
-    text: `Creado el ${new Date(giveaway.createdAt).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-        timeZone: "America/Mexico_City"
-    })} a las ${new Date(giveaway.createdAt).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-        timeZone: "America/Mexico_City"
-    }).replace(" ", "").toLowerCase()}`
-});
 
     if (
         ended
