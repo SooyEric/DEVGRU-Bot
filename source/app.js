@@ -41,22 +41,11 @@ import {
 } from "./utils/squadronRegistry.js";
 
 import {
-    getPendingState,
-    deletePendingState,
-    exchangeRobloxCode,
-    getRobloxUser
-} from "./utils/robloxOAuth.js";
-
-import {
     getPendingProfileState,
     deletePendingProfileState,
     exchangeProfileRobloxCode,
     getProfileRobloxUser
 } from "./utils/robloxProfileOAuth.js";
-
-import {
-    resumeRobloxApplication
-} from "./commands/aplicar.js";
 
 import perfil from "./commands/perfil.js";
 
@@ -329,7 +318,6 @@ client.on(
                                     : "Ninguno"
                             }`
                         )
-                        .setColor("#77DD77")
                         .setTimestamp();
 
                 await interaction.channel.send({
@@ -518,176 +506,6 @@ client.on(
                     await interaction.reply({
                         content:
                             "❌ No se pudo restaurar al usuario.",
-                        ephemeral: true
-                    });
-                }
-            }
-
-            return;
-        }
-
-        if (
-            interaction.customId.startsWith(
-                "application_accept:"
-            ) ||
-            interaction.customId.startsWith(
-                "application_reject:"
-            )
-        ) {
-            const userId =
-                interaction.customId.split(":")[1];
-
-            const allowedRoles =
-                permissions[1];
-
-            const hasPermission =
-                allowedRoles?.some(
-                    roleId =>
-                        interaction.member?.roles.cache.has(
-                            roleId
-                        )
-                );
-
-            if (!hasPermission) {
-                await interaction.reply({
-                    content:
-                        "❌ No tienes permiso para revisar aplicaciones.",
-                    ephemeral: true
-                });
-
-                return;
-            }
-
-            const accepted =
-                interaction.customId.startsWith(
-                    "application_accept:"
-                );
-
-            try {
-                const currentEmbed =
-                    interaction.message.embeds[0];
-
-                if (
-                    currentEmbed?.title ===
-                        "Aplicación aceptada" ||
-                    currentEmbed?.title ===
-                        "Aplicación rechazada"
-                ) {
-                    await interaction.reply({
-                        content:
-                            "❌ Esta aplicación ya fue revisada.",
-                        ephemeral: true
-                    });
-
-                    return;
-                }
-
-                if (accepted) {
-                    const acceptedEmbed =
-                        new EmbedBuilder()
-                            .setColor(
-                                "#77DD77"
-                            )
-                            .setTitle(
-                                "Aplicación aceptada"
-                            )
-                            .setDescription(
-                                `**Discord:** <@${userId}>\n` +
-                                `**Discord ID:** \`${userId}\`\n\n` +
-                                `**Aceptada por:** ${interaction.user}\n\n` +
-                                "✅ **La aplicación ha sido aceptada.**"
-                            );
-
-                    if (
-                        currentEmbed?.image?.url
-                    ) {
-                        acceptedEmbed.setImage(
-                            currentEmbed.image.url
-                        );
-                    }
-
-                    await interaction.update({
-                        embeds: [
-                            acceptedEmbed
-                        ],
-                        components: []
-                    });
-
-                    return;
-                }
-
-                const rejectedEmbed =
-                    new EmbedBuilder()
-                        .setColor(
-                            "#FF6B6B"
-                        )
-                        .setTitle(
-                            "Aplicación rechazada"
-                        )
-                        .setDescription(
-                            `**Discord:** <@${userId}>\n` +
-                            `**Discord ID:** \`${userId}\`\n\n` +
-                            `**Rechazada por:** ${interaction.user}\n\n` +
-                            "❌ **La aplicación ha sido rechazada.**"
-                        );
-
-                if (
-                    currentEmbed?.image?.url
-                ) {
-                    rejectedEmbed.setImage(
-                        currentEmbed.image.url
-                    );
-                }
-
-                await interaction.update({
-                    embeds: [
-                        rejectedEmbed
-                    ],
-                    components: []
-                });
-
-                try {
-                    const applicant =
-                        await client.users.fetch(
-                            userId
-                        );
-
-                    await applicant.send({
-                        embeds: [
-                            new EmbedBuilder()
-                                .setColor(
-                                    "#FF6B6B"
-                                )
-                                .setTitle(
-                                    "Aplicación rechazada"
-                                )
-                                .setDescription(
-                                    "❌ **Tu aplicación para DEVGRU ha sido rechazada.**\n\n" +
-                                    "Si consideras que se trata de un error, puedes contactar con un miembro del staff."
-                                )
-                        ]
-                    });
-
-                } catch (error) {
-                    logger.error(
-                        "No se pudo enviar el DM de rechazo:",
-                        error
-                    );
-                }
-
-            } catch (error) {
-                logger.error(
-                    "Error procesando aplicación:",
-                    error
-                );
-
-                if (
-                    !interaction.replied &&
-                    !interaction.deferred
-                ) {
-                    await interaction.reply({
-                        content:
-                            "❌ Ocurrió un error al procesar esta aplicación.",
                         ephemeral: true
                     });
                 }
@@ -923,155 +741,7 @@ const server =
                         state
                     );
 
-                if (profilePending) {
-                    try {
-                        const tokenData =
-                            await exchangeProfileRobloxCode(
-                                code
-                            );
-
-                        const robloxUser =
-                            await getProfileRobloxUser(
-                                tokenData.access_token
-                            );
-
-                        const verifiedUsername =
-                            robloxUser.preferred_username ||
-                            robloxUser.name;
-
-                        if (
-                            verifiedUsername.toLowerCase() !==
-                            profilePending.robloxUsername.toLowerCase()
-                        ) {
-                            deletePendingProfileState(
-                                state
-                            );
-
-                            res.writeHead(
-                                400,
-                                {
-                                    "Content-Type":
-                                        "text/html; charset=utf-8"
-                                }
-                            );
-
-                            res.end(`
-                                <!DOCTYPE html>
-                                <html lang="es">
-                                <head>
-                                    <meta charset="UTF-8">
-                                    <title>DEVGRU</title>
-                                </head>
-                                <body>
-                                    <h2>❌ Cuenta incorrecta</h2>
-                                    <p>La cuenta de Roblox verificada no coincide con la cuenta seleccionada.</p>
-                                </body>
-                                </html>
-                            `);
-
-                            return;
-                        }
-
-                        await perfil.saveLinkedAccount(
-                            profilePending.userId,
-                            robloxUser.sub,
-                            verifiedUsername
-                        );
-
-                        deletePendingProfileState(
-                            state
-                        );
-
-                        try {
-                            const channel =
-                                await client.channels.fetch(
-                                    profilePending.channelId
-                                );
-
-                            const profileMessage =
-                                await channel.messages.fetch(
-                                    profilePending.messageId
-                                );
-
-                            await profileMessage.edit({
-                                embeds: [
-                                    new EmbedBuilder()
-                                        .setColor(
-                                            "#ffaf1a"
-                                        )
-                                        .setTitle(
-                                            "Cuenta de Roblox vinculada"
-                                        )
-                                        .setDescription(
-                                            `<:roblox:1538379754414145536> **Cuenta vinculada correctamente.**\n\n` +
-                                            `**Usuario:** \`${verifiedUsername}\`\n` +
-                                            `**ID:** \`${robloxUser.sub}\``
-                                        )
-                                ],
-                                components: []
-                            });
-
-                        } catch (error) {
-                            logger.error(
-                                "No se pudo actualizar el mensaje de vinculación:",
-                                error
-                            );
-                        }
-
-                        res.writeHead(
-                            200,
-                            {
-                                "Content-Type":
-                                    "text/html; charset=utf-8"
-                            }
-                        );
-
-                        res.end(`
-                            <!DOCTYPE html>
-                            <html lang="es">
-                            <head>
-                                <meta charset="UTF-8">
-                                <meta
-                                    name="viewport"
-                                    content="width=device-width, initial-scale=1.0"
-                                >
-                                <title>DEVGRU</title>
-                            </head>
-                            <body>
-                                <h2>✅ Cuenta de Roblox vinculada</h2>
-                                <p>Puedes regresar a Discord.</p>
-                            </body>
-                            </html>
-                        `);
-
-                    } catch (error) {
-                        logger.error(
-                            "Error procesando OAuth de perfil:",
-                            error
-                        );
-
-                        res.writeHead(
-                            500,
-                            {
-                                "Content-Type":
-                                    "text/plain; charset=utf-8"
-                            }
-                        );
-
-                        res.end(
-                            "No se pudo verificar la cuenta de Roblox."
-                        );
-                    }
-
-                    return;
-                }
-
-                const pending =
-                    getPendingState(
-                        state
-                    );
-
-                if (!pending) {
+                if (!profilePending) {
                     res.writeHead(
                         400,
                         {
@@ -1088,77 +758,97 @@ const server =
                 }
 
                 try {
-                    logger.info(
-                        `Roblox OAuth callback recibido para Discord ID: ${pending.userId}`
-                    );
-
                     const tokenData =
-                        await exchangeRobloxCode(
+                        await exchangeProfileRobloxCode(
                             code
                         );
 
                     const robloxUser =
-                        await getRobloxUser(
+                        await getProfileRobloxUser(
                             tokenData.access_token
                         );
 
-                    deletePendingState(
+                    const verifiedUsername =
+                        robloxUser.preferred_username ||
+                        robloxUser.name;
+
+                    if (
+                        verifiedUsername.toLowerCase() !==
+                        profilePending.robloxUsername.toLowerCase()
+                    ) {
+                        deletePendingProfileState(
+                            state
+                        );
+
+                        res.writeHead(
+                            400,
+                            {
+                                "Content-Type":
+                                    "text/html; charset=utf-8"
+                            }
+                        );
+
+                        res.end(`
+                            <!DOCTYPE html>
+                            <html lang="es">
+                            <head>
+                                <meta charset="UTF-8">
+                                <title>DEVGRU</title>
+                            </head>
+                            <body>
+                                <h2>❌ Cuenta incorrecta</h2>
+                                <p>La cuenta de Roblox verificada no coincide con la cuenta seleccionada.</p>
+                            </body>
+                            </html>
+                        `);
+
+                        return;
+                    }
+
+                    await perfil.saveLinkedAccount(
+                        profilePending.userId,
+                        robloxUser.sub,
+                        verifiedUsername
+                    );
+
+                    deletePendingProfileState(
                         state
                     );
 
-                    logger.info(
-                        `Roblox account verified: ${
-                            robloxUser.preferred_username ||
-                            robloxUser.name
-                        } (${robloxUser.sub})`
-                    );
-
-                    const applicationContinued =
-                        resumeRobloxApplication(
-                            pending.userId,
-                            robloxUser,
-                            client
-                        );
-
-                    if (
-                        !applicationContinued
-                    ) {
-                        logger.warn(
-                            `No se encontró una aplicación activa para Discord ID: ${pending.userId}`
-                        );
-
-                        try {
-                            const discordUser =
-                                await client.users.fetch(
-                                    pending.userId
-                                );
-
-                            await discordUser.send({
-                                embeds: [
-                                    new EmbedBuilder()
-                                        .setColor(
-                                            "#ffaf1a"
-                                        )
-                                        .setTitle(
-                                            "Cuenta de Roblox verificada"
-                                        )
-                                        .setDescription(
-                                            "✅ Tu cuenta de Roblox fue verificada correctamente.\n\n" +
-                                            `**Usuario:** ${
-                                                robloxUser.preferred_username ||
-                                                robloxUser.name
-                                            }\n` +
-                                            `**ID:** \`${robloxUser.sub}\``
-                                        )
-                                ]
-                            });
-
-                        } catch (dmError) {
-                            logger.error(
-                                "No se pudo enviar el DM de Roblox:",
-                                dmError
+                    try {
+                        const channel =
+                            await client.channels.fetch(
+                                profilePending.channelId
                             );
-                        }
+
+                        const profileMessage =
+                            await channel.messages.fetch(
+                                profilePending.messageId
+                            );
+
+                        await profileMessage.edit({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setColor(
+                                        "#ffaf1a"
+                                    )
+                                    .setTitle(
+                                        "Cuenta de Roblox vinculada"
+                                    )
+                                    .setDescription(
+                                        `<:roblox:1538379754414145536> **Cuenta vinculada correctamente.**\n\n` +
+                                        `**Usuario:** \`${verifiedUsername}\`\n` +
+                                        `**ID:** \`${robloxUser.sub}\``
+                                    )
+                            ],
+                            components: []
+                        });
+
+                    } catch (error) {
+                        logger.error(
+                            "No se pudo actualizar el mensaje de vinculación:",
+                            error
+                        );
                     }
 
                     res.writeHead(
@@ -1181,7 +871,7 @@ const server =
                             <title>DEVGRU</title>
                         </head>
                         <body>
-                            <h2>✅ Cuenta de Roblox verificada</h2>
+                            <h2>✅ Cuenta de Roblox vinculada</h2>
                             <p>Puedes regresar a Discord.</p>
                         </body>
                         </html>
@@ -1189,7 +879,7 @@ const server =
 
                 } catch (error) {
                     logger.error(
-                        "Error procesando Roblox OAuth:",
+                        "Error procesando OAuth de perfil:",
                         error
                     );
 
