@@ -158,6 +158,13 @@ const OCCUPATIONS = [
     }
 ];
 
+const ACTIVITY_START_ROLES = [
+    "1373365833618690059", 
+    "1373365835862642713", 
+    "1373365837129318474", 
+    "1373365839037988894" 
+];
+
 const CATEGORIES = [
     "General",
     "Servicio",
@@ -200,6 +207,17 @@ function getOccupation(
     }
 
     return "Sin ocupación";
+}
+
+function requiresActivityStart(
+    member
+) {
+    return ACTIVITY_START_ROLES.some(
+        roleId =>
+            member.roles.cache.has(
+                roleId
+            )
+    );
 }
 
 function getSquadron(
@@ -248,6 +266,11 @@ function getCategoryContent(
             return (
                 "## Ascensos\n\n" +
                 "<:rango:1538381219631464448> **Siguiente Rango**: `Seaman Recruit (SOE2)`\n\n" +
+                (
+                    requiresActivityStart(member)
+                        ? "<:boss:1538099028372365333> **Iniciar Actividad**: `0/1`\n"
+                        : ""
+                ) +
                 "<:time:1538102015241224192> **Horas Semanales**: `0/5h`\n" +
                 "<:web:1538416206376206408> **Misiones Semanales**: `0/5`\n" +
                 "<:web2:1538416317844160583> **Entrenamientos Semanales**: `0/1`\n" +
@@ -260,6 +283,11 @@ function getCategoryContent(
                 "<:lvl:1538099654149935176> **Pago de Rango**: `R$ 0/h`\n" +
                 "<:gift:1538322136371044422> **Bonificaciones**: `R$ 0`\n" +
                 "<:robux:1538413836405837855> **Total Semanal**: `R$ 0`\n\n" +
+                (
+                    requiresActivityStart(member)
+                        ? "<:boss:1538099028372365333> **Iniciar Actividad**: `0/1`\n"
+                        : ""
+                ) +
                 "<:time:1538102015241224192> **Horas Semanales**: `0/5h`\n" +
                 "<:web:1538416206376206408> **Misiones Semanales**: `0/5`\n" +
                 "<:web2:1538416317844160583> **Entrenamientos Semanales**: `0/1`\n" +
