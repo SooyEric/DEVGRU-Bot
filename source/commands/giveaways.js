@@ -8,9 +8,7 @@ import {
     TextInputStyle
 } from "discord.js";
 
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath } from "url";
+import { getDatabase } from "../database/postgres.js";
 
 const EMBED_COLOR =
     "#ffaf1a";
@@ -18,28 +16,16 @@ const EMBED_COLOR =
 const GIVEAWAY_CHANNEL_ID =
     "1525029698843709595";
 
-const __filename =
-    fileURLToPath(import.meta.url);
-
-const __dirname =
-    path.dirname(__filename);
-
-const DATABASE_PATH =
-    path.join(
-        __dirname,
-        "../database/giveaways.json"
-    );
-
 const giveaways =
     new Map();
 
 const initializedClients =
     new WeakSet();
 
-let databaseLoaded =
+let databaseInitialized =
     false;
 
-let databaseLoading =
+let databaseInitializing =
     null;
 
 function parseDuration(
@@ -140,288 +126,272 @@ function formatDuration(
     return `${weeks}w`;
 }
 
-function serializeGiveaway(
-    giveaway
-) {
-    return {
-        id:
-            giveaway.id,
+async function initializeDatabase() {
+    if (
+        databaseInitialized
+    ) {
+        return;
+    }
 
-        guildId:
-            giveaway.guildId,
+    if (
+        databaseInitializing
+    ) {
+        await databaseInitializing;
+        return;
+    }
 
-        channelId:
-            giveaway.channelId,
+    databaseInitializing =
+        (async () => {
+            const database =
+                getDatabase();
 
-        messageId:
-            giveaway.messageId,
+            if (!database) {
+                throw new Error(
+                    "PostgreSQL no está disponible."
+                );
+            }
 
-        ownerId:
-            giveaway.ownerId,
+            await database.query(`
+                CREATE TABLE IF NOT EXISTS giveaways (
+                    id TEXT PRIMARY KEY,
+                    guild_id TEXT NOT NULL,
+                    channel_id TEXT NOT NULL,
+                    message_id TEXT NOT NULL,
+                    owner_id TEXT NOT NULL,
+                    created_at BIGINT NOT NULL,
+                    prize TEXT NOT NULL,
+                    winners_count INTEGER NOT NULL,
+                    requirements TEXT,
+                    participants JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    winners JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    end_at BIGINT NOT NULL,
+                    ended BOOLEAN NOT NULL DEFAULT FALSE
+                )
+            `);
 
-        createdAt:
-            giveaway.createdAt,
+            databaseInitialized =
+                true;
+        })();
 
-        prize:
-            giveaway.prize,
-
-        winnersCount:
-            giveaway.winnersCount,
-
-        requirements:
-            giveaway.requirements,
-
-        participants:
-            [
-                ...giveaway.participants
-            ],
-
-        winners:
-            [
-                ...giveaway.winners
-            ],
-
-        endAt:
-            giveaway.endAt,
-
-        ended:
-            giveaway.ended
-    };
+    try {
+        await databaseInitializing;
+    } finally {
+        databaseInitializing =
+            null;
+    }
 }
 
-async function saveGiveaways() {
-    try {
-        const data =
-            [
-                ...giveaways.values()
-            ].map(
-                serializeGiveaway
-            );
+async function saveGiveaway(
+    giveaway
+) {
+    await initializeDatabase();
 
-        await fs.mkdir(
-            path.dirname(
-                DATABASE_PATH
-            ),
-            {
-                recursive:
-                    true
-            }
-        );
+    const database =
+        getDatabase();
 
-        await fs.writeFile(
-            DATABASE_PATH,
+    await database.query(
+        `
+            INSERT INTO giveaways (
+                id,
+                guild_id,
+                channel_id,
+                message_id,
+                owner_id,
+                created_at,
+                prize,
+                winners_count,
+                requirements,
+                participants,
+                winners,
+                end_at,
+                ended
+            )
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10::jsonb,
+                $11::jsonb,
+                $12,
+                $13
+            )
+            ON CONFLICT (id)
+            DO UPDATE SET
+                guild_id = EXCLUDED.guild_id,
+                channel_id = EXCLUDED.channel_id,
+                message_id = EXCLUDED.message_id,
+                owner_id = EXCLUDED.owner_id,
+                created_at = EXCLUDED.created_at,
+                prize = EXCLUDED.prize,
+                winners_count = EXCLUDED.winners_count,
+                requirements = EXCLUDED.requirements,
+                participants = EXCLUDED.participants,
+                winners = EXCLUDED.winners,
+                end_at = EXCLUDED.end_at,
+                ended = EXCLUDED.ended
+        `,
+        [
+            giveaway.id,
+            giveaway.guildId,
+            giveaway.channelId,
+            giveaway.messageId,
+            giveaway.ownerId,
+            giveaway.createdAt,
+            giveaway.prize,
+            giveaway.winnersCount,
+            giveaway.requirements,
+            JSON.stringify([
+                ...giveaway.participants
+            ]),
             JSON.stringify(
-                data,
-                null,
-                4
+                giveaway.winners
             ),
-            "utf8"
-        );
-
-    } catch (error) {
-        console.error(
-            "Error guardando giveaways:",
-            error
-        );
-    }
+            giveaway.endAt,
+            giveaway.ended
+        ]
+    );
 }
 
 async function loadGiveaways(
     client
 ) {
-    if (
-        databaseLoaded
+    await initializeDatabase();
+
+    const database =
+        getDatabase();
+
+    const result =
+        await database.query(
+            `
+                SELECT
+                    id,
+                    guild_id,
+                    channel_id,
+                    message_id,
+                    owner_id,
+                    created_at,
+                    prize,
+                    winners_count,
+                    requirements,
+                    participants,
+                    winners,
+                    end_at,
+                    ended
+                FROM giveaways
+            `
+        );
+
+    for (
+        const saved of
+        result.rows
     ) {
-        return;
-    }
+        const giveaway = {
+            id:
+                saved.id,
 
-    if (
-        databaseLoading
-    ) {
-        await databaseLoading;
-        return;
-    }
+            guildId:
+                saved.guild_id,
 
-    databaseLoading =
-        (async () => {
-            try {
-                await fs.mkdir(
-                    path.dirname(
-                        DATABASE_PATH
-                    ),
-                    {
-                        recursive:
-                            true
-                    }
-                );
+            channelId:
+                saved.channel_id,
 
-                let raw;
+            messageId:
+                saved.message_id,
 
-                try {
-                    raw =
-                        await fs.readFile(
-                            DATABASE_PATH,
-                            "utf8"
-                        );
-                } catch (
-                    error
-                ) {
-                    if (
-                        error.code ===
-                        "ENOENT"
-                    ) {
-                        await fs.writeFile(
-                            DATABASE_PATH,
-                            "[]",
-                            "utf8"
-                        );
+            ownerId:
+                saved.owner_id,
 
-                        raw =
-                            "[]";
-                    } else {
-                        throw error;
-                    }
-                }
+            createdAt:
+                Number(
+                    saved.created_at
+                ),
 
-                const savedGiveaways =
-                    JSON.parse(
-                        raw
-                    );
+            prize:
+                saved.prize,
 
-                if (
-                    !Array.isArray(
-                        savedGiveaways
+            winnersCount:
+                saved.winners_count,
+
+            requirements:
+                saved.requirements,
+
+            participants:
+                new Set(
+                    Array.isArray(
+                        saved.participants
                     )
-                ) {
-                    throw new Error(
-                        "giveaways.json no contiene un array válido."
-                    );
-                }
+                        ? saved.participants
+                        : []
+                ),
 
-                for (
-                    const saved of
-                    savedGiveaways
-                ) {
-                    if (
-                        !saved?.id ||
-                        !saved?.channelId ||
-                        !saved?.messageId ||
-                        !saved?.endAt
-                    ) {
-                        continue;
-                    }
+            winners:
+                Array.isArray(
+                    saved.winners
+                )
+                    ? saved.winners
+                    : [],
 
-                    const giveaway = {
-                        id:
-                            saved.id,
+            endAt:
+                Number(
+                    saved.end_at
+                ),
 
-                        guildId:
-                            saved.guildId,
+            ended:
+                Boolean(
+                    saved.ended
+                )
+        };
 
-                        channelId:
-                            saved.channelId,
+        giveaways.set(
+            giveaway.id,
+            giveaway
+        );
+    }
 
-                        messageId:
-                            saved.messageId,
+    console.log(
+        `Giveaways cargados: ${giveaways.size}`
+    );
 
-                        ownerId:
-                            saved.ownerId,
+    for (
+        const giveaway of
+        giveaways.values()
+    ) {
+        if (
+            giveaway.ended
+        ) {
+            continue;
+        }
 
-                        createdAt:
-                            saved.createdAt,
+        const remaining =
+            giveaway.endAt -
+            Date.now();
 
-                        prize:
-                            saved.prize,
+        if (
+            remaining <=
+            0
+        ) {
+            await finishGiveaway(
+                giveaway,
+                client
+            );
 
-                        winnersCount:
-                            saved.winnersCount,
+            continue;
+        }
 
-                        requirements:
-                            saved.requirements,
-
-                        participants:
-                            new Set(
-                                saved.participants ||
-                                []
-                            ),
-
-                        winners:
-                            saved.winners ||
-                            [],
-
-                        endAt:
-                            saved.endAt,
-
-                        ended:
-                            Boolean(
-                                saved.ended
-                            )
-                    };
-
-                    giveaways.set(
-                        giveaway.id,
-                        giveaway
-                    );
-                }
-
-                databaseLoaded =
-                    true;
-
-                for (
-                    const giveaway of
-                    giveaways.values()
-                ) {
-                    if (
-                        giveaway.ended
-                    ) {
-                        continue;
-                    }
-
-                    const remaining =
-                        giveaway.endAt -
-                        Date.now();
-
-                    if (
-                        remaining <=
-                        0
-                    ) {
-                        await finishGiveaway(
-                            giveaway,
-                            client
-                        );
-
-                        continue;
-                    }
-
-                    setTimeout(
-                        () =>
-                            finishGiveaway(
-                                giveaway,
-                                client
-                            ),
-                        remaining
-                    );
-                }
-
-                console.log(
-                    `Giveaways cargados: ${giveaways.size}`
-                );
-
-            } catch (
-                error
-            ) {
-                console.error(
-                    "Error cargando giveaways:",
-                    error
-                );
-            }
-        })();
-
-    try {
-        await databaseLoading;
-    } finally {
-        databaseLoading =
-            null;
+        setTimeout(
+            () =>
+                finishGiveaway(
+                    giveaway,
+                    client
+                ),
+            remaining
+        );
     }
 }
 
@@ -720,7 +690,9 @@ async function finishGiveaway(
             giveaway
         );
 
-    await saveGiveaways();
+    await saveGiveaway(
+        giveaway
+    );
 
     try {
         const message =
@@ -898,7 +870,9 @@ function initializeGiveawayInteractions(
                     });
                 }
 
-                await saveGiveaways();
+                await saveGiveaway(
+                    giveaway
+                );
 
                 try {
                     await interaction.message.edit({
@@ -1163,7 +1137,9 @@ function initializeGiveawayInteractions(
                     ] =
                         newWinner;
 
-                    await saveGiveaways();
+                    await saveGiveaway(
+                        giveaway
+                    );
 
                     await submitted.update({
                         embeds: [
@@ -1193,9 +1169,16 @@ function initializeGiveawayInteractions(
     );
 }
 
-export async function initializeGiveaways(client) {
-    initializeGiveawayInteractions(client);
-    await loadGiveaways(client);
+export async function initializeGiveaways(
+    client
+) {
+    initializeGiveawayInteractions(
+        client
+    );
+
+    await loadGiveaways(
+        client
+    );
 }
 
 export default {
@@ -1216,9 +1199,7 @@ export default {
             message.client
         );
 
-        await loadGiveaways(
-            message.client
-        );
+        await initializeDatabase();
 
         const config = {
             ownerId:
@@ -1631,7 +1612,9 @@ export default {
                         giveaway
                     );
 
-                    await saveGiveaways();
+                    await saveGiveaway(
+                        giveaway
+                    );
 
                     setTimeout(
                         () =>
