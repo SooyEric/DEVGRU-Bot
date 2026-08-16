@@ -127,57 +127,112 @@ function formatDuration(
 }
 
 async function initializeDatabase() {
-    if (
-        databaseInitialized
-    ) {
+    if (databaseInitialized) {
         return;
     }
 
-    if (
-        databaseInitializing
-    ) {
+    if (databaseInitializing) {
         await databaseInitializing;
         return;
     }
 
-    databaseInitializing =
-        (async () => {
-            const database =
-                getDatabase();
+    databaseInitializing = (async () => {
+        const database = getDatabase();
 
-            if (!database) {
-                throw new Error(
-                    "PostgreSQL no está disponible."
-                );
-            }
+        if (!database) {
+            throw new Error(
+                "PostgreSQL no está disponible."
+            );
+        }
 
-            await database.query(`
-                CREATE TABLE IF NOT EXISTS giveaways (
-                    id TEXT PRIMARY KEY,
-                    guild_id TEXT NOT NULL,
-                    channel_id TEXT NOT NULL,
-                    message_id TEXT NOT NULL,
-                    owner_id TEXT NOT NULL,
-                    created_at BIGINT NOT NULL,
-                    prize TEXT NOT NULL,
-                    winners_count INTEGER NOT NULL,
-                    requirements TEXT,
-                    participants JSONB NOT NULL DEFAULT '[]'::jsonb,
-                    winners JSONB NOT NULL DEFAULT '[]'::jsonb,
-                    end_at BIGINT NOT NULL,
-                    ended BOOLEAN NOT NULL DEFAULT FALSE
-                )
-            `);
+        await database.query(`
+            CREATE TABLE IF NOT EXISTS giveaways (
+                id TEXT PRIMARY KEY,
+                guild_id TEXT,
+                channel_id TEXT,
+                message_id TEXT,
+                owner_id TEXT,
+                created_at BIGINT,
+                prize TEXT,
+                winners_count INTEGER,
+                requirements TEXT,
+                participants JSONB NOT NULL DEFAULT '[]'::jsonb,
+                winners JSONB NOT NULL DEFAULT '[]'::jsonb,
+                end_at BIGINT,
+                ended BOOLEAN NOT NULL DEFAULT FALSE
+            )
+        `);
 
-            databaseInitialized =
-                true;
-        })();
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS guild_id TEXT
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS channel_id TEXT
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS message_id TEXT
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS owner_id TEXT
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS created_at BIGINT
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS prize TEXT
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS winners_count INTEGER
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS requirements TEXT
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS participants JSONB
+            NOT NULL DEFAULT '[]'::jsonb
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS winners JSONB
+            NOT NULL DEFAULT '[]'::jsonb
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS end_at BIGINT
+        `);
+
+        await database.query(`
+            ALTER TABLE giveaways
+            ADD COLUMN IF NOT EXISTS ended BOOLEAN
+            NOT NULL DEFAULT FALSE
+        `);
+
+        databaseInitialized = true;
+    })();
 
     try {
         await databaseInitializing;
     } finally {
-        databaseInitializing =
-            null;
+        databaseInitializing = null;
     }
 }
 
