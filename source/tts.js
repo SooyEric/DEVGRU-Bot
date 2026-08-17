@@ -178,187 +178,208 @@ export class TTSSystem {
         );
     }
 
-    normalizeText(message) {
-        if (!message) {
-            return '';
-        }
+normalizeText(message) {
+    if (!message) {
+        return '';
+    }
 
-        let text =
-            message.content || '';
+    let text =
+        message.content || '';
 
-        text =
-            text.replace(
-                /<@!?(\d+)>/g,
-                (_, userId) => {
-                    const member =
-                        message.guild?.members.cache.get(
-                            userId
-                        );
+    let hasLink = false;
 
-                    if (member) {
-                        return `@${member.displayName}`;
-                    }
+    text =
+        text.replace(
+            /(?:https?:\/\/|www\.)[^\s<]+/gi,
+            () => {
+                hasLink = true;
+                return '';
+            }
+        );
 
-                    const user =
-                        message.client?.users.cache.get(
-                            userId
-                        );
+    text =
+        text.replace(
+            /<@!?(\d+)>/g,
+            (_, userId) => {
+                const member =
+                    message.guild?.members.cache.get(
+                        userId
+                    );
 
-                    if (user) {
-                        return `@${user.username}`;
-                    }
-
-                    return '@usuario';
+                if (member) {
+                    return `@${member.displayName}`;
                 }
-            );
 
-        text =
-            text.replace(
-                /<@&(\d+)>/g,
-                (_, roleId) => {
-                    const role =
-                        message.guild?.roles.cache.get(
-                            roleId
-                        );
+                const user =
+                    message.client?.users.cache.get(
+                        userId
+                    );
 
-                    if (role) {
-                        return `@${role.name}`;
-                    }
-
-                    return '@rol';
+                if (user) {
+                    return `@${user.username}`;
                 }
-            );
 
-        text =
-            text.replace(
-                /<#\d+>/g,
-                'archivo'
-            );
+                return '@usuario';
+            }
+        );
 
-        let hasCustomEmoji = false;
+    text =
+        text.replace(
+            /<@&(\d+)>/g,
+            (_, roleId) => {
+                const role =
+                    message.guild?.roles.cache.get(
+                        roleId
+                    );
 
-        text =
-            text.replace(
-                /<a?:\w+:\d+>/g,
-                () => {
-                    hasCustomEmoji = true;
-                    return '';
+                if (role) {
+                    return `@${role.name}`;
                 }
+
+                return '@rol';
+            }
+        );
+
+    text =
+        text.replace(
+            /<#\d+>/g,
+            'archivo'
+        );
+
+    let hasCustomEmoji = false;
+
+    text =
+        text.replace(
+            /<a?:\w+:\d+>/g,
+            () => {
+                hasCustomEmoji = true;
+                return '';
+            }
+        );
+
+    let hasUnicodeEmoji = false;
+
+    if (
+        this.hasUnicodeEmoji(text)
+    ) {
+        hasUnicodeEmoji = true;
+
+        text =
+            text.replace(
+                /(?:[\u{1F1E6}-\u{1F1FF}]{2}|[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{2300}-\u{23FF}]|[\u{2B00}-\u{2BFF}])(?:[\u{FE0E}\u{FE0F}]|\u{200D}(?:[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]))*/gu,
+                ''
             );
+    }
 
-        let hasUnicodeEmoji = false;
+    const mediaLabels = [];
 
-        if (
-            this.hasUnicodeEmoji(text)
-        ) {
-            hasUnicodeEmoji = true;
+    if (
+        hasCustomEmoji ||
+        hasUnicodeEmoji
+    ) {
+        mediaLabels.push(
+            'Emoji'
+        );
+    }
 
-            text =
-                text.replace(
-                    /(?:[\u{1F1E6}-\u{1F1FF}]{2}|[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{2300}-\u{23FF}]|[\u{2B00}-\u{2BFF}])(?:[\u{FE0E}\u{FE0F}]|\u{200D}(?:[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]))*/gu,
-                    ''
-                );
-        }
-
-        const mediaLabels = [];
-
-        if (
-            hasCustomEmoji ||
-            hasUnicodeEmoji
+    if (
+        message.attachments?.size > 0 &&
+        !hasLink
+    ) {
+        for (
+            const attachment
+            of message.attachments.values()
         ) {
             mediaLabels.push(
-                'Emoji'
+                this.getAttachmentType(
+                    attachment
+                )
             );
         }
+    }
 
-        if (
-            message.attachments?.size > 0
+    if (
+        message.stickers?.size > 0
+    ) {
+        for (
+            const _
+            of message.stickers.values()
         ) {
-            for (
-                const attachment
-                of message.attachments.values()
+            mediaLabels.push(
+                'Sticker'
+            );
+        }
+    }
+
+    if (
+        message.embeds?.length > 0 &&
+        !hasLink
+    ) {
+        for (
+            const embed
+            of message.embeds
+        ) {
+            if (
+                embed.video
             ) {
                 mediaLabels.push(
-                    this.getAttachmentType(
-                        attachment
-                    )
+                    'Video'
+                );
+
+                continue;
+            }
+
+            if (
+                embed.image ||
+                embed.thumbnail
+            ) {
+                mediaLabels.push(
+                    'Imagen'
+                );
+
+                continue;
+            }
+
+            if (
+                embed.url
+            ) {
+                mediaLabels.push(
+                    'Archivo'
                 );
             }
         }
+    }
 
-        if (
-            message.stickers?.size > 0
-        ) {
-            for (
-                const _
-                of message.stickers.values()
-            ) {
-                mediaLabels.push(
-                    'Sticker'
-                );
-            }
-        }
+    if (
+        hasLink
+    ) {
+        mediaLabels.push(
+            'Link'
+        );
+    }
 
-        if (
-            message.embeds?.length > 0
-        ) {
-            for (
-                const embed
-                of message.embeds
-            ) {
-                if (
-                    embed.video
-                ) {
-                    mediaLabels.push(
-                        'Video'
-                    );
+    text =
+        text
+            .replace(
+                /\s+/g,
+                ' '
+            )
+            .trim();
 
-                    continue;
-                }
-
-                if (
-                    embed.image ||
-                    embed.thumbnail
-                ) {
-                    mediaLabels.push(
-                        'Imagen'
-                    );
-
-                    continue;
-                }
-
-                if (
-                    embed.url
-                ) {
-                    mediaLabels.push(
-                        'Archivo'
-                    );
-                }
-            }
-        }
+    if (
+        mediaLabels.length > 0
+    ) {
+        const mediaText =
+            mediaLabels.join(' ');
 
         text =
             text
-                .replace(
-                    /\s+/g,
-                    ' '
-                )
-                .trim();
-
-        if (
-            mediaLabels.length > 0
-        ) {
-            const mediaText =
-                mediaLabels.join(' ');
-
-            text =
-                text
-                    ? `${text} ${mediaText}`
-                    : mediaText;
-        }
-
-        return text.trim();
+                ? `${text} ${mediaText}`
+                : mediaText;
     }
+
+    return text.trim();
+}
 
     async handleMessage(message) {
         if (
