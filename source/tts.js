@@ -746,12 +746,6 @@ export class TTSSystem {
             return;
         }
 
-        /*
-         * ============================
-         * CAMBIOS DEL PROPIO BOT
-         * ============================
-         */
-
         if (
             oldState.id ===
             client.user.id
@@ -761,10 +755,6 @@ export class TTSSystem {
 
             const newChannelId =
                 newState.channelId;
-
-            /*
-             * MUTE / UNMUTE
-             */
 
             if (
                 oldState.serverMute !==
@@ -785,23 +775,12 @@ export class TTSSystem {
                 return;
             }
 
-            /*
-             * Sin cambio de canal.
-             */
-
             if (
                 oldChannelId ===
                 newChannelId
             ) {
                 return;
             }
-
-            /*
-             * BOT MOVIDO DE CANAL
-             *
-             * NO destruimos la conexión.
-             * Discord ya actualizó la conexión.
-             */
 
             if (
                 oldChannelId &&
@@ -828,10 +807,6 @@ export class TTSSystem {
                 return;
             }
 
-            /*
-             * BOT DESCONECTADO
-             */
-
             if (
                 oldChannelId &&
                 !newChannelId
@@ -848,12 +823,6 @@ export class TTSSystem {
                         oldChannelId
                     );
                 }
-
-                /*
-                 * Si nosotros provocamos la
-                 * desconexión por inactividad,
-                 * no mandamos "Fui desconectado".
-                 */
 
                 if (
                     this.inactivityDisconnects.has(
@@ -886,12 +855,6 @@ export class TTSSystem {
             return;
         }
 
-        /*
-         * ============================
-         * OTROS USUARIOS
-         * ============================
-         */
-
         const botMember =
             guild.members.me;
 
@@ -908,11 +871,6 @@ export class TTSSystem {
 
         const botChannelId =
             botChannel.id;
-
-        /*
-         * Alguien entró al canal del bot.
-         * Cancelamos el temporizador.
-         */
 
         if (
             newState.channelId ===
@@ -934,11 +892,6 @@ export class TTSSystem {
             return;
         }
 
-        /*
-         * El usuario no estaba saliendo
-         * del canal del bot.
-         */
-
         if (
             oldState.channelId !==
             botChannelId
@@ -957,11 +910,6 @@ export class TTSSystem {
             return;
         }
 
-        /*
-         * Comprobamos si todavía queda
-         * algún humano.
-         */
-
         const humans =
             botChannel.members.filter(
                 voiceMember =>
@@ -974,10 +922,6 @@ export class TTSSystem {
             return;
         }
 
-        /*
-         * Ya existe un temporizador.
-         */
-
         if (
             this.leaveTimers.has(
                 botChannelId
@@ -985,10 +929,6 @@ export class TTSSystem {
         ) {
             return;
         }
-
-        /*
-         * 30 segundos sin humanos.
-         */
 
         const timer =
             setTimeout(
@@ -1033,19 +973,9 @@ export class TTSSystem {
                             'Abandoné el canal de voz por inactividad.'
                         );
 
-                        /*
-                         * Destruimos nuestra conexión
-                         * y limpiamos el estado.
-                         */
-
                         this.disconnect(
                             guild.id
                         );
-
-                        /*
-                         * Nos aseguramos de que
-                         * Discord también nos saque.
-                         */
 
                         if (
                             guild.members.me
