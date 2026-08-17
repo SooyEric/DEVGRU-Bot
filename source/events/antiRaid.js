@@ -25,7 +25,7 @@ const REMOVABLE_ROLES = [
     "1525041035024007188"
 ];
 
-const PING_LIMIT = 5;
+const PING_LIMIT = 3;
 
 const TIME_WINDOW =
     60 * 1000;
