@@ -51,19 +51,29 @@ import {
     initializeGiveaways
 } from "./commands/giveaways.js";
 
+import {
+    TTSSystem
+} from "./tts.js";
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.DirectMessages
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildVoiceStates
     ],
     partials: [
         Partials.Channel,
         Partials.Message
     ]
 });
+
+const tts =
+    new TTSSystem(
+        process.env.TTS_CHANNEL_ID
+    );
 
 const AUTO_ROLE_ID =
     "1373365890623602768";
@@ -110,6 +120,59 @@ client.on(
         } catch (error) {
             logger.error(
                 "Error procesando mensaje eliminado para Snipe:",
+                error
+            );
+        }
+    }
+);
+
+client.on(
+    "messageCreate",
+    async message => {
+        try {
+            if (
+                message.author.bot ||
+                !message.guild
+            ) {
+                return;
+            }
+
+            if (
+                message.channel.id !==
+                process.env.TTS_CHANNEL_ID
+            ) {
+                return;
+            }
+
+            await tts.handleMessage(
+                message
+            );
+
+        } catch (error) {
+            logger.error(
+                "[TTS] Error:",
+                error
+            );
+        }
+    }
+);
+
+client.on(
+    "voiceStateUpdate",
+    async (
+        oldState,
+        newState
+    ) => {
+        try {
+            tts.handleVoiceStateUpdate(
+                oldState,
+                newState,
+                client
+            );
+
+        } catch (error) {
+            logger.error(
+                "[VOICE] Error:",
                 error
             );
         }
