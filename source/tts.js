@@ -137,6 +137,47 @@ export class TTSSystem {
         );
     }
 
+    getAttachmentType(attachment) {
+        const contentType =
+            attachment.contentType?.toLowerCase() || '';
+
+        const name =
+            attachment.name?.toLowerCase() || '';
+
+        if (
+            contentType.startsWith('image/')
+        ) {
+            return 'Imagen';
+        }
+
+        if (
+            contentType.startsWith('video/')
+        ) {
+            return 'Video';
+        }
+
+        if (
+            contentType === 'image/gif' ||
+            contentType === 'image/gif;'
+        ) {
+            return 'Archivo';
+        }
+
+        if (
+            /\.(gif|gifv)$/i.test(name)
+        ) {
+            return 'Archivo';
+        }
+
+        return 'Archivo';
+    }
+
+    hasUnicodeEmoji(text) {
+        return /(?:[\u{1F1E6}-\u{1F1FF}]{2}|[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{2300}-\u{23FF}]|[\u{2B00}-\u{2BFF}])/u.test(
+            text
+        );
+    }
+
     normalizeText(message) {
         if (!message) {
             return '';
@@ -173,8 +214,19 @@ export class TTSSystem {
 
         text =
             text.replace(
-                /<@&\d+>/g,
-                'archivo'
+                /<@&(\d+)>/g,
+                (_, roleId) => {
+                    const role =
+                        message.guild?.roles.cache.get(
+                            roleId
+                        );
+
+                    if (role) {
+                        return `@${role.name}`;
+                    }
+
+                    return '@rol';
+                }
             );
 
         text =
@@ -183,49 +235,106 @@ export class TTSSystem {
                 'archivo'
             );
 
-        text =
-            text.replace(
-                /<a?:\w+:\d+>/g,
-                'archivo'
-            );
+        let hasCustomEmoji = false;
 
         text =
             text.replace(
-                /(?:[\u{1F1E6}-\u{1F1FF}]{2}|[\u{1F3FB}-\u{1F3FF}]|[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{2300}-\u{23FF}]|[\u{2B00}-\u{2BFF}])(?:[\u{FE0E}\u{FE0F}]|\u{200D}(?:[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]))*/gu,
-                'archivo'
+                /<a?:\w+:\d+>/g,
+                () => {
+                    hasCustomEmoji = true;
+                    return '';
+                }
             );
+
+        let hasUnicodeEmoji = false;
+
+        if (
+            this.hasUnicodeEmoji(text)
+        ) {
+            hasUnicodeEmoji = true;
+
+            text =
+                text.replace(
+                    /(?:[\u{1F1E6}-\u{1F1FF}]{2}|[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{2300}-\u{23FF}]|[\u{2B00}-\u{2BFF}])(?:[\u{FE0E}\u{FE0F}]|\u{200D}(?:[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]))*/gu,
+                    ''
+                );
+        }
+
+        const mediaLabels = [];
+
+        if (
+            hasCustomEmoji ||
+            hasUnicodeEmoji
+        ) {
+            mediaLabels.push(
+                'Emoji'
+            );
+        }
 
         if (
             message.attachments?.size > 0
         ) {
-            text =
-                text
-                    ? `${text} archivo`
-                    : 'archivo';
+            for (
+                const attachment
+                of message.attachments.values()
+            ) {
+                mediaLabels.push(
+                    this.getAttachmentType(
+                        attachment
+                    )
+                );
+            }
         }
 
         if (
             message.stickers?.size > 0
         ) {
-            text =
-                text
-                    ? `${text} archivo`
-                    : 'archivo';
+            for (
+                const _
+                of message.stickers.values()
+            ) {
+                mediaLabels.push(
+                    'Sticker'
+                );
+            }
         }
 
         if (
-            message.embeds?.some(
-                embed =>
-                    embed.image ||
-                    embed.thumbnail ||
-                    embed.video ||
-                    embed.url
-            )
+            message.embeds?.length > 0
         ) {
-            text =
-                text
-                    ? `${text} archivo`
-                    : 'archivo';
+            for (
+                const embed
+                of message.embeds
+            ) {
+                if (
+                    embed.video
+                ) {
+                    mediaLabels.push(
+                        'Video'
+                    );
+
+                    continue;
+                }
+
+                if (
+                    embed.image ||
+                    embed.thumbnail
+                ) {
+                    mediaLabels.push(
+                        'Imagen'
+                    );
+
+                    continue;
+                }
+
+                if (
+                    embed.url
+                ) {
+                    mediaLabels.push(
+                        'Archivo'
+                    );
+                }
+            }
         }
 
         text =
@@ -236,7 +345,19 @@ export class TTSSystem {
                 )
                 .trim();
 
-        return text;
+        if (
+            mediaLabels.length > 0
+        ) {
+            const mediaText =
+                mediaLabels.join(' ');
+
+            text =
+                text
+                    ? `${text} ${mediaText}`
+                    : mediaText;
+        }
+
+        return text.trim();
     }
 
     async handleMessage(message) {
@@ -912,7 +1033,7 @@ export class TTSSystem {
                         if (
                             started &&
                             newState.status ===
-                            AudioPlayerStatus.Idle
+                                AudioPlayerStatus.Idle
                         ) {
                             finish();
                         }
@@ -1279,7 +1400,8 @@ export class TTSSystem {
 
                     const currentBotChannel =
                         guild.members.me
-                            ?.voice.channel;
+                            ?.voice
+                            .channel;
 
                     if (
                         !currentBotChannel ||
@@ -1318,7 +1440,8 @@ export class TTSSystem {
 
                         if (
                             guild.members.me
-                                ?.voice.channel
+                                ?.voice
+                                .channel
                         ) {
                             await guild.members.me
                                 .voice
