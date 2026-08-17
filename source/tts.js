@@ -25,6 +25,9 @@ import { EmbedBuilder } from 'discord.js';
 const LANGUAGE = 'es';
 const LEAVE_DELAY = 30_000;
 
+const BACKUP_BOT_ID =
+    '1537361613185613844';
+
 const INFO_EMOJI =
     '<:info:1538323825542963270>';
 
@@ -73,6 +76,19 @@ export class TTSSystem {
         } catch {}
     }
 
+    getBotVoiceChannel(guild) {
+        return guild.members.me?.voice?.channel || null;
+    }
+
+    getBackupBotVoiceChannel(guild) {
+        const backupBot =
+            guild.members.cache.get(
+                BACKUP_BOT_ID
+            );
+
+        return backupBot?.voice?.channel || null;
+    }
+
     async handleMessage(message) {
         if (
             !message ||
@@ -94,15 +110,28 @@ export class TTSSystem {
             return;
         }
 
+        const guildId =
+            message.guild.id;
+
+        const currentBotChannel =
+            this.getBotVoiceChannel(
+                message.guild
+            );
+
+        if (
+            currentBotChannel &&
+            currentBotChannel.id !==
+                voiceChannel.id
+        ) {
+            return;
+        }
+
         const text =
             message.content.trim();
 
         if (!text) {
             return;
         }
-
-        const guildId =
-            message.guild.id;
 
         let queue =
             this.queues.get(guildId);
@@ -178,11 +207,45 @@ export class TTSSystem {
         let filePath = null;
 
         try {
+            const guild =
+                item.voiceChannel.guild;
+
+            const currentBotChannel =
+                this.getBotVoiceChannel(
+                    guild
+                );
+
+            if (
+                currentBotChannel &&
+                currentBotChannel.id !==
+                    item.voiceChannel.id
+            ) {
+                return;
+            }
 
             filePath =
                 await this.generateTTS(
                     item.text
                 );
+
+            const latestBotChannel =
+                this.getBotVoiceChannel(
+                    guild
+                );
+
+            if (
+                latestBotChannel &&
+                latestBotChannel.id !==
+                    item.voiceChannel.id
+            ) {
+                await this.deleteTTSFile(
+                    filePath
+                );
+
+                filePath = null;
+
+                return;
+            }
 
             await this.play(
                 item.voiceChannel,
@@ -388,6 +451,21 @@ export class TTSSystem {
     ) {
         const guildId =
             voiceChannel.guild.id;
+
+        const currentBotChannel =
+            this.getBotVoiceChannel(
+                voiceChannel.guild
+            );
+
+        if (
+            currentBotChannel &&
+            currentBotChannel.id !==
+                voiceChannel.id
+        ) {
+            throw new Error(
+                'El bot ya está en otro canal de voz.'
+            );
+        }
 
         await this.connect(
             voiceChannel
@@ -709,7 +787,9 @@ export class TTSSystem {
         if (queue) {
             queue.items.length = 0;
 
-            this.queues.delete(guildId);
+            this.queues.delete(
+                guildId
+            );
         }
 
         this.stop(guildId);
@@ -721,8 +801,13 @@ export class TTSSystem {
             connection.destroy();
         }
 
-        this.players.delete(guildId);
-        this.connections.delete(guildId);
+        this.players.delete(
+            guildId
+        );
+
+        this.connections.delete(
+            guildId
+        );
 
         return true;
     }
