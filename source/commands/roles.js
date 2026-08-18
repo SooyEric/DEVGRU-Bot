@@ -40,7 +40,7 @@ function createEmbed(
                             );
 
                         return (
-                            \`${number}\ ${role} - \`${role.id}\``
+                            `${number} ${role} - \`${role.id}\``
                         );
                     }
                 )
