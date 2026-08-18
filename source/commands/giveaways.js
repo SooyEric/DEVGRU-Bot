@@ -1333,7 +1333,9 @@ export default {
                 ) {
 await interaction.message.delete();
 
-await interaction.reply({
+await interaction.deferUpdate();
+
+await interaction.channel.send({
     flags: MessageFlags.IsComponentsV2,
     components: [
         createGiveawayStatusContainer(
@@ -1701,7 +1703,9 @@ await interaction.reply({
 
 await interaction.message.delete();
 
-await interaction.reply({
+await interaction.deferUpdate();
+
+await interaction.channel.send({
     flags: MessageFlags.IsComponentsV2,
     components: [
         createGiveawayStatusContainer(
