@@ -23,6 +23,7 @@ const pendingProfileStates =
 
 export function createProfileRobloxAuthorization(
     userId,
+    robloxId,
     robloxUsername,
     channelId,
     messageId
@@ -42,13 +43,14 @@ export function createProfileRobloxAuthorization(
 
     pendingProfileStates.set(
         state,
-        {
-            userId,
-            robloxUsername,
-            channelId,
-            messageId,
-            createdAt: Date.now()
-        }
+{
+    userId,
+    robloxId,
+    robloxUsername,
+    channelId,
+    messageId,
+    createdAt: Date.now()
+}
     );
 
     const params =
