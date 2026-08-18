@@ -114,19 +114,22 @@ export default {
                             )
                             .addOptions(
                                 {
-                                    label:
-                                        "Global",
-                                    value:
-                                        "global"
+                                    label: "Global",
+                                    value: "global",
+                                    emoji: {
+                                        id: "1539096076366258269",
+                                        name: "global"
+                                    }
                                 },
                                 {
-                                    label:
-                                        "Servidor",
-                                    value:
-                                        "server"
+                                    label: "Servidor",
+                                    value: "server",
+                                    emoji: {
+                                        id: "1539095904156385412",
+                                        name: "home"
+                                    }
                                 }
                             )
-                    );
 
             let selectedAvatar =
                 "global";
