@@ -730,7 +730,7 @@ function getRobloxVerificationEmbed(
             "<:roblox:1538379754414145536> Verificar Cuenta"
         )
         .setDescription(
-            `**Cuenta encontrada:** [${robloxUser.username}](${robloxUser.profileUrl})\n\n` +
+            `Cuenta encontrada: [${robloxUser.username}](${robloxUser.profileUrl})\n\n` +
             "Presiona el botón para confirmar que eres el propietario de esta cuenta mediante Roblox OAuth."
         );
 }
@@ -741,9 +741,6 @@ function getRobloxVerificationButtons(
     return new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
-                .setEmoji(
-                    "<:next:1539306938771447951>"
-                )
                 .setStyle(
                     ButtonStyle.Link
                 )
