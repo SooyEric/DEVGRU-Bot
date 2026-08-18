@@ -647,11 +647,11 @@ function getRobloxLinkEmbed() {
             EMBED_COLOR
         )
         .setTitle(
-            "Vinculación de Roblox"
+            "<:roblox:1538379754414145536> Vinculación de Roblox"
         )
         .setDescription(
-            "Para continuar, primero debes vincular una cuenta de Roblox válida con tu cuenta de Discord.\n\n" +
-            "Tu cuenta de Roblox quedará vinculada permanentemente a este Discord."
+            "Para continuar deberás vincular una cuenta de Roblox válida.\n\n" +
+            "Tu cuenta de Roblox quedará vinculada a tu cuenta de Discord."
         );
 }
 
@@ -663,10 +663,21 @@ function getRobloxLinkButton() {
                     "perfil_roblox_link"
                 )
                 .setLabel(
-                    "Vincular"
+                    "<:txt:1539307435372585111>"
                 )
                 .setStyle(
                     ButtonStyle.Secondary
+                ),
+
+            new ButtonBuilder()
+                .setCustomId(
+                    "perfil_roblox_cancel"
+                )
+                .setLabel(
+                    "<:cancel:1538544866659672144>"
+                )
+                .setStyle(
+                    ButtonStyle.Danger
                 )
         );
 }
@@ -752,6 +763,7 @@ function getRobloxVerificationButtons() {
         );
 }
 
+
 function createRobloxLinkCollector(
     profileMessage,
     requester
@@ -781,6 +793,21 @@ function createRobloxLinkCollector(
 
                 return;
             }
+
+if (
+    interaction.customId ===
+    "perfil_roblox_cancel"
+) {
+    await interaction.message
+        .delete()
+        .catch(() => {});
+
+    collector.stop(
+        "cancelled"
+    );
+
+    return;
+}
 
             if (
                 interaction.customId ===
