@@ -1,5 +1,3 @@
-damelo modificado completo:
-
 import {
     EmbedBuilder,
     ActionRowBuilder,
