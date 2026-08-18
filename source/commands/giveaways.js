@@ -493,8 +493,8 @@ function getConfigButtons() {
                 .setCustomId(
                     "giveaway_configure"
                 )
-                .setLabel(
-                    "Configurar"
+                .setEmoji(
+                    "<:config:1538099479759294484>"
                 )
                 .setStyle(
                     ButtonStyle.Secondary
@@ -504,19 +504,19 @@ function getConfigButtons() {
                 .setCustomId(
                     "giveaway_publish"
                 )
-                .setLabel(
-                    "Publicar"
+                .setEmoji(
+                    "<:check:1539142571345846355>"
                 )
                 .setStyle(
-                    ButtonStyle.Success
+                    ButtonStyle.Secondary
                 ),
 
             new ButtonBuilder()
                 .setCustomId(
                     "giveaway_cancel"
                 )
-                .setLabel(
-                    "✕"
+                .setEmoji(
+                    "<:cancel:1538544866659672144>"
                 )
                 .setStyle(
                     ButtonStyle.Danger
@@ -595,8 +595,8 @@ function getGiveawayButtons(
                     .setCustomId(
                         `giveaway_reroll:${giveaway.id}`
                     )
-                    .setLabel(
-                        "Reroll"
+                    .setEmoji(
+                        "<:reset:1539037348254449705>"
                     )
                     .setStyle(
                         ButtonStyle.Secondary
@@ -606,8 +606,8 @@ function getGiveawayButtons(
                     .setCustomId(
                         `giveaway_participants:${giveaway.id}`
                     )
-                    .setLabel(
-                        "Participantes"
+                    .setEmoji(
+                        "<:squad:1538380150746521651>"
                     )
                     .setStyle(
                         ButtonStyle.Secondary
@@ -621,8 +621,8 @@ function getGiveawayButtons(
                 .setCustomId(
                     `giveaway_join:${giveaway.id}`
                 )
-                .setLabel(
-                    "Participar"
+                .setEmoji(
+                    "<:thu:1538554141121581126>"
                 )
                 .setStyle(
                     ButtonStyle.Secondary
@@ -1681,9 +1681,12 @@ export default {
                     );
 
                     await interaction.update({
-                        content:
-                            "Giveaway publicado correctamente.",
-                        embeds: [],
+                        embeds: [
+                            new EmbedBuilder()
+                                .setDescription(
+                                    "Giveaway publicado correctamente."
+                                )
+                        ],
                         components: []
                     });
 
