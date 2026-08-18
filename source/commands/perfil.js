@@ -820,7 +820,7 @@ if (
 
         const modalInteraction =
             await interaction.awaitModalSubmit({
-                time: 60_000,
+                time: 30_000,
 
                 filter:
                     submitted =>
@@ -978,7 +978,7 @@ function createProfileCollector(
                             "timeout"
                         );
                     },
-                    60_000
+                    30_000
                 );
         };
 
@@ -1204,7 +1204,7 @@ if (
 
         const collector =
             groupMessage.createMessageComponentCollector({
-                time: 60_000
+                time: 30_000
             });
 
         collector.on(
