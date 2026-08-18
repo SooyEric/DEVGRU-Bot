@@ -607,7 +607,7 @@ function getGiveawayButtons(
                         `giveaway_participants:${giveaway.id}`
                     )
                     .setEmoji(
-                        "<:squad:1538380150746521651>"
+                        "<:grupo:1538323345831895090>"
                     )
                     .setStyle(
                         ButtonStyle.Secondary
@@ -622,7 +622,7 @@ function getGiveawayButtons(
                     `giveaway_join:${giveaway.id}`
                 )
                 .setEmoji(
-                    "<:thu:1538554141121581126>"
+                    "<:gwa:1538324626621337692>"
                 )
                 .setStyle(
                     ButtonStyle.Secondary
@@ -1316,12 +1316,16 @@ export default {
                     interaction.customId ===
                     "giveaway_cancel"
                 ) {
-                    await interaction.update({
-                        content:
-                            "Giveaway cancelado.",
-                        embeds: [],
-                        components: []
-                    });
+await interaction.update({
+    content: null,
+    embeds: [
+        new EmbedBuilder()
+            .setDescription(
+                "Giveaway cancelado."
+            )
+    ],
+    components: []
+});
 
                     collector.stop(
                         "cancelled"
@@ -1680,15 +1684,16 @@ export default {
                         config.duration
                     );
 
-                    await interaction.update({
-                        embeds: [
-                            new EmbedBuilder()
-                                .setDescription(
-                                    "Giveaway publicado correctamente."
-                                )
-                        ],
-                        components: []
-                    });
+await interaction.update({
+    content: null,
+    embeds: [
+        new EmbedBuilder()
+            .setDescription(
+                "Giveaway publicado correctamente."
+            )
+    ],
+    components: []
+});
 
                     collector.stop(
                         "published"
