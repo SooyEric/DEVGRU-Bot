@@ -112,24 +112,21 @@ export default {
                             .setPlaceholder(
                                 "Selecciona Avatar"
                             )
-.addOptions(
-    {
-        label: "Global",
-        value: "global",
-        emoji: {
-            id: "1539096076366258269",
-            name: "global"
-        }
-    },
-    {
-        label: "Servidor",
-        value: "server",
-        emoji: {
-            id: "1539095904156385412",
-            name: "home"
-        }
-    }
-)
+                            .addOptions(
+                                {
+                                    label:
+                                        "Global",
+                                    value:
+                                        "global"
+                                },
+                                {
+                                    label:
+                                        "Servidor",
+                                    value:
+                                        "server"
+                                }
+                            )
+                    );
 
             let selectedAvatar =
                 "global";
