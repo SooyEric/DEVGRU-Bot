@@ -6,6 +6,9 @@ import {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle
+    ContainerBuilder,
+    TextDisplayBuilder,
+    MessageFlags
 } from "discord.js";
 
 import { getDatabase } from "../database/postgres.js";
@@ -524,6 +527,18 @@ function getConfigButtons() {
         );
 }
 
+function createGiveawayStatusContainer(
+    text
+) {
+    return new ContainerBuilder()
+        .addTextDisplayComponents(
+            new TextDisplayBuilder()
+                .setContent(
+                    text
+                )
+        );
+}
+
 function getGiveawayEmbed(
     giveaway,
     ended = false
@@ -543,7 +558,7 @@ function getGiveawayEmbed(
                 "<:gwa:1538324626621337692> Giveaway"
             )
             .setDescription(
-                `## <:premio:1538335648262389822> ${giveaway.prize}\n\n` +
+                `## <:premio:1538335648262389822>${giveaway.prize}\n\n` +
 
                 `<:win:1538323077912334356> **Ganadores**: \`${giveaway.winnersCount}\`\n` +
 
@@ -1317,14 +1332,14 @@ export default {
                     "giveaway_cancel"
                 ) {
 await interaction.update({
-    content: null,
-    embeds: [
-        {
-            description: "Giveaway cancelado()",
-            color: null
-        }
-    ],
-    components: []
+    flags:
+        MessageFlags.IsComponentsV2,
+
+    components: [
+        createGiveawayStatusContainer(
+            "<:info:1538323825542963270> Giveaway cancelado."
+        )
+    ]
 });
 
                     collector.stop(
@@ -1685,14 +1700,14 @@ await interaction.update({
                     );
 
 await interaction.update({
-    content: null,
-    embeds: [
-        {
-            description: "Giveaway publicado correctamente.",
-            color: null
-        }
-    ],
-    components: []
+    flags:
+        MessageFlags.IsComponentsV2,
+
+    components: [
+        createGiveawayStatusContainer(
+            "<:info:1538323825542963270> Giveaway publicado correctamente."
+        )
+    ]
 });
 
                     collector.stop(
