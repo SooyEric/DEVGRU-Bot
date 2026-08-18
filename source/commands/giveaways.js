@@ -1331,16 +1331,16 @@ export default {
                     interaction.customId ===
                     "giveaway_cancel"
                 ) {
-await interaction.update({
-    flags:
-        MessageFlags.IsComponentsV2,
-
+await interaction.message.edit({
+    flags: MessageFlags.IsComponentsV2,
     components: [
         createGiveawayStatusContainer(
             "<:info:1538323825542963270> Giveaway cancelado."
         )
     ]
 });
+
+await interaction.deferUpdate();
 
                     collector.stop(
                         "cancelled"
@@ -1699,16 +1699,16 @@ await interaction.update({
                         config.duration
                     );
 
-await interaction.update({
-    flags:
-        MessageFlags.IsComponentsV2,
-
+await interaction.message.edit({
+    flags: MessageFlags.IsComponentsV2,
     components: [
         createGiveawayStatusContainer(
             "<:info:1538323825542963270> Giveaway publicado correctamente."
         )
     ]
 });
+
+await interaction.deferUpdate();
 
                     collector.stop(
                         "published"
