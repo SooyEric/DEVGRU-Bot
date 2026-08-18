@@ -662,7 +662,7 @@ function getRobloxLinkButton() {
                 .setCustomId(
                     "perfil_roblox_link"
                 )
-                .setLabel(
+                .setEmoji(
                     "<:txt:1539307435372585111>"
                 )
                 .setStyle(
@@ -673,7 +673,7 @@ function getRobloxLinkButton() {
                 .setCustomId(
                     "perfil_roblox_cancel"
                 )
-                .setLabel(
+                .setEmoji(
                     "<:cancel:1538544866659672144>"
                 )
                 .setStyle(
