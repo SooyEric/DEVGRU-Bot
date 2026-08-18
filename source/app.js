@@ -41,8 +41,18 @@ import {
 } from "./utils/squadronRegistry.js";
 
 import {
-    initializeRobloxProfileTable
+    initializeRobloxProfileTable,
+    getRobloxProfile,
+    getRobloxProfileByRobloxId,
+    saveRobloxProfile
 } from "./utils/robloxProfile.js";
+
+import {
+    getPendingProfileState,
+    deletePendingProfileState,
+    exchangeProfileRobloxCode,
+    getProfileRobloxUser
+} from "./utils/robloxProfileOAuth.js";
 
 import {
     handleMessageDelete
