@@ -1331,7 +1331,9 @@ export default {
                     interaction.customId ===
                     "giveaway_cancel"
                 ) {
-await interaction.message.edit({
+await interaction.message.delete();
+
+await interaction.reply({
     flags: MessageFlags.IsComponentsV2,
     components: [
         createGiveawayStatusContainer(
@@ -1339,8 +1341,6 @@ await interaction.message.edit({
         )
     ]
 });
-
-await interaction.deferUpdate();
 
                     collector.stop(
                         "cancelled"
@@ -1699,7 +1699,9 @@ await interaction.deferUpdate();
                         config.duration
                     );
 
-await interaction.message.edit({
+await interaction.message.delete();
+
+await interaction.reply({
     flags: MessageFlags.IsComponentsV2,
     components: [
         createGiveawayStatusContainer(
@@ -1707,8 +1709,6 @@ await interaction.message.edit({
         )
     ]
 });
-
-await interaction.deferUpdate();
 
                     collector.stop(
                         "published"
