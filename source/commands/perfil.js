@@ -6,7 +6,10 @@ import {
     ButtonStyle,
     ModalBuilder,
     TextInputBuilder,
-    TextInputStyle
+    TextInputStyle,
+    ContainerBuilder,
+    TextDisplayBuilder,
+    MessageFlags
 } from "discord.js";
 
 import logger from "../utils/logger.js";
@@ -544,13 +547,23 @@ function getCategoryMenu(
         );
 }
 
-function getNoProfileEmbed() {
-    return new EmbedBuilder()
-        .setColor(
-            EMBED_COLOR
-        )
-        .setDescription(
-            "Esta persona no tiene un perfil."
+function getNoProfileMessage() {
+    return new ContainerBuilder()
+        .addTextDisplayComponents(
+            new TextDisplayBuilder()
+                .setContent(
+                    "<:info:1538323825542963270> Esta persona no tiene un perfil."
+                )
+        );
+}
+
+function getRobloxNotLinkedMessage() {
+    return new ContainerBuilder()
+        .addTextDisplayComponents(
+            new TextDisplayBuilder()
+                .setContent(
+                    "<:info:1538323825542963270> Esta persona necesita vincular una cuenta de Roblox para mostrar su perfil."
+                )
         );
 }
 
@@ -1099,20 +1112,35 @@ export default {
         target.id
     );
 
-        if (
-            !isSelf &&
-            !target.roles.cache.has(
-                PROFILE_ROLE_ID
-            )
-        ) {
-            await message.reply({
-                embeds: [
-                    getNoProfileEmbed()
-                ]
-            });
+if (
+    !isSelf &&
+    !target.roles.cache.has(
+        PROFILE_ROLE_ID
+    )
+) {
+    await message.reply({
+        components: [
+            getNoProfileMessage()
+        ],
+        flags: MessageFlags.IsComponentsV2
+    });
 
-            return;
-        }
+    return;
+}
+
+if (
+    !isSelf &&
+    !robloxProfile
+) {
+    await message.reply({
+        components: [
+            getRobloxNotLinkedMessage()
+        ],
+        flags: MessageFlags.IsComponentsV2
+    });
+
+    return;
+}
         
 if (
     isSelf
