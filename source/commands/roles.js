@@ -40,7 +40,7 @@ function createEmbed(
                             );
 
                         return (
-                            `\`${number}\` ${role} - ${role.id}`
+                            `\`${number}.\` ${role} - \`${role.id}\``
                         );
                     }
                 )
@@ -74,7 +74,9 @@ function createButtons() {
             .setCustomId(
                 "roles_previous"
             )
-            .setLabel("←")
+            .setEmoji(
+                "<:left:1538544846459899955>"
+            )
             .setStyle(
                 ButtonStyle.Secondary
             );
@@ -84,7 +86,9 @@ function createButtons() {
             .setCustomId(
                 "roles_next"
             )
-            .setLabel("→")
+            .setEmoji(
+                "<:right:1538541644695998545>"
+            )
             .setStyle(
                 ButtonStyle.Secondary
             );
@@ -94,7 +98,9 @@ function createButtons() {
             .setCustomId(
                 "roles_delete"
             )
-            .setLabel("X")
+            .setEmoji(
+                "<:cancel:1538544866659672144>"
+            )
             .setStyle(
                 ButtonStyle.Danger
             );
@@ -156,124 +162,124 @@ export default {
                 ]
             });
 
-const collector =
-    sentMessage.createMessageComponentCollector();
+        const collector =
+            sentMessage.createMessageComponentCollector();
 
-let inactivityTimeout;
+        let inactivityTimeout;
 
-const resetInactivityTimer =
-    () => {
-        clearTimeout(
-            inactivityTimeout
-        );
+        const resetInactivityTimer =
+            () => {
+                clearTimeout(
+                    inactivityTimeout
+                );
 
-        inactivityTimeout =
-            setTimeout(
-                () => {
-                    collector.stop(
-                        "timeout"
+                inactivityTimeout =
+                    setTimeout(
+                        () => {
+                            collector.stop(
+                                "timeout"
+                            );
+                        },
+                        TIMEOUT
                     );
-                },
-                TIMEOUT
-            );
-    };
-
-resetInactivityTimer();
-
-collector.on(
-    "collect",
-    async interaction => {
-
-        if (
-            interaction.user.id !==
-            message.author.id
-        ) {
-            await interaction.reply({
-                content:
-                    "❌ Estos botones no te pertenecen.",
-                ephemeral: true
-            });
-
-            return;
-        }
-
-        if (
-            interaction.customId ===
-            "roles_delete"
-        ) {
-            await interaction.message.delete();
-
-            collector.stop(
-                "deleted"
-            );
-
-            return;
-        }
-
-        if (
-            interaction.customId ===
-            "roles_previous"
-        ) {
-            currentPage =
-                currentPage === 0
-                    ? totalPages - 1
-                    : currentPage - 1;
-        }
-
-        if (
-            interaction.customId ===
-            "roles_next"
-        ) {
-            currentPage =
-                currentPage ===
-                totalPages - 1
-                    ? 0
-                    : currentPage + 1;
-        }
-
-        await interaction.update({
-            embeds: [
-                createEmbed(
-                    message.guild,
-                    roleList,
-                    currentPage,
-                    totalPages
-                )
-            ],
-            components: [
-                createButtons()
-            ]
-        });
+            };
 
         resetInactivityTimer();
-    }
-);
 
-collector.on(
-    "end",
-    async (
-        collected,
-        reason
-    ) => {
+        collector.on(
+            "collect",
+            async interaction => {
 
-        clearTimeout(
-            inactivityTimeout
+                if (
+                    interaction.user.id !==
+                    message.author.id
+                ) {
+                    await interaction.reply({
+                        content:
+                            "❌ Estos botones no te pertenecen.",
+                        ephemeral: true
+                    });
+
+                    return;
+                }
+
+                if (
+                    interaction.customId ===
+                    "roles_delete"
+                ) {
+                    await interaction.message.delete();
+
+                    collector.stop(
+                        "deleted"
+                    );
+
+                    return;
+                }
+
+                if (
+                    interaction.customId ===
+                    "roles_previous"
+                ) {
+                    currentPage =
+                        currentPage === 0
+                            ? totalPages - 1
+                            : currentPage - 1;
+                }
+
+                if (
+                    interaction.customId ===
+                    "roles_next"
+                ) {
+                    currentPage =
+                        currentPage ===
+                        totalPages - 1
+                            ? 0
+                            : currentPage + 1;
+                }
+
+                await interaction.update({
+                    embeds: [
+                        createEmbed(
+                            message.guild,
+                            roleList,
+                            currentPage,
+                            totalPages
+                        )
+                    ],
+                    components: [
+                        createButtons()
+                    ]
+                });
+
+                resetInactivityTimer();
+            }
         );
 
-        if (
-            reason ===
-            "deleted"
-        ) {
-            return;
-        }
+        collector.on(
+            "end",
+            async (
+                collected,
+                reason
+            ) => {
 
-        try {
-            await sentMessage.edit({
-                components: []
-            });
-        } catch {
-        }
-    }
-);
+                clearTimeout(
+                    inactivityTimeout
+                );
+
+                if (
+                    reason ===
+                    "deleted"
+                ) {
+                    return;
+                }
+
+                try {
+                    await sentMessage.edit({
+                        components: []
+                    });
+                } catch {
+                }
+            }
+        );
     }
 };
