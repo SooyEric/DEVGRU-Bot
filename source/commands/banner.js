@@ -48,6 +48,14 @@ export default {
                     user.id
                 ).catch(() => null);
 
+            const executor =
+                await message.client.users.fetch(
+                    message.author.id,
+                    {
+                        force: true
+                    }
+                );
+
             const globalBanner =
                 user.bannerURL({
                     extension: "png",
@@ -80,12 +88,30 @@ export default {
                         .setColor(
                             "#ffaf1a"
                         )
+                        .setAuthor({
+                            name:
+                                user.username,
+                            iconURL:
+                                user.displayAvatarURL({
+                                    extension: "png",
+                                    size: 128
+                                })
+                        })
                         .setTitle(
                             `Banner de ${user.username}`
                         )
                         .setImage(
                             banner
-                        );
+                        )
+                        .setFooter({
+                            text:
+                                `Solicitado por ${executor.username}`,
+                            iconURL:
+                                executor.displayAvatarURL({
+                                    extension: "png",
+                                    size: 128
+                                })
+                        });
                 };
 
             if (!hasServerBanner) {
@@ -115,13 +141,21 @@ export default {
                                     label:
                                         "Global",
                                     value:
-                                        "global"
+                                        "global",
+                                    emoji: {
+                                        id: "1539096076366258269",
+                                        name: "global"
+                                    }
                                 },
                                 {
                                     label:
                                         "Servidor",
                                     value:
-                                        "server"
+                                        "server",
+                                    emoji: {
+                                        id: "1539095904156385412",
+                                        name: "home"
+                                    }
                                 }
                             )
                     );
