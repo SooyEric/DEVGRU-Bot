@@ -3,7 +3,10 @@ import {
     GatewayIntentBits,
     Collection,
     EmbedBuilder,
-    Partials
+    Partials,
+    ContainerBuilder,
+    TextDisplayBuilder,
+    MessageFlags
 } from "discord.js";
 
 import http from "http";
@@ -1019,35 +1022,36 @@ if (
                 pending.messageId
             );
 
-        const username =
-            robloxUser.preferred_username ||
-            pending.robloxUsername;
+const username =
+    robloxUser.preferred_username ||
+    pending.robloxUsername;
 
-        const profileUrl =
-            robloxUser.profile ||
-            `https://www.roblox.com/users/${authenticatedRobloxId}/profile`;
+const profileUrl =
+    robloxUser.profile ||
+    `https://www.roblox.com/users/${authenticatedRobloxId}/profile`;
 
-        await message.edit({
-            embeds: [
-                new EmbedBuilder()
-                    .setColor(
-                        "#77DD77"
-                    )
-                    .setTitle(
-                        "Cuenta de Roblox vinculada"
-                    )
-                    .setDescription(
-                        "Tu cuenta de Roblox ha sido verificada y vinculada correctamente.\n\n" +
-                        `**Cuenta:** [${username}](${profileUrl})\n\n` +
-                        "La vinculación ha quedado guardada permanentemente en tu perfil de Discord."
-                    )
-            ],
-            components: []
-        });
+await message.delete();
 
-        logger.info(
-            `[ROBLOX OAUTH] Cuenta vinculada. Discord=${pending.userId} Roblox=${authenticatedRobloxId}`
-        );
+await channel.send({
+    flags:
+        MessageFlags.IsComponentsV2,
+
+    components: [
+        new ContainerBuilder()
+            .addTextDisplayComponents(
+                new TextDisplayBuilder()
+                    .setContent(
+                        "## <:roblox:1538379754414145536> Cuenta Vinculada\n\n" +
+                        "Tu cuenta de Roblox ha sido vinculada correctamente.\n\n" +
+                        `El usuario [${username}](${profileUrl}) ha sido asociado correctamente con tu perfil de Discord.`
+                    )
+            )
+    ]
+});
+
+logger.info(
+    `[ROBLOX OAUTH] Cuenta vinculada. Discord=${pending.userId} Roblox=${authenticatedRobloxId}`
+);
 
         res.writeHead(
             200,
