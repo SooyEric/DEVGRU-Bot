@@ -741,6 +741,9 @@ function getRobloxVerificationButtons(
     return new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
+                .setLabel(
+                    "Verificar"
+                )
                 .setStyle(
                     ButtonStyle.Link
                 )
