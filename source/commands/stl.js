@@ -179,8 +179,8 @@ function createButtons() {
                 .setCustomId(
                     "stl_cancel"
                 )
-                .setLabel(
-                    "✕"
+                .setEmoji(
+                    "<:cancel:1538544866659672144>"
                 )
                 .setStyle(
                     ButtonStyle.Danger
