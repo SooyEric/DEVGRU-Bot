@@ -914,13 +914,14 @@ function createRobloxLinkCollector(
                 }
 
                 try {
-                    const authorizationUrl =
-                        createProfileRobloxAuthorization(
-                            requester.user.id,
-                            selectedRobloxUser.username,
-                            profileMessage.channel.id,
-                            profileMessage.id
-                        );
+const authorizationUrl =
+    createProfileRobloxAuthorization(
+        requester.user.id,
+        selectedRobloxUser.id,
+        selectedRobloxUser.username,
+        profileMessage.channel.id,
+        profileMessage.id
+    );
 
                     await interaction.reply({
                         content:
