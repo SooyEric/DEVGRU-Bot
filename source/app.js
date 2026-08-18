@@ -698,7 +698,7 @@ const PORT =
 
 const server =
     http.createServer(
-        (
+        async (
             req,
             res
         ) => {
