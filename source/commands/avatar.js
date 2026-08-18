@@ -49,7 +49,12 @@ export default {
                 ).catch(() => null);
 
             const executor =
-                message.member;
+                await message.client.users.fetch(
+                    message.author.id,
+                    {
+                        force: true
+                    }
+                );
 
             const globalAvatar =
                 user.displayAvatarURL({
@@ -87,7 +92,6 @@ export default {
                         )
                         .setAuthor({
                             name:
-                                member?.displayName ||
                                 user.username,
                             iconURL:
                                 user.displayAvatarURL({
@@ -103,7 +107,7 @@ export default {
                         )
                         .setFooter({
                             text:
-                                `Solicitado por ${executor.displayName}`,
+                                `Solicitado por ${executor.username}`,
                             iconURL:
                                 executor.displayAvatarURL({
                                     extension: "png",
