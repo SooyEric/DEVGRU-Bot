@@ -379,7 +379,8 @@ function getStatus(
 
 function getCategoryContent(
     category,
-    member
+    member,
+    robloxProfile
 ) {
     switch (category) {
         case "Servicio":
@@ -452,7 +453,11 @@ function getCategoryContent(
             return (
                 "## General\n\n" +
                 `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
-                "<:roblox:1538379754414145536> **Usuario de Roblox**: `No Registrado`\n\n" +
+(
+    robloxProfile
+        ? `<:roblox:1538379754414145536> **Usuario de Roblox**: [${robloxProfile.roblox_username}](${robloxProfile.roblox_profile_url})\n\n`
+        : "<:roblox:1538379754414145536> **Usuario de Roblox**: `No Registrado`\n\n"
+) +
                 `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
                 `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
                 `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\`\n` +
@@ -464,7 +469,8 @@ function getCategoryContent(
 function getProfileEmbed(
     member,
     requester,
-    category
+    category,
+    robloxProfile
 ) {
     const nickname =
         member.nickname ||
@@ -487,10 +493,11 @@ function getProfileEmbed(
             `Perfil de ${nickname}`
         )
         .setDescription(
-            getCategoryContent(
-                category,
-                member
-            )
+getCategoryContent(
+    category,
+    member,
+    robloxProfile
+)
         )
         .setFooter({
             text:
@@ -958,7 +965,8 @@ if (
 function createProfileCollector(
     profileMessage,
     target,
-    requester
+    requester,
+    robloxProfile
 ) {
     let currentCategory =
         "General";
@@ -1016,11 +1024,12 @@ function createProfileCollector(
 
             await interaction.update({
                 embeds: [
-                    getProfileEmbed(
-                        target,
-                        requester,
-                        currentCategory
-                    )
+getProfileEmbed(
+    target,
+    requester,
+    currentCategory,
+    robloxProfile
+)
                 ],
                 components: [
                     getCategoryMenu(
@@ -1043,10 +1052,11 @@ function createProfileCollector(
             try {
                 await profileMessage.edit({
                     embeds: [
-                        getProfileEmbed(
-                            target,
-                            requester,
-                            currentCategory
+getProfileEmbed(
+    target,
+    requester,
+    currentCategory,
+    robloxProfile
                         )
                     ],
                     components: []
@@ -1083,6 +1093,11 @@ export default {
         const isSelf =
             target.id ===
             message.author.id;
+            
+            const robloxProfile =
+    await getRobloxProfile(
+        target.id
+    );
 
         if (
             !isSelf &&
@@ -1102,10 +1117,6 @@ export default {
 if (
     isSelf
 ) {
-    const robloxProfile =
-        await getRobloxProfile(
-            message.author.id
-        );
 
     if (
         !robloxProfile
@@ -1254,26 +1265,28 @@ if (
     }
 }
 
-        const profileMessage =
-            await message.reply({
-                embeds: [
-                    getProfileEmbed(
-                        target,
-                        message.member,
-                        "General"
-                    )
-                ],
-                components: [
-                    getCategoryMenu(
-                        "General"
-                    )
-                ]
-            });
+const profileMessage =
+    await message.reply({
+        embeds: [
+            getProfileEmbed(
+                target,
+                message.member,
+                "General",
+                robloxProfile
+            )
+        ],
+        components: [
+            getCategoryMenu(
+                "General"
+            )
+        ]
+    });
 
-        createProfileCollector(
-            profileMessage,
-            target,
-            message.member
-        );
+createProfileCollector(
+    profileMessage,
+    target,
+    message.member,
+    robloxProfile
+);
     }
 };
