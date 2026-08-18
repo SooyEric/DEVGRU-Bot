@@ -48,6 +48,9 @@ export default {
                     user.id
                 ).catch(() => null);
 
+            const executor =
+                message.member;
+
             const globalAvatar =
                 user.displayAvatarURL({
                     extension:
@@ -82,12 +85,31 @@ export default {
                         .setColor(
                             "#ffaf1a"
                         )
+                        .setAuthor({
+                            name:
+                                member?.displayName ||
+                                user.username,
+                            iconURL:
+                                user.displayAvatarURL({
+                                    extension: "png",
+                                    size: 128
+                                })
+                        })
                         .setTitle(
                             `Avatar de ${user.username}`
                         )
                         .setImage(
                             avatar
-                        );
+                        )
+                        .setFooter({
+                            text:
+                                `Solicitado por ${executor.displayName}`,
+                            iconURL:
+                                executor.displayAvatarURL({
+                                    extension: "png",
+                                    size: 128
+                                })
+                        });
                 };
 
             if (!serverAvatar) {
