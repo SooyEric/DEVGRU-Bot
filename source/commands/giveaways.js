@@ -543,7 +543,7 @@ function getGiveawayEmbed(
                 "<:gwa:1538324626621337692> Giveaway"
             )
             .setDescription(
-                `# ${giveaway.prize} <:premio:1538335648262389822>\n\n` +
+                `## <:premio:1538335648262389822> ${giveaway.prize}\n\n` +
 
                 `<:win:1538323077912334356> **Ganadores**: \`${giveaway.winnersCount}\`\n` +
 
@@ -1319,10 +1319,10 @@ export default {
 await interaction.update({
     content: null,
     embeds: [
-        new EmbedBuilder()
-            .setDescription(
-                "Giveaway cancelado."
-            )
+        {
+            description: "Giveaway cancelado()",
+            color: null
+        }
     ],
     components: []
 });
@@ -1687,10 +1687,10 @@ await interaction.update({
 await interaction.update({
     content: null,
     embeds: [
-        new EmbedBuilder()
-            .setDescription(
-                "Giveaway publicado correctamente."
-            )
+        {
+            description: "Giveaway publicado correctamente.",
+            color: null
+        }
     ],
     components: []
 });
