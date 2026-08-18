@@ -41,6 +41,10 @@ import {
 } from "./utils/squadronRegistry.js";
 
 import {
+    initializeRobloxProfileTable
+} from "./utils/robloxProfile.js";
+
+import {
     handleMessageDelete
 } from "./utils/snipeManager.js";
 
@@ -100,6 +104,7 @@ client.commands =
 await initializeBanTable();
 await initializeAntiRaidTable();
 await initializeSquadronRegistry();
+await initializeRobloxProfileTable();
 
 squadronRegistry.register(client);
 antiRaid.register(client);
