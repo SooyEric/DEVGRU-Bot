@@ -709,6 +709,514 @@ const server =
                     `http://${req.headers.host}`
                 );
 
+if (
+    url.pathname === "/roblox/callback"
+) {
+    const code =
+        url.searchParams.get(
+            "code"
+        );
+
+    const state =
+        url.searchParams.get(
+            "state"
+        );
+
+    const error =
+        url.searchParams.get(
+            "error"
+        );
+
+    const errorDescription =
+        url.searchParams.get(
+            "error_description"
+        );
+
+    if (
+        !state
+    ) {
+        res.writeHead(
+            400,
+            {
+                "Content-Type":
+                    "text/plain; charset=utf-8"
+            }
+        );
+
+        res.end(
+            "Solicitud OAuth inválida."
+        );
+
+        return;
+    }
+
+    const pending =
+        getPendingProfileState(
+            state
+        );
+
+    if (
+        !pending
+    ) {
+        res.writeHead(
+            400,
+            {
+                "Content-Type":
+                    "text/plain; charset=utf-8"
+            }
+        );
+
+        res.end(
+            "La sesión de vinculación ha expirado o no es válida."
+        );
+
+        return;
+    }
+
+    if (
+        error
+    ) {
+        deletePendingProfileState(
+            state
+        );
+
+        try {
+            const channel =
+                await client.channels.fetch(
+                    pending.channelId
+                );
+
+            const message =
+                await channel.messages.fetch(
+                    pending.messageId
+                );
+
+            await message.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(
+                            "#ff4d4d"
+                        )
+                        .setTitle(
+                            "Verificación cancelada"
+                        )
+                        .setDescription(
+                            "La verificación de Roblox no fue completada.\n\n" +
+                            "Puedes volver a intentarlo utilizando el botón **Vincular**."
+                        )
+                ]
+            });
+        } catch (callbackError) {
+            logger.error(
+                "Error actualizando mensaje después de cancelar Roblox OAuth:",
+                callbackError
+            );
+        }
+
+        res.writeHead(
+            200,
+            {
+                "Content-Type":
+                    "text/html; charset=utf-8"
+            }
+        );
+
+        res.end(`
+            <!DOCTYPE html>
+            <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>DEVGRU</title>
+                </head>
+                <body>
+                    <h2>Verificación cancelada</h2>
+                    <p>Puedes cerrar esta ventana y volver a Discord.</p>
+                </body>
+            </html>
+        `);
+
+        return;
+    }
+
+    if (
+        !code
+    ) {
+        deletePendingProfileState(
+            state
+        );
+
+        res.writeHead(
+            400,
+            {
+                "Content-Type":
+                    "text/plain; charset=utf-8"
+            }
+        );
+
+        res.end(
+            "Roblox no devolvió un código de autorización."
+        );
+
+        return;
+    }
+
+    try {
+        const tokens =
+            await exchangeProfileRobloxCode(
+                code
+            );
+
+        const robloxUser =
+            await getProfileRobloxUser(
+                tokens.access_token
+            );
+
+        const authenticatedRobloxId =
+            String(
+                robloxUser.sub
+            );
+
+        const selectedRobloxId =
+            String(
+                pending.robloxId
+            );
+
+        if (
+            authenticatedRobloxId !==
+            selectedRobloxId
+        ) {
+            deletePendingProfileState(
+                state
+            );
+
+            const channel =
+                await client.channels.fetch(
+                    pending.channelId
+                );
+
+            const message =
+                await channel.messages.fetch(
+                    pending.messageId
+                );
+
+            await message.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(
+                            "#ff4d4d"
+                        )
+                        .setTitle(
+                            "Cuenta incorrecta"
+                        )
+                        .setDescription(
+                            "La cuenta de Roblox con la que autorizaste no coincide con la cuenta que seleccionaste anteriormente.\n\n" +
+                            "Vuelve a intentarlo utilizando **Verificar**."
+                        )
+                ],
+                components: []
+            });
+
+            res.writeHead(
+                400,
+                {
+                    "Content-Type":
+                        "text/html; charset=utf-8"
+                }
+            );
+
+            res.end(`
+                <!DOCTYPE html>
+                <html lang="es">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>DEVGRU</title>
+                    </head>
+                    <body>
+                        <h2>Cuenta incorrecta</h2>
+                        <p>La cuenta autorizada no coincide con la cuenta seleccionada.</p>
+                        <p>Puedes cerrar esta ventana y volver a Discord.</p>
+                    </body>
+                </html>
+            `);
+
+            return;
+        }
+
+        const existingDiscordProfile =
+            await getRobloxProfile(
+                pending.userId
+            );
+
+        const existingRobloxProfile =
+            await getRobloxProfileByRobloxId(
+                authenticatedRobloxId
+            );
+
+        if (
+            existingRobloxProfile &&
+            existingRobloxProfile.discord_id !==
+                pending.userId
+        ) {
+            deletePendingProfileState(
+                state
+            );
+
+            const channel =
+                await client.channels.fetch(
+                    pending.channelId
+                );
+
+            const message =
+                await channel.messages.fetch(
+                    pending.messageId
+                );
+
+            await message.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(
+                            "#ff4d4d"
+                        )
+                        .setTitle(
+                            "Cuenta ya vinculada"
+                        )
+                        .setDescription(
+                            "Esta cuenta de Roblox ya está vinculada a otra cuenta de Discord."
+                        )
+                ],
+                components: []
+            });
+
+            res.writeHead(
+                409,
+                {
+                    "Content-Type":
+                        "text/html; charset=utf-8"
+                }
+            );
+
+            res.end(`
+                <!DOCTYPE html>
+                <html lang="es">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>DEVGRU</title>
+                    </head>
+                    <body>
+                        <h2>Cuenta ya vinculada</h2>
+                        <p>Esta cuenta de Roblox ya está vinculada a otra cuenta de Discord.</p>
+                        <p>Puedes cerrar esta ventana.</p>
+                    </body>
+                </html>
+            `);
+
+            return;
+        }
+
+        if (
+            existingDiscordProfile &&
+            existingDiscordProfile.roblox_id !==
+                authenticatedRobloxId
+        ) {
+            deletePendingProfileState(
+                state
+            );
+
+            const channel =
+                await client.channels.fetch(
+                    pending.channelId
+                );
+
+            const message =
+                await channel.messages.fetch(
+                    pending.messageId
+                );
+
+            await message.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(
+                            "#ff4d4d"
+                        )
+                        .setTitle(
+                            "Cuenta ya vinculada"
+                        )
+                        .setDescription(
+                            "Tu cuenta de Discord ya tiene una cuenta de Roblox vinculada."
+                        )
+                ],
+                components: []
+            });
+
+            res.writeHead(
+                409,
+                {
+                    "Content-Type":
+                        "text/html; charset=utf-8"
+                }
+            );
+
+            res.end(`
+                <!DOCTYPE html>
+                <html lang="es">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>DEVGRU</title>
+                    </head>
+                    <body>
+                        <h2>Cuenta ya vinculada</h2>
+                        <p>Tu cuenta de Discord ya tiene una cuenta de Roblox vinculada.</p>
+                        <p>Puedes cerrar esta ventana.</p>
+                    </body>
+                </html>
+            `);
+
+            return;
+        }
+
+        await saveRobloxProfile(
+            pending.userId,
+            authenticatedRobloxId,
+            robloxUser.preferred_username ||
+                pending.robloxUsername
+        );
+
+        deletePendingProfileState(
+            state
+        );
+
+        const channel =
+            await client.channels.fetch(
+                pending.channelId
+            );
+
+        const message =
+            await channel.messages.fetch(
+                pending.messageId
+            );
+
+        const username =
+            robloxUser.preferred_username ||
+            pending.robloxUsername;
+
+        const profileUrl =
+            robloxUser.profile ||
+            `https://www.roblox.com/users/${authenticatedRobloxId}/profile`;
+
+        await message.edit({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(
+                        "#77DD77"
+                    )
+                    .setTitle(
+                        "Cuenta de Roblox vinculada"
+                    )
+                    .setDescription(
+                        "Tu cuenta de Roblox ha sido verificada y vinculada correctamente.\n\n" +
+                        `**Cuenta:** [${username}](${profileUrl})\n\n` +
+                        "La vinculación ha quedado guardada permanentemente en tu perfil de Discord."
+                    )
+            ],
+            components: []
+        });
+
+        res.writeHead(
+            200,
+            {
+                "Content-Type":
+                    "text/html; charset=utf-8"
+            }
+        );
+
+        res.end(`
+            <!DOCTYPE html>
+            <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>DEVGRU</title>
+                </head>
+                <body>
+                    <h2>Cuenta vinculada correctamente</h2>
+                    <p>Tu cuenta de Roblox ha sido verificada.</p>
+                    <p>Puedes cerrar esta ventana y volver a Discord.</p>
+                </body>
+            </html>
+        `);
+
+        return;
+
+    } catch (error) {
+        logger.error(
+            "Error procesando Roblox OAuth callback:",
+            error
+        );
+
+        deletePendingProfileState(
+            state
+        );
+
+        try {
+            const channel =
+                await client.channels.fetch(
+                    pending.channelId
+                );
+
+            const message =
+                await channel.messages.fetch(
+                    pending.messageId
+                );
+
+            await message.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(
+                            "#ff4d4d"
+                        )
+                        .setTitle(
+                            "Error de verificación"
+                        )
+                        .setDescription(
+                            "No pudimos completar la verificación de tu cuenta de Roblox.\n\n" +
+                            "Inténtalo nuevamente."
+                        )
+                ],
+                components: []
+            });
+        } catch (messageError) {
+            logger.error(
+                "Error actualizando mensaje de Roblox OAuth:",
+                messageError
+            );
+        }
+
+        res.writeHead(
+            500,
+            {
+                "Content-Type":
+                    "text/html; charset=utf-8"
+            }
+        );
+
+        res.end(`
+            <!DOCTYPE html>
+            <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>DEVGRU</title>
+                </head>
+                <body>
+                    <h2>Error de verificación</h2>
+                    <p>No pudimos completar la verificación.</p>
+                    <p>Puedes cerrar esta ventana y volver a Discord.</p>
+                </body>
+            </html>
+        `);
+
+        return;
+    }
+}
+
             if (
                 url.pathname === "/"
             ) {
