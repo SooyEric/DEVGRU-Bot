@@ -9,6 +9,12 @@ import {
     TextInputStyle
 } from "discord.js";
 
+import logger from "../utils/logger.js";
+
+import {
+    isRobloxUserInGroup
+} from "../utils/robloxGroup.js";
+
 import {
     getRobloxProfile
 } from "../utils/robloxProfile.js";
@@ -1122,7 +1128,7 @@ export default {
             return;
         }
         
-        if (
+if (
     isSelf
 ) {
     const robloxProfile =
@@ -1146,6 +1152,131 @@ export default {
         createRobloxLinkCollector(
             profileMessage,
             message.member
+        );
+
+        return;
+    }
+
+    let isInGroup;
+
+    try {
+        isInGroup =
+            await isRobloxUserInGroup(
+                robloxProfile.roblox_id
+            );
+    } catch (error) {
+        logger.error(
+            "[ROBLOX GROUP] Error comprobando membresía:",
+            error
+        );
+
+        await message.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(
+                        "#ff4d4d"
+                    )
+                    .setDescription(
+                        "No se pudo comprobar tu membresía en el grupo de Roblox. Inténtalo nuevamente en unos momentos."
+                    )
+            ]
+        });
+
+        return;
+    }
+
+    if (
+        !isInGroup
+    ) {
+        const groupMessage =
+            await message.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(
+                            EMBED_COLOR
+                        )
+                        .setTitle(
+                            "Únete al grupo de Roblox"
+                        )
+                        .setDescription(
+                            "Tu cuenta de Roblox ya está vinculada correctamente.\n\n" +
+                            "Para continuar, debes enviar una solicitud para unirte al grupo oficial de **DEVGRU - Seal Team Six**.\n\n" +
+                            "Después de enviar la solicitud, vuelve a utilizar `-perfil` para comprobar tu membresía."
+                        )
+                ],
+                components: [
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setLabel(
+                                    "Unirse al grupo"
+                                )
+                                .setStyle(
+                                    ButtonStyle.Link
+                                )
+                                .setURL(
+                                    "https://www.roblox.com/communities/34479953/DEVGRU-Seal-Team-Six#!/about"
+                                ),
+                            new ButtonBuilder()
+                                .setCustomId(
+                                    "perfil_roblox_group_cancel"
+                                )
+                                .setLabel(
+                                    "✕"
+                                )
+                                .setStyle(
+                                    ButtonStyle.Secondary
+                                )
+                        )
+                ]
+            });
+
+        const collector =
+            groupMessage.createMessageComponentCollector({
+                time: 60_000
+            });
+
+        collector.on(
+            "collect",
+            async interaction => {
+                if (
+                    interaction.user.id !==
+                    message.author.id
+                ) {
+                    await interaction.reply({
+                        content:
+                            "No es tu interacción.",
+                        ephemeral:
+                            true
+                    });
+
+                    return;
+                }
+
+                if (
+                    interaction.customId ===
+                    "perfil_roblox_group_cancel"
+                ) {
+                    await interaction.message.delete()
+                        .catch(() => {});
+
+                    collector.stop(
+                        "cancelled"
+                    );
+                }
+            }
+        );
+
+        collector.on(
+            "end",
+            async () => {
+                try {
+                    await groupMessage.edit({
+                        components: []
+                    });
+                } catch {
+                }
+            }
         );
 
         return;
