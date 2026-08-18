@@ -73,13 +73,7 @@ function createServerEmbed(
 
         embed.setFooter({
             text:
-                `Unido el ${
-                    joinedAt
-                        ? formatDate(
-                            joinedAt
-                        )
-                        : "desconocido"
-                }`,
+                `Solicitado por ${user.username}`,
             iconURL:
                 user.displayAvatarURL({
                     extension: "png",
@@ -118,13 +112,7 @@ function createServerEmbed(
 
         embed.setFooter({
             text:
-                `Unido el ${
-                    joinedAt
-                        ? formatDate(
-                            joinedAt
-                        )
-                        : "desconocido"
-                }`,
+                `Solicitado por ${user.username}`,
             iconURL:
                 user.displayAvatarURL({
                     extension: "png",
@@ -199,13 +187,7 @@ function createServerEmbed(
             )
             .setFooter({
                 text:
-                    `Unido el ${
-                        joinedAt
-                            ? formatDate(
-                                joinedAt
-                            )
-                            : "desconocido"
-                    }`,
+                    `Solicitado por ${user.username}`,
                 iconURL:
                     user.displayAvatarURL({
                         extension: "png",
@@ -230,14 +212,26 @@ function createMenu() {
                     {
                         label: "Servidor",
                         value: "server",
+                        emoji: {
+                            id: "1539095904156385412",
+                            name: "home"
+                        }
                     },
                     {
                         label: "Icono",
                         value: "icon",
+                        emoji: {
+                            id: "1538099479759294484",
+                            name: "config"
+                        }
                     },
                     {
                         label: "Banner",
                         value: "banner",
+                        emoji: {
+                            id: "1538099479759294484",
+                            name: "config"
+                        }
                     }
                 )
         );
@@ -274,101 +268,101 @@ export default {
                     ]
                 });
 
-const collector =
-    sentMessage.createMessageComponentCollector({
-        filter:
-            interaction =>
-                interaction.customId ===
-                "serverinfo_menu"
-    });
+            const collector =
+                sentMessage.createMessageComponentCollector({
+                    filter:
+                        interaction =>
+                            interaction.customId ===
+                            "serverinfo_menu"
+                });
 
-let currentType =
-    "server";
+            let currentType =
+                "server";
 
-let inactivityTimeout;
+            let inactivityTimeout;
 
-const resetInactivityTimer =
-    () => {
-        clearTimeout(
-            inactivityTimeout
-        );
-
-        inactivityTimeout =
-            setTimeout(
+            const resetInactivityTimer =
                 () => {
-                    collector.stop(
-                        "timeout"
+                    clearTimeout(
+                        inactivityTimeout
                     );
-                },
-                30_000
+
+                    inactivityTimeout =
+                        setTimeout(
+                            () => {
+                                collector.stop(
+                                    "timeout"
+                                );
+                            },
+                            30_000
+                        );
+                };
+
+            resetInactivityTimer();
+
+            collector.on(
+                "collect",
+                async interaction => {
+                    if (
+                        interaction.user.id !==
+                        message.author.id
+                    ) {
+                        await interaction.reply({
+                            content:
+                                "Esta interacción no te pertenece.",
+                            ephemeral: true
+                        });
+
+                        return;
+                    }
+
+                    currentType =
+                        interaction.values[0];
+
+                    const embed =
+                        createServerEmbed(
+                            message.guild,
+                            message.author,
+                            currentType
+                        );
+
+                    await interaction.update({
+                        embeds: [
+                            embed
+                        ],
+                        components: [
+                            menu
+                        ]
+                    });
+
+                    resetInactivityTimer();
+                }
             );
-    };
 
-resetInactivityTimer();
+            collector.on(
+                "end",
+                async () => {
+                    clearTimeout(
+                        inactivityTimeout
+                    );
 
-collector.on(
-    "collect",
-    async interaction => {
-        if (
-            interaction.user.id !==
-            message.author.id
-        ) {
-            await interaction.reply({
-                content:
-                    "Esta interacción no te pertenece.",
-                ephemeral: true
-            });
+                    try {
+                        const embed =
+                            createServerEmbed(
+                                message.guild,
+                                message.author,
+                                currentType
+                            );
 
-            return;
-        }
-
-        currentType =
-            interaction.values[0];
-
-        const embed =
-            createServerEmbed(
-                message.guild,
-                message.author,
-                currentType
+                        await sentMessage.edit({
+                            embeds: [
+                                embed
+                            ],
+                            components: []
+                        });
+                    } catch {}
+                }
             );
-
-        await interaction.update({
-            embeds: [
-                embed
-            ],
-            components: [
-                menu
-            ]
-        });
-
-        resetInactivityTimer();
-    }
-);
-
-collector.on(
-    "end",
-    async () => {
-        clearTimeout(
-            inactivityTimeout
-        );
-
-        try {
-            const embed =
-                createServerEmbed(
-                    message.guild,
-                    message.author,
-                    currentType
-                );
-
-            await sentMessage.edit({
-                embeds: [
-                    embed
-                ],
-                components: []
-            });
-        } catch {}
-    }
-);
 
         } catch (error) {
             console.error(
