@@ -63,7 +63,7 @@ export function createProfileRobloxAuthorization(
                 "code",
 
             scope:
-                "openid profile group:read",
+                "openid profile",
 
             state
         });
