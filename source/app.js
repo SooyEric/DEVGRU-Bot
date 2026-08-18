@@ -736,29 +736,6 @@ if (
     url.pathname === "/internal/roblox/callback" &&
     req.method === "POST"
 ) {
-    logger.info(
-        "[ROBLOX OAUTH TEST] POST RECIBIDO"
-    );
-
-    res.writeHead(
-        200,
-        {
-            "Content-Type":
-                "application/json; charset=utf-8"
-        }
-    );
-
-    res.end(
-        JSON.stringify({
-            success: true,
-            message:
-                "POST recibido correctamente"
-        })
-    );
-
-    return;
-}
-
     try {
         let body = "";
 
