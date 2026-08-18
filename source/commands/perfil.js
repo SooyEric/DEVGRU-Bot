@@ -1,8 +1,21 @@
 import {
     EmbedBuilder,
     ActionRowBuilder,
-    StringSelectMenuBuilder
+    StringSelectMenuBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } from "discord.js";
+
+import {
+    getRobloxProfile
+} from "../utils/robloxProfile.js";
+
+import {
+    createProfileRobloxAuthorization
+} from "../utils/robloxProfileOAuth.js";
 
 const EMBED_COLOR =
     "#ffaf1a";
@@ -559,6 +572,411 @@ async function getTargetMember(
     return message.member;
 }
 
+async function findRobloxUser(
+    username
+) {
+    const response =
+        await fetch(
+            "https://users.roblox.com/v1/usernames/users",
+            {
+                method:
+                    "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        usernames: [
+                            username
+                        ],
+                        excludeBannedUsers:
+                            true
+                    })
+            }
+        );
+
+    if (
+        !response.ok
+    ) {
+        throw new Error(
+            `Roblox API respondió ${response.status}.`
+        );
+    }
+
+    const data =
+        await response.json();
+
+    const user =
+        data.data?.[0];
+
+    if (
+        !user
+    ) {
+        return null;
+    }
+
+    return {
+        id:
+            String(
+                user.id
+            ),
+
+        username:
+            user.name,
+
+        displayName:
+            user.displayName,
+
+        profileUrl:
+            `https://www.roblox.com/users/${user.id}/profile`
+    };
+}
+
+function getRobloxLinkEmbed() {
+    return new EmbedBuilder()
+        .setColor(
+            EMBED_COLOR
+        )
+        .setTitle(
+            "Vinculación de Roblox"
+        )
+        .setDescription(
+            "Para continuar, primero debes vincular una cuenta de Roblox válida con tu cuenta de Discord.\n\n" +
+            "Tu cuenta de Roblox quedará vinculada permanentemente a este Discord."
+        );
+}
+
+function getRobloxLinkButton() {
+    return new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId(
+                    "perfil_roblox_link"
+                )
+                .setLabel(
+                    "Vincular"
+                )
+                .setStyle(
+                    ButtonStyle.Secondary
+                )
+        );
+}
+
+function getRobloxUsernameModal() {
+    return new ModalBuilder()
+        .setCustomId(
+            "perfil_roblox_username_modal"
+        )
+        .setTitle(
+            "Vincular cuenta de Roblox"
+        )
+        .addComponents(
+            new ActionRowBuilder()
+                .addComponents(
+                    new TextInputBuilder()
+                        .setCustomId(
+                            "roblox_username"
+                        )
+                        .setLabel(
+                            "Usuario de Roblox"
+                        )
+                        .setPlaceholder(
+                            "Ej. AsquerosamenteRicoo"
+                        )
+                        .setStyle(
+                            TextInputStyle.Short
+                        )
+                        .setRequired(
+                            true
+                        )
+                        .setMinLength(
+                            3
+                        )
+                        .setMaxLength(
+                            20
+                        )
+                )
+        );
+}
+
+function getRobloxVerificationEmbed(
+    robloxUser
+) {
+    return new EmbedBuilder()
+        .setColor(
+            EMBED_COLOR
+        )
+        .setTitle(
+            "Verificar cuenta de Roblox"
+        )
+        .setDescription(
+            "Has indicado la siguiente cuenta de Roblox:\n\n" +
+            `**[${robloxUser.username}](${robloxUser.profileUrl})**\n\n` +
+            "Presiona **Verificar** para confirmar que eres el propietario de esta cuenta mediante Roblox OAuth."
+        );
+}
+
+function getRobloxVerificationButtons() {
+    return new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId(
+                    "perfil_roblox_verify"
+                )
+                .setLabel(
+                    "Verificar"
+                )
+                .setStyle(
+                    ButtonStyle.Primary
+                ),
+
+            new ButtonBuilder()
+                .setCustomId(
+                    "perfil_roblox_cancel"
+                )
+                .setLabel(
+                    "✕"
+                )
+                .setStyle(
+                    ButtonStyle.Danger
+                )
+        );
+}
+
+function createRobloxLinkCollector(
+    profileMessage,
+    requester
+) {
+    let selectedRobloxUser =
+        null;
+
+    const collector =
+        profileMessage.createMessageComponentCollector({
+            time:
+                5 * 60 * 1000
+        });
+
+    collector.on(
+        "collect",
+        async interaction => {
+            if (
+                interaction.user.id !==
+                requester.user.id
+            ) {
+                await interaction.reply({
+                    content:
+                        "No es tu interacción.",
+                    ephemeral:
+                        true
+                });
+
+                return;
+            }
+
+            if (
+                interaction.customId ===
+                "perfil_roblox_link"
+            ) {
+                await interaction.showModal(
+                    getRobloxUsernameModal()
+                );
+
+                try {
+                    const modalInteraction =
+                        await interaction.awaitModalSubmit({
+                            time:
+                                60_000,
+
+                            filter:
+                                submitted =>
+                                    submitted.user.id ===
+                                    requester.user.id &&
+                                    submitted.customId ===
+                                    "perfil_roblox_username_modal"
+                        });
+
+                    const username =
+                        modalInteraction.fields
+                            .getTextInputValue(
+                                "roblox_username"
+                            )
+                            .trim();
+
+                    await modalInteraction.deferUpdate();
+
+                    let robloxUser;
+
+                    try {
+                        robloxUser =
+                            await findRobloxUser(
+                                username
+                            );
+                    } catch {
+                        await profileMessage.edit({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setColor(
+                                        EMBED_COLOR
+                                    )
+                                    .setTitle(
+                                        "Error"
+                                    )
+                                    .setDescription(
+                                        "No se pudo consultar Roblox en este momento. Inténtalo nuevamente."
+                                    )
+                            ],
+                            components: [
+                                getRobloxLinkButton()
+                            ]
+                        });
+
+                        return;
+                    }
+
+                    if (
+                        !robloxUser
+                    ) {
+                        await profileMessage.edit({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setColor(
+                                        EMBED_COLOR
+                                    )
+                                    .setTitle(
+                                        "Cuenta no encontrada"
+                                    )
+                                    .setDescription(
+                                        `No encontramos una cuenta de Roblox con el usuario \`${username}\`.\n\n` +
+                                        "Comprueba que hayas escrito correctamente tu nombre de usuario."
+                                    )
+                            ],
+                            components: [
+                                getRobloxLinkButton()
+                            ]
+                        });
+
+                        return;
+                    }
+
+                    selectedRobloxUser =
+                        robloxUser;
+
+                    await profileMessage.edit({
+                        embeds: [
+                            getRobloxVerificationEmbed(
+                                robloxUser
+                            )
+                        ],
+                        components: [
+                            getRobloxVerificationButtons()
+                        ]
+                    });
+
+                } catch {
+                    return;
+                }
+
+                return;
+            }
+
+            if (
+                interaction.customId ===
+                "perfil_roblox_cancel"
+            ) {
+                collector.stop(
+                    "cancelled"
+                );
+
+                await interaction.message.delete()
+                    .catch(() => {});
+
+                return;
+            }
+
+            if (
+                interaction.customId ===
+                "perfil_roblox_verify"
+            ) {
+                if (
+                    !selectedRobloxUser
+                ) {
+                    await interaction.reply({
+                        content:
+                            "Primero debes seleccionar una cuenta de Roblox.",
+                        ephemeral:
+                            true
+                    });
+
+                    return;
+                }
+
+                try {
+                    const authorizationUrl =
+                        createProfileRobloxAuthorization(
+                            requester.user.id,
+                            selectedRobloxUser.username,
+                            profileMessage.channel.id,
+                            profileMessage.id
+                        );
+
+                    await interaction.reply({
+                        content:
+                            "Continúa con Roblox para verificar que eres el propietario de esta cuenta.",
+                        components: [
+                            new ActionRowBuilder()
+                                .addComponents(
+                                    new ButtonBuilder()
+                                        .setLabel(
+                                            "Continuar con Roblox"
+                                        )
+                                        .setStyle(
+                                            ButtonStyle.Link
+                                        )
+                                        .setURL(
+                                            authorizationUrl
+                                        )
+                                )
+                        ],
+                        ephemeral:
+                            true
+                    });
+
+                } catch {
+                    await interaction.reply({
+                        content:
+                            "No se pudo iniciar la verificación de Roblox. Inténtalo nuevamente.",
+                        ephemeral:
+                            true
+                    });
+                }
+
+                return;
+            }
+        }
+    );
+
+    collector.on(
+        "end",
+        async () => {
+            if (
+                profileMessage.deleted
+            ) {
+                return;
+            }
+
+            try {
+                await profileMessage.edit({
+                    components: []
+                });
+            } catch {
+            }
+        }
+    );
+}
+
 function createProfileCollector(
     profileMessage,
     target,
@@ -702,6 +1120,36 @@ export default {
 
             return;
         }
+        
+        if (
+    isSelf
+) {
+    const robloxProfile =
+        await getRobloxProfile(
+            message.author.id
+        );
+
+    if (
+        !robloxProfile
+    ) {
+        const profileMessage =
+            await message.reply({
+                embeds: [
+                    getRobloxLinkEmbed()
+                ],
+                components: [
+                    getRobloxLinkButton()
+                ]
+            });
+
+        createRobloxLinkCollector(
+            profileMessage,
+            message.member
+        );
+
+        return;
+    }
+}
 
         const profileMessage =
             await message.reply({
