@@ -737,36 +737,27 @@ if (
     req.method === "POST"
 ) {
     logger.info(
-    "[ROBLOX OAUTH] POST /internal/roblox/callback recibido."
-);
-    const authorization =
-        req.headers.authorization;
+        "[ROBLOX OAUTH TEST] POST RECIBIDO"
+    );
 
-    const expectedAuthorization =
-        `Bearer ${process.env.ROBLOX_CALLBACK_API_KEY}`;
+    res.writeHead(
+        200,
+        {
+            "Content-Type":
+                "application/json; charset=utf-8"
+        }
+    );
 
-    if (
-        !process.env.ROBLOX_CALLBACK_API_KEY ||
-        authorization !==
-            expectedAuthorization
-    ) {
-        res.writeHead(
-            401,
-            {
-                "Content-Type":
-                    "application/json; charset=utf-8"
-            }
-        );
+    res.end(
+        JSON.stringify({
+            success: true,
+            message:
+                "POST recibido correctamente"
+        })
+    );
 
-        res.end(
-            JSON.stringify({
-                success: false,
-                error: "Unauthorized"
-            })
-        );
-
-        return;
-    }
+    return;
+}
 
     try {
         let body = "";
