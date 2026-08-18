@@ -735,6 +735,32 @@ function getRobloxVerificationEmbed(
         );
 }
 
+function getRobloxVerificationButtons(
+    authorizationUrl
+) {
+    return new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setStyle(
+                    ButtonStyle.Link
+                )
+                .setURL(
+                    authorizationUrl
+                ),
+
+            new ButtonBuilder()
+                .setCustomId(
+                    "perfil_roblox_cancel"
+                )
+                .setEmoji(
+                    "<:cancel:1538544866659672144>"
+                )
+                .setStyle(
+                    ButtonStyle.Danger
+                )
+        );
+}
+
 return new ActionRowBuilder()
     .addComponents(
         new ButtonBuilder()
