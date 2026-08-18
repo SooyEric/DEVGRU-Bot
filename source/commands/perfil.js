@@ -35,6 +35,9 @@ const PROFILE_ROLE_ID =
 const INACTIVE_ROLE_ID =
     "1538434883045818378";
 
+const PROFILE_UI_TIMEOUT =
+    30_000;
+
 const SQUADRONS = [
     {
         id: "1373365857928876243",
@@ -214,6 +217,44 @@ const PAYMENTS = {
     "1373365829860593735": 40
 };
 
+function createProfileTimeout(
+    collector
+) {
+    let timeout = null;
+
+    function reset() {
+        clear();
+
+        timeout =
+            setTimeout(
+                () => {
+                    collector.stop(
+                        "timeout"
+                    );
+                },
+                PROFILE_UI_TIMEOUT
+            );
+    }
+
+    function clear() {
+        if (
+            timeout
+        ) {
+            clearTimeout(
+                timeout
+            );
+
+            timeout =
+                null;
+        }
+    }
+
+    return {
+        reset,
+        clear
+    };
+}
+
 function getRank(
     member
 ) {
@@ -385,7 +426,9 @@ function getCategoryContent(
     member,
     robloxProfile
 ) {
-    switch (category) {
+    switch (
+        category
+    ) {
         case "Servicio":
             return (
                 "## Servicio\n\n" +
@@ -410,7 +453,9 @@ function getCategoryContent(
                 "## Ascensos\n\n" +
                 `<:rango:1538381219631464448> **Siguiente Rango**: \`${getNextRank(member)}\`\n\n` +
                 (
-                    requiresActivityStart(member)
+                    requiresActivityStart(
+                        member
+                    )
                         ? "<:boss:1538099028372365333> **Iniciar Actividad**: `0/1`\n"
                         : ""
                 ) +
@@ -441,7 +486,9 @@ function getCategoryContent(
                 "<:gift:1538322136371044422> **Bonificaciones**: `R$ 0`\n" +
                 "<:robux:1538413836405837855> **Total Semanal**: `R$ 0`\n\n" +
                 (
-                    requiresActivityStart(member)
+                    requiresActivityStart(
+                        member
+                    )
                         ? "<:boss:1538099028372365333> **Iniciar Actividad**: `0/1`\n"
                         : ""
                 ) +
@@ -456,11 +503,11 @@ function getCategoryContent(
             return (
                 "## General\n\n" +
                 `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
-(
-    robloxProfile
-        ? `<:roblox:1538379754414145536> **Usuario de Roblox**: [${robloxProfile.roblox_username}](${robloxProfile.roblox_profile_url})\n\n`
-        : "<:roblox:1538379754414145536> **Usuario de Roblox**: `No Registrado`\n\n"
-) +
+                (
+                    robloxProfile
+                        ? `<:roblox:1538379754414145536> **Usuario de Roblox**: [${robloxProfile.roblox_username}](${robloxProfile.roblox_profile_url})\n\n`
+                        : "<:roblox:1538379754414145536> **Usuario de Roblox**: `No Registrado`\n\n"
+                ) +
                 `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
                 `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
                 `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\`\n` +
@@ -496,11 +543,11 @@ function getProfileEmbed(
             `Perfil de ${nickname}`
         )
         .setDescription(
-getCategoryContent(
-    category,
-    member,
-    robloxProfile
-)
+            getCategoryContent(
+                category,
+                member,
+                robloxProfile
+            )
         )
         .setFooter({
             text:
@@ -515,7 +562,7 @@ getCategoryContent(
                         hour: "2-digit",
                         minute: "2-digit"
                     }
-                )}`
+                )`
         });
 }
 
@@ -798,14 +845,15 @@ function createRobloxLinkCollector(
     profileMessage,
     requester
 ) {
-    let selectedRobloxUser =
-        null;
-
     const collector =
-        profileMessage.createMessageComponentCollector({
-            time:
-                5 * 60 * 1000
-        });
+        profileMessage.createMessageComponentCollector();
+
+    const profileTimeout =
+        createProfileTimeout(
+            collector
+        );
+
+    profileTimeout.reset();
 
     collector.on(
         "collect",
@@ -824,151 +872,166 @@ function createRobloxLinkCollector(
                 return;
             }
 
-if (
-    interaction.customId ===
-    "perfil_roblox_cancel"
-) {
-    await interaction.message
-        .delete()
-        .catch(() => {});
+            profileTimeout.reset();
 
-    collector.stop(
-        "cancelled"
-    );
+            if (
+                interaction.customId ===
+                "perfil_roblox_cancel"
+            ) {
+                await interaction.message
+                    .delete()
+                    .catch(() => {});
 
-    return;
-}
-
-if (
-    interaction.customId ===
-    "perfil_roblox_link"
-) {
-    try {
-        await interaction.showModal(
-            getRobloxUsernameModal()
-        );
-
-        const modalInteraction =
-            await interaction.awaitModalSubmit({
-                time: 30_000,
-
-                filter:
-                    submitted =>
-                        submitted.user.id ===
-                            requester.user.id &&
-                        submitted.customId ===
-                            "perfil_roblox_username_modal"
-            });
-
-        const username =
-            modalInteraction.fields
-                .getTextInputValue(
-                    "roblox_username"
-                )
-                .trim();
-
-        await modalInteraction.deferUpdate();
-
-        let robloxUser;
-
-        try {
-            robloxUser =
-                await findRobloxUser(
-                    username
+                collector.stop(
+                    "cancelled"
                 );
-        } catch (error) {
-            logger.error(
-                "[ROBLOX] Error buscando usuario:",
-                error
-            );
 
-            await profileMessage.edit({
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor(
-                            EMBED_COLOR
-                        )
-                        .setTitle(
-                            "Error"
-                        )
-                        .setDescription(
-                            "No se pudo consultar Roblox en este momento. Inténtalo nuevamente."
-                        )
-                ],
-                components: [
-                    getRobloxLinkButton()
-                ]
-            });
+                return;
+            }
 
-            return;
-        }
+            if (
+                interaction.customId ===
+                "perfil_roblox_link"
+            ) {
+                try {
+                    await interaction.showModal(
+                        getRobloxUsernameModal()
+                    );
 
-        if (!robloxUser) {
-            await profileMessage.edit({
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor(
-                            EMBED_COLOR
-                        )
-                        .setTitle(
-                            "Cuenta no encontrada"
-                        )
-                        .setDescription(
-                            `No encontramos una cuenta de Roblox con el usuario \`${username}\`.\n\n` +
-                            "Comprueba que hayas escrito correctamente tu nombre de usuario."
-                        )
-                ],
-                components: [
-                    getRobloxLinkButton()
-                ]
-            });
+                    const modalInteraction =
+                        await interaction.awaitModalSubmit({
+                            time:
+                                PROFILE_UI_TIMEOUT,
 
-            return;
-        }
+                            filter:
+                                submitted =>
+                                    submitted.user.id ===
+                                        requester.user.id &&
+                                    submitted.customId ===
+                                        "perfil_roblox_username_modal"
+                        });
 
-        const authorizationUrl =
-            createProfileRobloxAuthorization(
-                requester.user.id,
-                robloxUser.id,
-                robloxUser.username,
-                profileMessage.channel.id,
-                profileMessage.id
-            );
+                    profileTimeout.reset();
 
-        await profileMessage.edit({
-            embeds: [
-                getRobloxVerificationEmbed(
-                    robloxUser
-                )
-            ],
-            components: [
-                getRobloxVerificationButtons(
-                    authorizationUrl
-                )
-            ]
-        });
+                    const username =
+                        modalInteraction.fields
+                            .getTextInputValue(
+                                "roblox_username"
+                            )
+                            .trim();
 
-        logger.info(
-            `[ROBLOX] Usuario encontrado: ${robloxUser.username} (${robloxUser.id})`
-        );
+                    await modalInteraction.deferUpdate();
 
-    } catch (error) {
-        logger.error(
-            "[ROBLOX] Error procesando modal:",
-            error
-        );
+                    let robloxUser;
 
-        return;
-    }
+                    try {
+                        robloxUser =
+                            await findRobloxUser(
+                                username
+                            );
+                    } catch (error) {
+                        logger.error(
+                            "[ROBLOX] Error buscando usuario:",
+                            error
+                        );
 
-    return;
-}
+                        profileTimeout.reset();
+
+                        await profileMessage.edit({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setColor(
+                                        EMBED_COLOR
+                                    )
+                                    .setTitle(
+                                        "Error"
+                                    )
+                                    .setDescription(
+                                        "No se pudo consultar Roblox en este momento. Inténtalo nuevamente."
+                                    )
+                            ],
+                            components: [
+                                getRobloxLinkButton()
+                            ]
+                        });
+
+                        return;
+                    }
+
+                    if (
+                        !robloxUser
+                    ) {
+                        profileTimeout.reset();
+
+                        await profileMessage.edit({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setColor(
+                                        EMBED_COLOR
+                                    )
+                                    .setTitle(
+                                        "Cuenta no encontrada"
+                                    )
+                                    .setDescription(
+                                        `No encontramos una cuenta de Roblox con el usuario \`${username}\`.\n\n` +
+                                        "Comprueba que hayas escrito correctamente tu nombre de usuario."
+                                    )
+                            ],
+                            components: [
+                                getRobloxLinkButton()
+                            ]
+                        });
+
+                        return;
+                    }
+
+                    const authorizationUrl =
+                        createProfileRobloxAuthorization(
+                            requester.user.id,
+                            robloxUser.id,
+                            robloxUser.username,
+                            profileMessage.channel.id,
+                            profileMessage.id
+                        );
+
+                    await profileMessage.edit({
+                        embeds: [
+                            getRobloxVerificationEmbed(
+                                robloxUser
+                            )
+                        ],
+                        components: [
+                            getRobloxVerificationButtons(
+                                authorizationUrl
+                            )
+                        ]
+                    });
+
+                    profileTimeout.reset();
+
+                    logger.info(
+                        `[ROBLOX] Usuario encontrado: ${robloxUser.username} (${robloxUser.id})`
+                    );
+
+                } catch (error) {
+                    logger.error(
+                        "[ROBLOX] Error procesando modal:",
+                        error
+                    );
+
+                    return;
+                }
+
+                return;
+            }
         }
     );
 
     collector.on(
         "end",
         async () => {
+            profileTimeout.clear();
+
             if (
                 profileMessage.deleted
             ) {
@@ -994,29 +1057,15 @@ function createProfileCollector(
     let currentCategory =
         "General";
 
-    let inactivityTimeout;
-
-    const resetInactivityTimer =
-        () => {
-            clearTimeout(
-                inactivityTimeout
-            );
-
-            inactivityTimeout =
-                setTimeout(
-                    () => {
-                        collector.stop(
-                            "timeout"
-                        );
-                    },
-                    30_000
-                );
-        };
-
     const collector =
         profileMessage.createMessageComponentCollector();
 
-    resetInactivityTimer();
+    const profileTimeout =
+        createProfileTimeout(
+            collector
+        );
+
+    profileTimeout.reset();
 
     collector.on(
         "collect",
@@ -1047,12 +1096,12 @@ function createProfileCollector(
 
             await interaction.update({
                 embeds: [
-getProfileEmbed(
-    target,
-    requester,
-    currentCategory,
-    robloxProfile
-)
+                    getProfileEmbed(
+                        target,
+                        requester,
+                        currentCategory,
+                        robloxProfile
+                    )
                 ],
                 components: [
                     getCategoryMenu(
@@ -1061,27 +1110,88 @@ getProfileEmbed(
                 ]
             });
 
-            resetInactivityTimer();
+            profileTimeout.reset();
         }
     );
 
     collector.on(
         "end",
         async () => {
-            clearTimeout(
-                inactivityTimeout
-            );
+            profileTimeout.clear();
 
             try {
                 await profileMessage.edit({
                     embeds: [
-getProfileEmbed(
-    target,
-    requester,
-    currentCategory,
-    robloxProfile
+                        getProfileEmbed(
+                            target,
+                            requester,
+                            currentCategory,
+                            robloxProfile
                         )
                     ],
+                    components: []
+                });
+            } catch {
+            }
+        }
+    );
+}
+
+function createGroupCollector(
+    groupMessage,
+    requester
+) {
+    const collector =
+        groupMessage.createMessageComponentCollector();
+
+    const profileTimeout =
+        createProfileTimeout(
+            collector
+        );
+
+    profileTimeout.reset();
+
+    collector.on(
+        "collect",
+        async interaction => {
+            if (
+                interaction.user.id !==
+                requester.user.id
+            ) {
+                await interaction.reply({
+                    content:
+                        "No es tu interacción.",
+                    ephemeral:
+                        true
+                });
+
+                return;
+            }
+
+            profileTimeout.reset();
+
+            if (
+                interaction.customId ===
+                "perfil_roblox_group_cancel"
+            ) {
+                await interaction.message
+                    .delete()
+                    .catch(() => {});
+
+                collector.stop(
+                    "cancelled"
+                );
+            }
+        }
+    );
+
+    collector.on(
+        "end",
+        async () => {
+            profileTimeout.clear();
+
+            try {
+                await groupMessage.edit({
                     components: []
                 });
             } catch {
@@ -1116,264 +1226,223 @@ export default {
         const isSelf =
             target.id ===
             message.author.id;
-            
-            const robloxProfile =
-    await getRobloxProfile(
-        target.id
-    );
 
-if (
-    !isSelf &&
-    !target.roles.cache.has(
-        PROFILE_ROLE_ID
-    )
-) {
-    await message.reply({
-        components: [
-            getNoProfileMessage()
-        ],
-        flags: MessageFlags.IsComponentsV2
-    });
-
-    return;
-}
-
-if (
-    !isSelf &&
-    !robloxProfile
-) {
-    await message.reply({
-        components: [
-            getRobloxNotLinkedMessage()
-        ],
-        flags: MessageFlags.IsComponentsV2
-    });
-
-    return;
-}
-
-if (
-    !isSelf &&
-    robloxProfile
-) {
-    let isInGroup;
-
-    try {
-        isInGroup =
-            await isRobloxUserInGroup(
-                robloxProfile.roblox_id
+        const robloxProfile =
+            await getRobloxProfile(
+                target.id
             );
-    } catch (error) {
-        logger.error(
-            "[ROBLOX GROUP] Error comprobando membresía del perfil:",
-            error
-        );
 
-        await message.reply({
-            components: [
-                new ContainerBuilder()
-                    .addTextDisplayComponents(
-                        new TextDisplayBuilder()
-                            .setContent(
-                                "<:info:1538323825542963270> No se pudo comprobar la membresía de esta persona en el grupo de Roblox."
+        if (
+            !isSelf &&
+            !target.roles.cache.has(
+                PROFILE_ROLE_ID
+            )
+        ) {
+            await message.reply({
+                components: [
+                    getNoProfileMessage()
+                ],
+                flags:
+                    MessageFlags.IsComponentsV2
+            });
+
+            return;
+        }
+
+        if (
+            !isSelf &&
+            !robloxProfile
+        ) {
+            await message.reply({
+                components: [
+                    getRobloxNotLinkedMessage()
+                ],
+                flags:
+                    MessageFlags.IsComponentsV2
+            });
+
+            return;
+        }
+
+        if (
+            !isSelf &&
+            robloxProfile
+        ) {
+            let isInGroup;
+
+            try {
+                isInGroup =
+                    await isRobloxUserInGroup(
+                        robloxProfile.roblox_id
+                    );
+            } catch (error) {
+                logger.error(
+                    "[ROBLOX GROUP] Error comprobando membresía del perfil:",
+                    error
+                );
+
+                await message.reply({
+                    components: [
+                        new ContainerBuilder()
+                            .addTextDisplayComponents(
+                                new TextDisplayBuilder()
+                                    .setContent(
+                                        "<:info:1538323825542963270> No se pudo comprobar la membresía de esta persona en el grupo de Roblox."
+                                    )
                             )
-                    )
-            ],
-            flags:
-                MessageFlags.IsComponentsV2
-        });
+                    ],
+                    flags:
+                        MessageFlags.IsComponentsV2
+                });
 
-        return;
-    }
+                return;
+            }
 
-    if (
-        !isInGroup
-    ) {
-        await message.reply({
-            components: [
-                getRobloxNotInGroupMessage()
-            ],
-            flags:
-                MessageFlags.IsComponentsV2
-        });
+            if (
+                !isInGroup
+            ) {
+                await message.reply({
+                    components: [
+                        getRobloxNotInGroupMessage()
+                    ],
+                    flags:
+                        MessageFlags.IsComponentsV2
+                });
 
-        return;
-    }
-}
-        
-if (
-    isSelf
-) {
+                return;
+            }
+        }
 
-    if (
-        !robloxProfile
-    ) {
+        if (
+            isSelf
+        ) {
+
+            if (
+                !robloxProfile
+            ) {
+                const profileMessage =
+                    await message.reply({
+                        embeds: [
+                            getRobloxLinkEmbed()
+                        ],
+                        components: [
+                            getRobloxLinkButton()
+                        ]
+                    });
+
+                createRobloxLinkCollector(
+                    profileMessage,
+                    message.member
+                );
+
+                return;
+            }
+
+            let isInGroup;
+
+            try {
+                isInGroup =
+                    await isRobloxUserInGroup(
+                        robloxProfile.roblox_id
+                    );
+            } catch (error) {
+                logger.error(
+                    "[ROBLOX GROUP] Error comprobando membresía:",
+                    error
+                );
+
+                await message.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor(
+                                "#ff4d4d"
+                            )
+                            .setDescription(
+                                "No se pudo comprobar tu membresía en el grupo de Roblox. Inténtalo nuevamente en unos momentos."
+                            )
+                    ]
+                });
+
+                return;
+            }
+
+            if (
+                !isInGroup
+            ) {
+                const groupMessage =
+                    await message.reply({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setColor(
+                                    EMBED_COLOR
+                                )
+                                .setTitle(
+                                    "<:roblox:1538379754414145536> Solicitud al grupo de Roblox"
+                                )
+                                .setDescription(
+                                    "Tu cuenta de Roblox está vinculada correctamente.\n\n" +
+                                    "Para continuar, debes unirte al grupo oficial de DEVGRU en Roblox."
+                                )
+                        ],
+                        components: [
+                            new ActionRowBuilder()
+                                .addComponents(
+                                    new ButtonBuilder()
+                                        .setLabel(
+                                            "Unirse"
+                                        )
+                                        .setStyle(
+                                            ButtonStyle.Link
+                                        )
+                                        .setURL(
+                                            "https://www.roblox.com/communities/34479953/DEVGRU-Seal-Team-Six#!/about"
+                                        ),
+
+                                    new ButtonBuilder()
+                                        .setCustomId(
+                                            "perfil_roblox_group_cancel"
+                                        )
+                                        .setEmoji(
+                                            "<:cancel:1538544866659672144>"
+                                        )
+                                        .setStyle(
+                                            ButtonStyle.Danger
+                                        )
+                                )
+                        ]
+                    });
+
+                createGroupCollector(
+                    groupMessage,
+                    message.member
+                );
+
+                return;
+            }
+        }
+
         const profileMessage =
             await message.reply({
                 embeds: [
-                    getRobloxLinkEmbed()
+                    getProfileEmbed(
+                        target,
+                        message.member,
+                        "General",
+                        robloxProfile
+                    )
                 ],
                 components: [
-                    getRobloxLinkButton()
+                    getCategoryMenu(
+                        "General"
+                    )
                 ]
             });
 
-        createRobloxLinkCollector(
+        createProfileCollector(
             profileMessage,
-            message.member
+            target,
+            message.member,
+            robloxProfile
         );
-
-        return;
-    }
-
-    let isInGroup;
-
-    try {
-        isInGroup =
-            await isRobloxUserInGroup(
-                robloxProfile.roblox_id
-            );
-    } catch (error) {
-        logger.error(
-            "[ROBLOX GROUP] Error comprobando membresía:",
-            error
-        );
-
-        await message.reply({
-            embeds: [
-                new EmbedBuilder()
-                    .setColor(
-                        "#ff4d4d"
-                    )
-                    .setDescription(
-                        "No se pudo comprobar tu membresía en el grupo de Roblox. Inténtalo nuevamente en unos momentos."
-                    )
-            ]
-        });
-
-        return;
-    }
-
-    if (
-        !isInGroup
-    ) {
-        const groupMessage =
-            await message.reply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor(
-                            EMBED_COLOR
-                        )
-.setTitle(
-    "<:roblox:1538379754414145536> Solicitud al grupo de Roblox"
-)
-.setDescription(
-    "Tu cuenta de Roblox está vinculada correctamente.\n\n" +
-    "Para continuar, debes unirte al grupo oficial de DEVGRU en Roblox."
-)
-                ],
-components: [
-    new ActionRowBuilder()
-        .addComponents(
-            new ButtonBuilder()
-                .setLabel(
-                    "Unirse"
-                )
-                .setStyle(
-                    ButtonStyle.Link
-                )
-                .setURL(
-                    "https://www.roblox.com/communities/34479953/DEVGRU-Seal-Team-Six#!/about"
-                ),
-
-            new ButtonBuilder()
-                .setCustomId(
-                    "perfil_roblox_group_cancel"
-                )
-                .setEmoji(
-                    "<:cancel:1538544866659672144>"
-                )
-                .setStyle(
-                    ButtonStyle.Danger
-                )
-        )
-]
-            });
-
-        const collector =
-            groupMessage.createMessageComponentCollector({
-                time: 30_000
-            });
-
-        collector.on(
-            "collect",
-            async interaction => {
-                if (
-                    interaction.user.id !==
-                    message.author.id
-                ) {
-                    await interaction.reply({
-                        content:
-                            "No es tu interacción.",
-                        ephemeral:
-                            true
-                    });
-
-                    return;
-                }
-
-                if (
-                    interaction.customId ===
-                    "perfil_roblox_group_cancel"
-                ) {
-                    await interaction.message.delete()
-                        .catch(() => {});
-
-                    collector.stop(
-                        "cancelled"
-                    );
-                }
-            }
-        );
-
-        collector.on(
-            "end",
-            async () => {
-                try {
-                    await groupMessage.edit({
-                        components: []
-                    });
-                } catch {
-                }
-            }
-        );
-
-        return;
-    }
-}
-
-const profileMessage =
-    await message.reply({
-        embeds: [
-            getProfileEmbed(
-                target,
-                message.member,
-                "General",
-                robloxProfile
-            )
-        ],
-        components: [
-            getCategoryMenu(
-                "General"
-            )
-        ]
-    });
-
-createProfileCollector(
-    profileMessage,
-    target,
-    message.member,
-    robloxProfile
-);
     }
 };
