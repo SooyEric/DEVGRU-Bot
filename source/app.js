@@ -711,6 +711,29 @@ const server =
 
 if (
     url.pathname === "/internal/roblox/callback" &&
+    req.method === "GET"
+) {
+    res.writeHead(
+        200,
+        {
+            "Content-Type":
+                "application/json; charset=utf-8"
+        }
+    );
+
+    res.end(
+        JSON.stringify({
+            success: true,
+            message:
+                "DEVGRU-Bot Roblox callback endpoint is online."
+        })
+    );
+
+    return;
+}
+
+if (
+    url.pathname === "/internal/roblox/callback" &&
     req.method === "POST"
 ) {
     const authorization =
