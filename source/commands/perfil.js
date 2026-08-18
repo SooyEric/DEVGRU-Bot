@@ -806,136 +806,130 @@ if (
     return;
 }
 
-            if (
-                interaction.customId ===
-                "perfil_roblox_link"
-            ) {
-                await interaction.showModal(
-                    getRobloxUsernameModal()
+if (
+    interaction.customId ===
+    "perfil_roblox_link"
+) {
+    try {
+        await interaction.showModal(
+            getRobloxUsernameModal()
+        );
+
+        const modalInteraction =
+            await interaction.awaitModalSubmit({
+                time: 60_000,
+
+                filter:
+                    submitted =>
+                        submitted.user.id ===
+                            requester.user.id &&
+                        submitted.customId ===
+                            "perfil_roblox_username_modal"
+            });
+
+        const username =
+            modalInteraction.fields
+                .getTextInputValue(
+                    "roblox_username"
+                )
+                .trim();
+
+        await modalInteraction.deferUpdate();
+
+        let robloxUser;
+
+        try {
+            robloxUser =
+                await findRobloxUser(
+                    username
                 );
+        } catch (error) {
+            logger.error(
+                "[ROBLOX] Error buscando usuario:",
+                error
+            );
 
-                try {
-                    const modalInteraction =
-                        await interaction.awaitModalSubmit({
-                            time:
-                                60_000,
+            await profileMessage.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(
+                            EMBED_COLOR
+                        )
+                        .setTitle(
+                            "Error"
+                        )
+                        .setDescription(
+                            "No se pudo consultar Roblox en este momento. Inténtalo nuevamente."
+                        )
+                ],
+                components: [
+                    getRobloxLinkButton()
+                ]
+            });
 
-                            filter:
-                                submitted =>
-                                    submitted.user.id ===
-                                    requester.user.id &&
-                                    submitted.customId ===
-                                    "perfil_roblox_username_modal"
-                        });
+            return;
+        }
 
-                    const username =
-                        modalInteraction.fields
-                            .getTextInputValue(
-                                "roblox_username"
-                            )
-                            .trim();
+        if (!robloxUser) {
+            await profileMessage.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor(
+                            EMBED_COLOR
+                        )
+                        .setTitle(
+                            "Cuenta no encontrada"
+                        )
+                        .setDescription(
+                            `No encontramos una cuenta de Roblox con el usuario \`${username}\`.\n\n` +
+                            "Comprueba que hayas escrito correctamente tu nombre de usuario."
+                        )
+                ],
+                components: [
+                    getRobloxLinkButton()
+                ]
+            });
 
-                    await modalInteraction.deferUpdate();
+            return;
+        }
 
-                    let robloxUser;
+        const authorizationUrl =
+            createProfileRobloxAuthorization(
+                requester.user.id,
+                robloxUser.id,
+                robloxUser.username,
+                profileMessage.channel.id,
+                profileMessage.id
+            );
 
-                    try {
-                        robloxUser =
-                            await findRobloxUser(
-                                username
-                            );
-                    } catch {
-                        await profileMessage.edit({
-                            embeds: [
-                                new EmbedBuilder()
-                                    .setColor(
-                                        EMBED_COLOR
-                                    )
-                                    .setTitle(
-                                        "Error"
-                                    )
-                                    .setDescription(
-                                        "No se pudo consultar Roblox en este momento. Inténtalo nuevamente."
-                                    )
-                            ],
-                            components: [
-                                getRobloxLinkButton()
-                            ]
-                        });
+        await profileMessage.edit({
+            embeds: [
+                getRobloxVerificationEmbed(
+                    robloxUser
+                )
+            ],
+            components: [
+                getRobloxVerificationButtons(
+                    authorizationUrl
+                )
+            ]
+        });
 
-                        return;
-                    }
+        logger.info(
+            `[ROBLOX] Usuario encontrado: ${robloxUser.username} (${robloxUser.id})`
+        );
 
-                    if (
-                        !robloxUser
-                    ) {
-                        await profileMessage.edit({
-                            embeds: [
-                                new EmbedBuilder()
-                                    .setColor(
-                                        EMBED_COLOR
-                                    )
-                                    .setTitle(
-                                        "Cuenta no encontrada"
-                                    )
-                                    .setDescription(
-                                        `No encontramos una cuenta de Roblox con el usuario \`${username}\`.\n\n` +
-                                        "Comprueba que hayas escrito correctamente tu nombre de usuario."
-                                    )
-                            ],
-                            components: [
-                                getRobloxLinkButton()
-                            ]
-                        });
+    } catch (error) {
+        logger.error(
+            "[ROBLOX] Error procesando modal:",
+            error
+        );
 
-                        return;
-                    }
+        return;
+    }
 
-selectedRobloxUser =
-    robloxUser;
-
-const authorizationUrl =
-    createProfileRobloxAuthorization(
-        requester.user.id,
-        robloxUser.id,
-        robloxUser.username,
-        profileMessage.channel.id,
-        profileMessage.id
-    );
-
-await profileMessage.edit({
-    embeds: [
-        getRobloxVerificationEmbed(
-            robloxUser
-        )
-    ],
-    components: [
-        getRobloxVerificationButtons(
-            authorizationUrl
-        )
-    ]
-});
-
-                } catch {
-                    return;
-                }
-
-                return;
-            }
-
-            if (
-                interaction.customId ===
-                "perfil_roblox_cancel"
-            ) {
-                collector.stop(
-                    "cancelled"
-                );
-
-                await interaction.message.delete()
-                    .catch(() => {});
-
-                return;
-            }
+    return;
+}
         }
     );
 
