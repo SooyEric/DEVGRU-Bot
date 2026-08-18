@@ -727,42 +727,42 @@ function getRobloxVerificationEmbed(
             EMBED_COLOR
         )
         .setTitle(
-            "Verificar cuenta de Roblox"
+            "<:roblox:1538379754414145536> Verificar Cuenta"
         )
         .setDescription(
-            "Has indicado la siguiente cuenta de Roblox:\n\n" +
-            `**[${robloxUser.username}](${robloxUser.profileUrl})**\n\n` +
-            "Presiona **Verificar** para confirmar que eres el propietario de esta cuenta mediante Roblox OAuth."
+            `**Cuenta encontrada:** [${robloxUser.username}](${robloxUser.profileUrl})\n\n` +
+            "Presiona el botón para confirmar que eres el propietario de esta cuenta mediante Roblox OAuth."
         );
 }
 
-function getRobloxVerificationButtons() {
+function getRobloxVerificationButtons(
+    authorizationUrl
+) {
     return new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
-                .setCustomId(
-                    "perfil_roblox_verify"
-                )
-                .setLabel(
-                    "Verificar"
+                .setEmoji(
+                    "<:next:1539306938771447951>"
                 )
                 .setStyle(
-                    ButtonStyle.Primary
+                    ButtonStyle.Link
+                )
+                .setURL(
+                    authorizationUrl
                 ),
 
             new ButtonBuilder()
                 .setCustomId(
                     "perfil_roblox_cancel"
                 )
-                .setLabel(
-                    "✕"
+                .setEmoji(
+                    "<:cancel:1538544866659672144>"
                 )
                 .setStyle(
                     ButtonStyle.Danger
                 )
         );
 }
-
 
 function createRobloxLinkCollector(
     profileMessage,
@@ -894,19 +894,30 @@ if (
                         return;
                     }
 
-                    selectedRobloxUser =
-                        robloxUser;
+selectedRobloxUser =
+    robloxUser;
 
-                    await profileMessage.edit({
-                        embeds: [
-                            getRobloxVerificationEmbed(
-                                robloxUser
-                            )
-                        ],
-                        components: [
-                            getRobloxVerificationButtons()
-                        ]
-                    });
+const authorizationUrl =
+    createProfileRobloxAuthorization(
+        requester.user.id,
+        robloxUser.id,
+        robloxUser.username,
+        profileMessage.channel.id,
+        profileMessage.id
+    );
+
+await profileMessage.edit({
+    embeds: [
+        getRobloxVerificationEmbed(
+            robloxUser
+        )
+    ],
+    components: [
+        getRobloxVerificationButtons(
+            authorizationUrl
+        )
+    ]
+});
 
                 } catch {
                     return;
@@ -925,67 +936,6 @@ if (
 
                 await interaction.message.delete()
                     .catch(() => {});
-
-                return;
-            }
-
-            if (
-                interaction.customId ===
-                "perfil_roblox_verify"
-            ) {
-                if (
-                    !selectedRobloxUser
-                ) {
-                    await interaction.reply({
-                        content:
-                            "Primero debes seleccionar una cuenta de Roblox.",
-                        ephemeral:
-                            true
-                    });
-
-                    return;
-                }
-
-                try {
-const authorizationUrl =
-    createProfileRobloxAuthorization(
-        requester.user.id,
-        selectedRobloxUser.id,
-        selectedRobloxUser.username,
-        profileMessage.channel.id,
-        profileMessage.id
-    );
-
-                    await interaction.reply({
-                        content:
-                            "Continúa con Roblox para verificar que eres el propietario de esta cuenta.",
-                        components: [
-                            new ActionRowBuilder()
-                                .addComponents(
-                                    new ButtonBuilder()
-                                        .setLabel(
-                                            "Continuar con Roblox"
-                                        )
-                                        .setStyle(
-                                            ButtonStyle.Link
-                                        )
-                                        .setURL(
-                                            authorizationUrl
-                                        )
-                                )
-                        ],
-                        ephemeral:
-                            true
-                    });
-
-                } catch {
-                    await interaction.reply({
-                        content:
-                            "No se pudo iniciar la verificación de Roblox. Inténtalo nuevamente.",
-                        ephemeral:
-                            true
-                    });
-                }
 
                 return;
             }
