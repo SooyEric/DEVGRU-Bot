@@ -499,20 +499,20 @@ function getCategoryContent(
             );
         }
 
-        default:
-            return (
-                "## General\n\n" +
-                `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
-                (
-                    robloxProfile
-                        ? `<:roblox:1538379754414145536> **Usuario de Roblox**: [${robloxProfile.roblox_username}](${robloxProfile.roblox_profile_url})\n\n`
-                        : "<:roblox:1538379754414145536> **Usuario de Roblox**: `No Registrado`\n\n"
-                ) +
-                `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
-                `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
-                `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\`\n` +
-                `<:info:1538323825542963270> **Estado**: \`${getStatus(member)}\``
-            );
+default:
+    return (
+        "## General\n\n" +
+        `<:persona:1538099937391288380> **Usuario de Discord**: \`${member.user.username}\`\n` +
+        (
+            robloxProfile
+                ? `<:roblox:1538379754414145536> **Usuario de Roblox**: [${robloxProfile.roblox_username}](${robloxProfile.roblox_profile_url})\n\n`
+                : "<:roblox:1538379754414145536> **Usuario de Roblox**: `No Registrado`\n\n"
+        ) +
+        `<:rango:1538381219631464448> **Rango**: \`${getRank(member)}\`\n` +
+        `<:espada:1538399737206669312> **Ocupación**: \`${getOccupation(member)}\`\n` +
+        `<:squad:1538380150746521651> **Escuadrón**: \`${getSquadron(member)}\`\n` +
+        `<:info:1538323825542963270> **Estado**: \`${getStatus(member)}\``
+    );
     }
 }
 
