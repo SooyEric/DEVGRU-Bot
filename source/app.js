@@ -736,6 +736,9 @@ if (
     url.pathname === "/internal/roblox/callback" &&
     req.method === "POST"
 ) {
+    logger.info(
+    "[ROBLOX OAUTH] POST /internal/roblox/callback recibido."
+);
     const authorization =
         req.headers.authorization;
 
