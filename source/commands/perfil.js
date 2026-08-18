@@ -567,6 +567,16 @@ function getRobloxNotLinkedMessage() {
         );
 }
 
+function getRobloxNotInGroupMessage() {
+    return new ContainerBuilder()
+        .addTextDisplayComponents(
+            new TextDisplayBuilder()
+                .setContent(
+                    "<:info:1538323825542963270> Esta persona necesita unirse al grupo de Roblox para mostrar su perfil."
+                )
+        );
+}
+
 async function getTargetMember(
     message,
     args
@@ -1141,6 +1151,55 @@ if (
 
     return;
 }
+
+if (
+    !isSelf &&
+    robloxProfile
+) {
+    let isInGroup;
+
+    try {
+        isInGroup =
+            await isRobloxUserInGroup(
+                robloxProfile.roblox_id
+            );
+    } catch (error) {
+        logger.error(
+            "[ROBLOX GROUP] Error comprobando membresía del perfil:",
+            error
+        );
+
+        await message.reply({
+            components: [
+                new ContainerBuilder()
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder()
+                            .setContent(
+                                "<:info:1538323825542963270> No se pudo comprobar la membresía de esta persona en el grupo de Roblox."
+                            )
+                    )
+            ],
+            flags:
+                MessageFlags.IsComponentsV2
+        });
+
+        return;
+    }
+
+    if (
+        !isInGroup
+    ) {
+        await message.reply({
+            components: [
+                getRobloxNotInGroupMessage()
+            ],
+            flags:
+                MessageFlags.IsComponentsV2
+        });
+
+        return;
+    }
+}
         
 if (
     isSelf
@@ -1205,40 +1264,40 @@ if (
                         .setColor(
                             EMBED_COLOR
                         )
-                        .setTitle(
-                            "Únete al grupo de Roblox"
-                        )
-                        .setDescription(
-                            "Tu cuenta de Roblox ya está vinculada correctamente.\n\n" +
-                            "Para continuar, debes enviar una solicitud para unirte al grupo oficial de **DEVGRU - Seal Team Six**.\n\n" +
-                            "Después de enviar la solicitud, vuelve a utilizar `-perfil` para comprobar tu membresía."
-                        )
+.setTitle(
+    "<:roblox:1538379754414145536> Solicitud al grupo de Roblox"
+)
+.setDescription(
+    "Tu cuenta de Roblox está vinculada correctamente.\n\n" +
+    "Para continuar, debes unirte al grupo oficial de DEVGRU en Roblox."
+)
                 ],
-                components: [
-                    new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setLabel(
-                                    "Unirse al grupo"
-                                )
-                                .setStyle(
-                                    ButtonStyle.Link
-                                )
-                                .setURL(
-                                    "https://www.roblox.com/communities/34479953/DEVGRU-Seal-Team-Six#!/about"
-                                ),
-                            new ButtonBuilder()
-                                .setCustomId(
-                                    "perfil_roblox_group_cancel"
-                                )
-                                .setLabel(
-                                    "✕"
-                                )
-                                .setStyle(
-                                    ButtonStyle.Secondary
-                                )
-                        )
-                ]
+components: [
+    new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setLabel(
+                    "Unirse"
+                )
+                .setStyle(
+                    ButtonStyle.Link
+                )
+                .setURL(
+                    "https://www.roblox.com/communities/34479953/DEVGRU-Seal-Team-Six#!/about"
+                ),
+
+            new ButtonBuilder()
+                .setCustomId(
+                    "perfil_roblox_group_cancel"
+                )
+                .setEmoji(
+                    "<:cancel:1538544866659672144>"
+                )
+                .setStyle(
+                    ButtonStyle.Danger
+                )
+        )
+]
             });
 
         const collector =
